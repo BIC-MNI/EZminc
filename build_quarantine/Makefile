@@ -1,6 +1,6 @@
 .DEFAULT_GOAL = help
 
-.PHONY : dirs clean volume_tools ezminc minc oobicpl n3 bicpl ebtks conglomerate mincmorph mincblob pve ray_trace 
+.PHONY : dirs clean volume_tools ezminc minc oobicpl n3 bicpl ebtks conglomerate mincmorph mincblob pve ray_trace list
 
 # some important environment variables
 TEMP   ?= ../../temp
@@ -242,7 +242,7 @@ help :
 	@echo Prerequisits: realpath bison 
 
 
-all : $(dirs) $(volume_tools) $(bicpl) $(n3) $(conglomerate) $(glim_image) $(mni_autoreg) $(mincblob) $(mni_perllib) $(ray_trace) $(ezminc) $(mincbet) $(pve) | dirs
+all : $(volume_tools) $(bicpl) $(n3) $(conglomerate) $(glim_image) $(mni_autoreg) $(mincblob) $(mni_perllib) $(ray_trace) $(ezminc) $(mincbet) $(pve) | dirs
 
 
 core : $(dirs) minc itk ezminc 
@@ -547,3 +547,6 @@ ${PREFIX}/environment.sh :
 
 ${PREFIX}/environment.csh : 
 	echo -e setenv PATH ${PREFIX}/bin:'$${PATH}' \\nexport PERL5LIB=${PREFIX}/perl:'$${PERL5LIB}' >${PREFIX}/environment.csh
+
+list : 
+	@echo $(subst $(TEMP)/src/,,$(sources)) fltk-$(FLTK_VER) vtk-$(VTK_VER)
