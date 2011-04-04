@@ -251,19 +251,19 @@ core : $(dirs) minc itk ezminc
 clean : 
 	rm -rf $(sources)
 
-minc : $(minc) $(hdf5) $(netcdf)
+minc : $(dirs) $(minc) $(hdf5) $(netcdf)
 
-ezminc : $(ezminc)  
+ezminc : $(dirs)  $(ezminc)  
 
-volume_tools : $(volume_tools) 
+volume_tools : $(dirs)  $(volume_tools) 
 
-itk : $(itk)
+itk : $(dirs)  $(itk)
 
-vtk : $(vtk)
+vtk : $(dirs) $(vtk)
 
-fltk : $(fltk)
+fltk : $(dirs) $(fltk)
 
-bicpl : $(bicpl)
+bicpl : $(dirs) $(bicpl)
 
 n3 : $(n3)
 
@@ -285,11 +285,11 @@ getopt_tabular : $(getopt_tabular)
 
 mni_perllib : $(mni_perllib)
 
-register : $(register)
+register : $(dirs) $(register)
 
-Display : $(Display)
+Display : $(dirs) $(Display)
 
-cmake : $(cmake)
+cmake : $(dirs) $(cmake)
 
 #3 configure & compile
 $(netcdf) : ${TEMP}/src/netcdf-$(NETCDF_VER)
@@ -443,7 +443,6 @@ $(register) : ${TEMP}/src/Register-$(REGISTER_VER) $(bicpl)
 	make $(PARALLEL_BUILD)  && \
 	make install 
 
-
 $(Display) :${TEMP}/src/Display-$(DISPLAY_VER) $(bicpl)
 	cd ${TEMP}/src/Display-1.5.0 && \
 	./configure --prefix=$(PREFIX) --with-build-path=$(PREFIX)  --with-minc2 --with-x && \
@@ -537,7 +536,11 @@ ${PREFIX} :
 
 dirs : 
 	mkdir -p ${TEMP}/src
-	mkdir -p ${PREFIX}
+	mkdir -p ${PREFIX} ${PREFIX}/lib ${PREFIX}/include ${PREFIX}/bin
+
+
+visual :  $(dirs) register Display
+
 
 environment : ${PREFIX}/environment.sh ${PREFIX}/environment.csh
 
