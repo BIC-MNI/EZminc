@@ -3,19 +3,15 @@
 .PHONY : dirs clean volume_tools ezminc minc oobicpl n3 bicpl ebtks conglomerate mincmorph mincblob pve ray_trace list
 
 # some important environment variables
-TEMP   ?= ../../temp
-PREFIX ?= ../../quarantine
+TEMP   ?= $(shell pwd)
+PREFIX ?= $(shell pwd)
 # specify number of parallel tasks in building (number of cores you can use for compiling)
 PARALLEL_BUILD ?= -j4 
 
 
 #CC=gcc-4.1  
 
-#get absolute paths
-TEMP   := $(shell realpath $(TEMP) )
-PREFIX := $(shell realpath $(PREFIX) )
-
-dirs := ${TEMP}/src ${PREFIX}
+dirs := ${TEMP}/src ${PREFIX} ${PREFIX}/include ${PREFIX}/lib 
 
 WGET := wget -c 
 CMAKE := $(PREFIX)/bin/cmake
@@ -242,7 +238,7 @@ help :
 	@echo Prerequisits: realpath bison 
 
 
-all : $(volume_tools) $(bicpl) $(n3) $(conglomerate) $(glim_image) $(mni_autoreg) $(mincblob) $(mni_perllib) $(ray_trace) $(ezminc) $(mincbet) $(pve) | dirs
+all : dirs $(volume_tools) $(bicpl) $(n3) $(conglomerate) $(glim_image) $(mni_autoreg) $(mincblob) $(mni_perllib) $(ray_trace) $(ezminc) $(mincbet) $(pve) 
 
 
 core : $(dirs) minc itk ezminc 
@@ -528,15 +524,14 @@ $(ezminc) : ${TEMP}/src/ezminc $(minc) $(itk) $(cmake) $(fftw) $(gsl)
 	touch $(ezminc)
 
 
-${TEMP}/src : 
-	mkdir -p ${TEMP}/src
+${dirs} : dirs 
   
-${PREFIX} :
-	mkdir -p ${PREFIX}
-
 dirs : 
+	mkdir -p ${TEMP}
 	mkdir -p ${TEMP}/src
 	mkdir -p ${PREFIX} ${PREFIX}/lib ${PREFIX}/include ${PREFIX}/bin
+	mkdir -p ${PREFIX}/lib
+	mkdir -p ${PREFIX}/include
 
 
 visual :  $(dirs) register Display
@@ -550,6 +545,7 @@ ${PREFIX}/environment.sh :
 
 ${PREFIX}/environment.csh : 
 	echo -e setenv PATH ${PREFIX}/bin:'$${PATH}' \\nexport PERL5LIB=${PREFIX}/perl:'$${PERL5LIB}' >${PREFIX}/environment.csh
+
 
 list : 
 	@echo $(subst $(TEMP)/src/,,$(sources)) fltk-$(FLTK_VER) vtk-$(VTK_VER)
