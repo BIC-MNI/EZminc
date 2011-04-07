@@ -76,9 +76,14 @@ ADD_EXECUTABLE( volume_dwt volume_dwt.cpp)
 
 TARGET_LINK_LIBRARIES(volume_dwt minc_image_proc minc_io)
 
+ADD_EXECUTABLE( minc_downsample 
+                minc_downsample.cpp )
+TARGET_LINK_LIBRARIES(minc_downsample minc_io)
+
+
 
 INSTALL(TARGETS 
-        volume_dwt
+        volume_dwt minc_downsample
         RUNTIME DESTINATION bin )
 
 INSTALL(PROGRAMS 

@@ -242,6 +242,7 @@ namespace minc
       } 
       
       info.resize(3+(is_vector?1:0)+(have_time?1:0));
+      
       if(is_vector)
       {
         info[0].dim=dim_info::DIM_VEC;
@@ -249,19 +250,21 @@ namespace minc
         info[0].step=1;
         
       }
+      
       for(int i=0;i<3;i++)
       {
-        info[i+(is_vector?1:0)].dim=dim_info::dimensions( dim_info::DIM_X+i);
+        int ii=i+(is_vector?1:0);
+        info[ii].dim=dim_info::dimensions( dim_info::DIM_X+i);
         
-        info[i+(is_vector?1:0)].length=vol.dim(i);
-        info[i+(is_vector?1:0)].step=vol.step()[i];
-        info[i+(is_vector?1:0)].start=vol.start()[i];
-        
-        info[i+(is_vector?1:0)].have_dir_cos=true;
+        info[ii].length=vol.dim(i);
+        info[ii].step  =vol.step()[i];
+        info[ii].start =vol.start()[i];
+        info[ii].have_dir_cos=true;
         
         for(int j=0;j<3;j++)
-          info[i+(is_vector?1:0)].dir_cos[j]=vol.direction_cosines(i)[j];
+          info[ii].dir_cos[j]=vol.direction_cosines(i)[j];
       }
+      
       if(have_time) 
       {
         info[3+(is_vector?1:0)].dim=dim_info::DIM_TIME;

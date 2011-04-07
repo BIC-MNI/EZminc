@@ -28,6 +28,7 @@ my $step_iterations;
 my $measure;
 my $debug;
 my $adni;
+my $out_roi;
 
 #additional parameters
 GetOptions( 
@@ -49,7 +50,8 @@ GetOptions(
           "init=s"    =>       \$init,
           "step_iterations=n"=>\$step_iterations,
           "measure=s" =>       \$measure,
-          "adni"      =>       \$adni
+          "adni"      =>       \$adni,
+          "out-roi=s" =>       \$out_roi,
           );
 
 die <<END 
@@ -70,6 +72,7 @@ die <<END
   --measure <output>    - perform residual deformation measurement at each iteration (long) 
   --debug               - for debugging
   --adni                - treat the phantom as adni 
+  --out-roi <output>    - create ROI describing volume where distortions may be applied
 ] 
 END
   if $#ARGV<2; #number of arguments -1 
@@ -268,8 +271,29 @@ push @args,'-debug' if $debug;
 push @args,'-weight',1;
 push @args,'-stiffness',0;
 
-
 do_cmd(@args);
+
+
+#create ROI
+
+if($out_roi)
+{
+  my $output_field=$output_xfm;
+  $output_field=~s/.xfm$/_grid_0.mnc/;
+
+  my @masks;
+  foreach $scan(@scans) {
+    my $name=basename($scan,'.gz');
+    do_cmd('mincresample',$mask,'-like',$output_field,
+           '-transform',"$tmpdir/align_${name}.xfm",
+           '-nearest',"$tmpdir/mask_${name}.mnc",'-clobber');
+
+    push @masks,"$tmpdir/mask_${name}.mnc";
+  }
+
+  $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
+  do_cmd('mincmath','-byte','-max',@masks,$out_roi,'-clobber');
+}
 
 sub do_cmd {
     print STDOUT "@_\n" if $verbose;
