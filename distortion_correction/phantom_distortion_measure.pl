@@ -29,6 +29,8 @@ my $measure;
 my $debug;
 my $adni;
 my $out_roi;
+my $only_roi;
+my $dilate_roi=0;
 
 #additional parameters
 GetOptions( 
@@ -52,6 +54,8 @@ GetOptions(
           "measure=s" =>       \$measure,
           "adni"      =>       \$adni,
           "out-roi=s" =>       \$out_roi,
+          "only-roi"  =>       \$only_roi,
+          "dilate-roi=n" =>    \$dilate_roi,
           );
 
 die <<END 
@@ -73,6 +77,7 @@ die <<END
   --debug               - for debugging
   --adni                - treat the phantom as adni 
   --out-roi <output>    - create ROI describing volume where distortions may be applied
+  --only-roi            - a HACK to skip actual distortion correction field calculations 
 ] 
 END
   if $#ARGV<2; #number of arguments -1 
@@ -86,12 +91,13 @@ $output_par=pop @ARGV;
 my @scans=@ARGV;
 
 #check if the output exists
-check_file($output_par) unless $clobber;
-check_file($output_xfm) unless $clobber;
+check_file($output_par) unless $clobber || $only_roi;
+check_file($output_xfm) unless $clobber || $only_roi;
+check_file($out_roi) if !$clobber && $out_roi;
+
 
 #makes a temporary directory
 my $tmpdir;
-
 my $minc_compress=$ENV{MINC_COMPRESS};
 delete $ENV{MINC_COMPRESS} if $minc_compress;
 
@@ -254,6 +260,34 @@ foreach $scan(@scans) {
   }
 }
 
+
+#create ROI
+if($out_roi)
+{
+  my $output_field=$output_xfm;
+  $output_field=~s/.xfm$/_grid_0.mnc/;
+
+  my @masks;
+  foreach $scan(@scans) {
+    my $name=basename($scan,'.gz');
+    if($dilate_roi>0)
+    {
+      do_cmd('itk_morph','--exp',"D[${dilate_roi}]",$mask,"$tmpdir/mask.mnc");
+      $mask="$tmpdir/mask.mnc";
+    }
+    do_cmd('mincresample',$mask,'-like',$output_field,
+           '-transform',"$tmpdir/align_${name}.xfm",
+           '-nearest',"$tmpdir/mask_${name}.mnc",'-clobber');
+
+    push @masks,"$tmpdir/mask_${name}.mnc";
+  }
+
+  $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
+  do_cmd('mincmath','-byte','-max',@masks,$out_roi,'-clobber');
+}
+
+exit 0 if $only_roi;
+
 # calculate parameters
 @args=('phantomfit.pl',@args,'-order',$order,'-clobber');
 push @args,'-cylindric'        if $cylindric;
@@ -273,27 +307,6 @@ push @args,'-stiffness',0;
 
 do_cmd(@args);
 
-
-#create ROI
-
-if($out_roi)
-{
-  my $output_field=$output_xfm;
-  $output_field=~s/.xfm$/_grid_0.mnc/;
-
-  my @masks;
-  foreach $scan(@scans) {
-    my $name=basename($scan,'.gz');
-    do_cmd('mincresample',$mask,'-like',$output_field,
-           '-transform',"$tmpdir/align_${name}.xfm",
-           '-nearest',"$tmpdir/mask_${name}.mnc",'-clobber');
-
-    push @masks,"$tmpdir/mask_${name}.mnc";
-  }
-
-  $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
-  do_cmd('mincmath','-byte','-max',@masks,$out_roi,'-clobber');
-}
 
 sub do_cmd {
     print STDOUT "@_\n" if $verbose;

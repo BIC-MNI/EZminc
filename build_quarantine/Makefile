@@ -179,7 +179,6 @@ ${TEMP}/src/Register-$(REGISTER_VER).tar.gz :
  -O ${TEMP}/src/Register-$(REGISTER_VER).tar.gz
 
 
-
 # unpacking archives:
 
 ${TEMP}/src/ezminc :  ${TEMP}/src/ezminc-$(EZMINC_VER).tar.gz  
@@ -228,12 +227,12 @@ fltk           := $(PREFIX)/lib/FLTK-1.3/UseFLTK.cmake
 
 
 help : 
-	@echo Usage: to compile all packages \"make all\"
+	@echo Usage: to compile all packages  \"make all\"
 	@echo        to compile core packages \"make core\"
 	@echo        to compile visual programs \(Display, register\) \"make visual\"
 	@echo        important variables:
 	@echo           PREFIX - where to install packages
-	@echo           TEMP  - where to compile everything
+	@echo           TEMP   - where to compile everything
 	@echo           PARALLEL_BUILD - how to execute parallel build \( -j4 \)
 	@echo Prerequisits: realpath bison 
 

@@ -16,9 +16,11 @@
 #ifndef __MINC_HISTOGRAMS_H__
 #define __MINC_HISTOGRAMS_H__
 
+#include <minc_io_simple_volume.h>
+
 #include <valarray>
 #include <vector>
-#include <minc_io_simple_volume.h>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 
@@ -492,6 +494,76 @@ namespace minc
   //! perform simple k-means classify
   void simple_k_means( histogram<double>& hist, std::vector<double> & mu,int k_means,int maxiter);
   
+  
+  template<class T> class simple_commulative_histogram
+  {
+    protected:
+      std::vector<T> values;
+    public:
+      simple_commulative_histogram()
+      {}
+    
+      void build_histogram(const simple_volume<T> & img,
+                           const simple_volume<unsigned char> & mask)
+      {
+        values.clear();
+        for (int i=0; i<img.c_buf_size(); i++) 
+        {
+          if (mask.c_buf()[i])
+          {
+          //hist.seed(img.c_buf()[i]);
+          //cnt++;
+            values.push_back(img.c_buf()[i]);
+          }
+        }
+        std::sort(values.begin(),values.end());
+      }
+    
+      void build_histogram(const simple_volume<T> & img)
+      {
+        values.clear();
+        for (int i=0; i<img.c_buf_size(); i++) 
+        {
+          values.push_back(img.c_buf()[i]);
+        }
+        std::sort(values.begin(),values.end());
+      }
+    
+      T find_percentile(double pc) const
+      {
+      
+        double idx=pc*values.size();// /100 ?
+        int idx_f=floor(idx);
+        int idx_f2=idx_f+1;
+      
+        double frac=idx-idx_f;
+      
+        if(idx_f>=values.size())
+        {
+          idx_f=values.size()-1;
+          idx_f2=idx_f;
+          frac=0.0;
+        } else if(idx_f==(values.size()-1)) {
+          idx_f2=idx_f;
+          frac=0.0;
+        } else if(idx_f<0) {
+          idx_f=0;
+          idx_f2=idx_f;
+          frac=0.0;
+        }
+        return values[idx_f]*(1.0-frac)+values[idx_f2]*frac;
+      }
+      
+      T min(void) const
+      {
+        return values[0];
+      }
+      
+      T max(void) const
+      {
+        return values[values.size()-1];
+      }
+  };
 
 }; //minc
 #endif //__MINC_HISTOGRAMS_H__

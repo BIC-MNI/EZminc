@@ -80,10 +80,13 @@ ADD_EXECUTABLE( minc_downsample
                 minc_downsample.cpp )
 TARGET_LINK_LIBRARIES(minc_downsample minc_io)
 
+ADD_EXECUTABLE( minc_nuyl
+                minc_nuyl.cpp )
+TARGET_LINK_LIBRARIES(minc_nuyl minc_image_proc minc_io)
 
 
 INSTALL(TARGETS 
-        volume_dwt minc_downsample
+        volume_dwt minc_downsample minc_nuyl
         RUNTIME DESTINATION bin )
 
 INSTALL(PROGRAMS 
