@@ -1,24 +1,19 @@
-IF(HAVE_GSL AND ITK_FOUND)
+IF(HAVE_GSL)
 	ADD_EXECUTABLE(volume_pol
 			volume_pol.cpp )
 
 	TARGET_LINK_LIBRARIES( volume_pol 
-		minc4itk minc_image_proc)
+		minc_image_proc minc_io  gsl gslcblas)
 		
-	INSTALL(TARGETS 
-        volume_pol
-        RUNTIME DESTINATION bin )
-        
-ENDIF(HAVE_GSL AND ITK_FOUND)
-
-IF(HAVE_GSL)
-	ADD_EXECUTABLE( random_volume
+	
+  ADD_EXECUTABLE( random_volume
 									random_volume.cpp )
 
 	TARGET_LINK_LIBRARIES(random_volume minc_io  gsl gslcblas)
 
 	INSTALL(TARGETS 
         random_volume
+        volume_pol
         RUNTIME DESTINATION bin )
 ENDIF(HAVE_GSL)
 

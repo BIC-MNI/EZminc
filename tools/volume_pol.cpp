@@ -1,6 +1,3 @@
-#include "minc_wrappers.h"
-#include "minc_helpers.h"
-
 #include <iostream>
 #include <fstream>
 #include <getopt.h>
@@ -11,115 +8,21 @@
 #include <unistd.h>
 //#include "data_proc.h"
 
-#include "histograms.h"
+#include <minc_histograms.h>
+#include <minc_io_simple_volume.h>
+#include <minc_1_simple.h>
+#include <minc_1_simple_rw.h>
+
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
-
-namespace minc
-{
-	template < class T > void build_histogram(histogram< T > &hist,minc::image3d::Pointer img)
-	{
-	
-		//1. get min, max
-		voxel_type min, max;
-		int count = get_image_limits(img,min,max);
-	
-		hist.clear();
-		hist.set_limits(min, max);
-		minc::image3d_iterator it(img, img->GetLargestPossibleRegion ());
-    int cnt=0;
-		//2. populate histogram
-		for (it.GoToBegin (); !it.IsAtEnd (); ++it) {
-			T v=it.Value();
-			if (fabs(v) > 1e20) //remove minc undefined voxels
-				continue;
-			hist[v]++;
-      cnt++;
-		}
-		hist /= cnt;
-	}
-	
-	template < class T > void build_histogram (histogram < T > &hist,
-												minc::image3d::Pointer img,
-												minc::mask3d::Pointer msk)
-	{
-		//1. get min, max
-		minc::image3d_iterator it (img, img->GetLargestPossibleRegion ());
-		minc::mask3d_const_iterator it3 (msk, msk->GetLargestPossibleRegion ());
-		int count = 0;
-	
-		T 	min = std::numeric_limits < T >::max (),
-				max = -std::numeric_limits < T >::max ();
-		it3.GoToBegin();
-		for (it.GoToBegin (); !it.IsAtEnd (); ++it) {
-			T v=it.Value();
-			if (fabs(v) > 1e20)
-				continue;
-			if (it3.Value()) {
-				count++;
-				if (v < min)
-					min = v;
-				if (v > max)
-					max = v;
-			}
-			++it3;
-		}
-		hist.clear ();
-		hist.set_limits (min, max);
-		//2. populate histogram
-		it3.GoToBegin ();
-		for (it.GoToBegin (); !it.IsAtEnd (); ++it) {
-			T v=it.Value ();
-			if (fabs(v) > 1e20)
-				continue;
-	
-			if (it3.Value ())
-				hist[v]++;
-			++it3;
-		}
-		hist /= count;
-	}
-	
-	template < class T > void build_joint_histogram (joint_histogram < T > &hist,
-															minc::image3d::Pointer img1,
-															minc::image3d::Pointer img2)
-	{
-		if(img1->GetLargestPossibleRegion ().GetSize()!=
-						img2->GetLargestPossibleRegion ().GetSize())
-			REPORT_ERROR("Volume dimensions mismatch");
-	
-		//1. get min, max
-		minc::image3d_iterator it1 (img1, img1->GetLargestPossibleRegion ());
-		minc::image3d_iterator it2 (img2, img2->GetLargestPossibleRegion ());
-	
-		//    value_type min1,min2,max1,max2;
-	
-		//    int count = get_image_limits(img1,min1,max1);
-		//    get_image_limits(img2,min2,max2);
-		int count=0;
-	
-		//hist.set_limits(min1,max1);
-		//hist.set_joint_limits(min2,max2);
-		hist=T(0);
-	
-		//2. populate histogram
-		for (it1.GoToBegin (),it2.GoToBegin(); !it1.IsAtEnd (); ++it1,++it2) {
-			T v1,v2;
-			if ((v1=it1.Value ()) > 1e10 || (v2=it2.Value())>1.e10)
-				continue;
-			hist[v1]++;
-			hist(v1,v2)++;
-			count++;
-		}
-		hist.normalize(count);
-	}
-};
 
 void print_expression (std::ostream & out, const std::vector < double >&coeff2,
                   float min2, float max2,bool noclamp=false)
 {
 	int order = coeff2.size ();
-	out << "clamp(";
+  if(!noclamp)
+    out << "clamp(";
+  
   switch(order)
   {
     case 1:
@@ -136,7 +39,10 @@ void print_expression (std::ostream & out, const std::vector < double >&coeff2,
         out << "+";
     }
   }
-	out << "," << min2 << "," << (noclamp?max2*1000:max2) << ")" << std::endl;
+  if(!noclamp)
+    out << "," << min2 << "," << (noclamp?max2*1000:max2) << ")";
+  out << std::endl;
+  
 	out.flush();
 }
 
@@ -168,13 +74,8 @@ typedef double histogram_type;
 
 int main (int argc, char **argv)
 {
-	histogram<histogram_type>
-    hist1(buckets),
-    hist2(buckets),
-    hist3(buckets),
-    hist4(buckets);
     
-	std::vector<histogram<histogram_type> >  joint(buckets, histogram < histogram_type >(buckets));
+  
 	int verbose = 0;
 	int clobber = 0;
 	int histogram = 1;
@@ -271,24 +172,25 @@ int main (int argc, char **argv)
 
 	try
 	{
-		image3d::Pointer img1   (image3d::New()), img2(image3d::New());
-		mask3d::Pointer  src_msk(mask3d::New()),  trg_msk(mask3d::New());
-		if (order <= 0)
+    minc::histogram<histogram_type>  hist1(buckets),hist2(buckets);
+        
+    simple_volume<double> img1,img2;
+    minc_byte_volume src_msk,trg_msk;
+
+		
+    if (order <= 0)
 			order = 1;
 
-    load_minc(infile.c_str (), img1);
+    minc_1_reader rdr1;
+    rdr1.open(infile.c_str());
+    load_simple_volume<double>(rdr1,img1);
     
-		image3d::SizeType s1 = img1->GetLargestPossibleRegion().GetSize ();
-		if(verbose)
-			cout<<"Image "<<s1[0]<<" x "<<s1[1]<< " x "<<s1[2]<<endl;
 
-		load_minc(templatefile.c_str (), img2);
+    minc_1_reader rdr2;
+    rdr2.open(templatefile.c_str());
+    load_simple_volume<double>(rdr2,img2);
 
-    image3d::SizeType s2 = img2->GetLargestPossibleRegion().GetSize ();
-		if(verbose)
-			cout<<"Template "<<s2[0]<<" x "<<s2[1]<< " x "<<s2[2]<<endl;
-
-		if(!joint_hist_file.empty() && s1!=s2)
+		if(!joint_hist_file.empty() && img1.size()!=img2.size())
 		{
 			cerr<<"For Joint Histogram Images should have the same dimensions, use mincresample!"<<endl;
 			return 1;
@@ -296,40 +198,44 @@ int main (int argc, char **argv)
 
 		if (!source_mask_file.empty())
 		{
-  		load_minc(source_mask_file.c_str (), src_msk);
-			mask3d::SizeType ms = src_msk->GetLargestPossibleRegion().GetSize ();
-			if (ms != s1)
-			{
-				cerr << "Mask is wrong size, use mincresample!" << endl;
-				return 1;
-			}
-		}
+      minc_byte_volume src_mask;
+      minc_1_reader rdr;
+      if(verbose) std::cout<<"loading mask:"<<source_mask_file.c_str()<<std::endl;
+      
+      rdr.open(source_mask_file.c_str());
+      load_simple_volume(rdr,src_msk);
+      
+      if(src_msk.size()!=img1.size())
+        REPORT_ERROR("Source mask size mismatch");
+    }
     
 		if (!target_mask_file.empty())
 		{
-  		load_minc(target_mask_file.c_str (), trg_msk);
-			mask3d::SizeType ms  = trg_msk->GetLargestPossibleRegion().GetSize ();
-			if (ms != s2)
-			{
-				cerr << "Mask is wrong size, use mincresample!" << endl;
-				return 1;
-			}
+      minc_byte_volume src_mask;
+      minc_1_reader rdr;
+      if(verbose) std::cout<<"loading mask:"<<target_mask_file.c_str()<<std::endl;
+      
+      rdr.open(target_mask_file.c_str());
+      load_simple_volume(rdr,trg_msk);
+      
+      if(trg_msk.size()!=img2.size())
+        REPORT_ERROR("Target mask size mismatch");
 		}
 
 		MNK_Gauss_Polinomial_Mod pol(order);
 
 		if (!source_mask_file.empty())
-			build_histogram<histogram_type>(hist1, img1, src_msk);
+      build_histogram(hist1,img1,src_msk);
 		else
-			build_histogram<histogram_type>(hist1, img1);
+      build_histogram(hist1,img1);
 
 		if (verbose)
 			cout << "Image min=" << hist1.min () << " max=" << hist1.max() << endl;
 
 		if (!target_mask_file.empty())
-			build_histogram<histogram_type>(hist2, img2, trg_msk);
+      build_histogram(hist2,img2,trg_msk);
 		else
-			build_histogram<histogram_type>(hist2, img2);
+      build_histogram(hist2,img2);
 
 		if (verbose)
 			cout << "Template min=" << hist2.min() << " max=" << hist2.max() << endl;
@@ -426,9 +332,10 @@ int main (int argc, char **argv)
 				return 1;
 			}
 
-			joint_histogram<histogram_type> j_hist(buckets,hist1.min(),hist1.max());
+			minc::joint_histogram<histogram_type> j_hist(buckets,hist1.min(),hist1.max());
 			j_hist.set_joint_limits(hist2.min(),hist2.max());
-			build_joint_histogram(j_hist,img1,img2);
+      
+      build_joint_histogram<double>(j_hist,img1,img2);
 
 			ofstream out_joint(joint_hist_file.c_str());
 			if(out_joint.bad())
