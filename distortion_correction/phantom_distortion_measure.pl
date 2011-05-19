@@ -260,34 +260,8 @@ foreach $scan(@scans) {
   }
 }
 
-
-#create ROI
-if($out_roi)
+unless( $only_roi )
 {
-  my $output_field=$output_xfm;
-  $output_field=~s/.xfm$/_grid_0.mnc/;
-
-  my @masks;
-  foreach $scan(@scans) {
-    my $name=basename($scan,'.gz');
-    if($dilate_roi>0)
-    {
-      do_cmd('itk_morph','--exp',"D[${dilate_roi}]",$mask,"$tmpdir/mask.mnc");
-      $mask="$tmpdir/mask.mnc";
-    }
-    do_cmd('mincresample',$mask,'-like',$output_field,
-           '-transform',"$tmpdir/align_${name}.xfm",
-           '-nearest',"$tmpdir/mask_${name}.mnc",'-clobber');
-
-    push @masks,"$tmpdir/mask_${name}.mnc";
-  }
-
-  $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
-  do_cmd('mincmath','-byte','-max',@masks,$out_roi,'-clobber');
-}
-
-exit 0 if $only_roi;
-
 # calculate parameters
 @args=('phantomfit.pl',@args,'-order',$order,'-clobber');
 push @args,'-cylindric'        if $cylindric;
@@ -306,6 +280,35 @@ push @args,'-weight',1;
 push @args,'-stiffness',0;
 
 do_cmd(@args);
+}
+
+#create ROI
+if($out_roi)
+{
+  my $output_field=$output_xfm;
+  $output_field=~s/.xfm$/_grid_0.mnc/;
+
+  my @masks;
+  foreach $scan(@scans) {
+    my $name=basename($scan,'.gz');
+    if($dilate_roi>0)
+    {
+      do_cmd('itk_morph','--exp',"D[${dilate_roi}]",$mask,"$tmpdir/mask.mnc",'--clobber');
+      $mask="$tmpdir/mask.mnc";
+    }
+    do_cmd('mincresample',$mask,'-like',$output_field,
+           '-transform',"$tmpdir/align_${name}.xfm",
+           '-nearest',"$tmpdir/mask_${name}.mnc",'-clobber');
+
+    push @masks,"$tmpdir/mask_${name}.mnc";
+  }
+
+  $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
+  do_cmd('mincmath','-byte','-max',@masks,$out_roi,'-clobber');
+}
+
+#exit 0 if $only_roi;
+
 
 
 sub do_cmd {

@@ -19,7 +19,7 @@ CMAKE := $(PREFIX)/bin/cmake
 #package versions
 NETCDF_VER       := 4.0.1
 HDF5_VER         := 1.8.6
-MINC_VER         := 2.1.00
+MINC_VER         := 9e69692
 BICPL_VER        := 1.4.6
 EBTKS_VER        := 1.6.4
 OOBICPL_VER      := 0.4.4
@@ -48,7 +48,7 @@ DISPLAY_VER      := 1.5.0
 archives := \
 ${TEMP}/src/netcdf-$(NETCDF_VER).tar.gz \
 ${TEMP}/src/hdf5-$(HDF5_VER).tar.gz \
-${TEMP}/src/minc-$(MINC_VER).tar.gz \
+${TEMP}/src/andrewjanke-minc-$(MINC_VER).tar.gz \
 ${TEMP}/src/bicpl-$(BICPL_VER).tar.gz \
 ${TEMP}/src/ebtks-$(EBTKS_VER).tar.gz \
 ${TEMP}/src/oobicpl-$(OOBICPL_VER).tar.gz \
@@ -82,9 +82,9 @@ ${TEMP}/src/hdf5-$(HDF5_VER).tar.gz :
 	$(WGET) http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-$(HDF5_VER).tar.gz \
  -O ${TEMP}/src/hdf5-$(HDF5_VER).tar.gz
 
-${TEMP}/src/minc-$(MINC_VER).tar.gz : 
-	$(WGET) http://packages.bic.mni.mcgill.ca/tgz/minc-$(MINC_VER).tar.gz \
- -O ${TEMP}/src/minc-$(MINC_VER).tar.gz
+${TEMP}/src/andrewjanke-minc-$(MINC_VER).tar.gz : 
+	$(WGET) --no-check-certificate https://github.com/andrewjanke/minc/tarball/9e69692c15a1644457144d18c37d55c31f2fe107 \
+	-O ${TEMP}/src/andrewjanke-minc-$(MINC_VER).tar.gz
 
 ${TEMP}/src/bicpl-$(BICPL_VER).tar.gz : 
 	$(WGET)  http://packages.bic.mni.mcgill.ca/tgz/bicpl-$(BICPL_VER).tar.gz  \
@@ -323,8 +323,9 @@ $(gsl) : ${TEMP}/src/gsl-$(GSL_VER)
 	make $(PARALLEL_BUILD) && \
 	make install
 
-$(minc) : ${TEMP}/src/minc-$(MINC_VER) $(netcdf) $(hdf5) $(getopt_tabular) $(mni_perllib)
-	cd ${TEMP}/src/minc-$(MINC_VER) && \
+$(minc) : ${TEMP}/src/andrewjanke-minc-$(MINC_VER) $(netcdf) $(hdf5) $(getopt_tabular) $(mni_perllib)
+	cd ${TEMP}/src/andrewjanke-minc-$(MINC_VER) && \
+	./autogen.sh && \
 	./configure --prefix=$(PREFIX) --with-build-path=$(PREFIX)  --disable-shared && make clean  && \
 	make $(PARALLEL_BUILD) && \
 	make install 
@@ -388,13 +389,13 @@ $(mni_autoreg) : ${TEMP}/src/mni_autoreg-$(MNI_AUTOREG_VER) $(minc)
 
 $(mni_perllib) : ${TEMP}/src/mni_perllib-$(MNI_PERLLIB_VER) 
 	cd ${TEMP}/src/mni_perllib-$(MNI_PERLLIB_VER) && \
-	echo $(PREFIX)>yes && \
+	echo -e $(PREFIX) \\n\\n\\n > yes && \
 	perl ./Makefile.PL SITEPREFIX=$(PREFIX) INSTALLDIRS=site INSTALLSITELIB=$(PREFIX)/perl INSTALLSITEBIN=$(PREFIX)/bin \
-		INSTALLSITEMAN1DIR=$(PREFIX) INSTALLSITEMAN3DIR=$(PREFIX) && < yes  && \
+		INSTALLSITEMAN1DIR=$(PREFIX) INSTALLSITEMAN3DIR=$(PREFIX) < yes  && \
 	make && \
-	make install
+	make install && \
 	touch $(mni_perllib)
-  
+
 $(getopt_tabular) : ${TEMP}/src/Getopt-Tabular-$(GETOPT_TABULAR_VER)
 	cd ${TEMP}/src/Getopt-Tabular-$(GETOPT_TABULAR_VER) && \
 	perl ./Makefile.PL SITEPREFIX=$(PREFIX) INSTALLDIRS=site INSTALLSITELIB=$(PREFIX)/perl INSTALLSITEBIN=$(PREFIX)/bin \

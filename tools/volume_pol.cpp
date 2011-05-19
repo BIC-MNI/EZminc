@@ -2,7 +2,6 @@
 #include <fstream>
 #include <getopt.h>
 #include <vector>
-#include <valarray>
 #include <math.h>
 #include <limits>
 #include <unistd.h>
@@ -15,6 +14,7 @@
 
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
+#include <time_stamp.h>    // for creating minc style history entry
 
 void print_expression (std::ostream & out, const std::vector < double >&coeff2,
                   float min2, float max2,bool noclamp=false)
@@ -53,7 +53,7 @@ const int buckets = 100;
 
 void show_usage(void)
 {
-	std::cerr << "Usage: volume_pol <input> <template> " << endl
+	std::cerr << "Usage: volume_pol <input> <template> [output_file]" << endl
 	<< "[--verbose] be verbose" << endl
 	<< "[--quiet] be quiet " << endl
 	<< "[--clobber] clobber the output files" << endl
@@ -81,11 +81,14 @@ int main (int argc, char **argv)
 	int histogram = 1;
   int noclamp=0;
   histogram_type map_min=0,map_max=0;
-	bool use_mask = false, make_output_file = false;
+	bool use_mask = false;
 	int  order = 4;
 	std::string source_mask_file,target_mask_file;
 	std::string hist_file, joint_hist_file;
 	std::string outfile, infile, templatefile, exp_file;
+  
+  char *_history = time_stamp(argc, argv); 
+  std::string history=_history;
   
 	static struct option long_options[] =
 	  {
@@ -167,8 +170,26 @@ int main (int argc, char **argv)
 	if ((argc - optind) > 2)
 	{
 		outfile = argv[optind + 2];
-		make_output_file = true;
-	}
+    
+    if (!clobber && !access (outfile.c_str (), F_OK))
+    {
+      cerr << outfile.c_str () << " Exists!" << endl;
+      return 1;
+    }
+  }
+  
+  if (!exp_file.empty() && !clobber && !access (exp_file.c_str (), F_OK))
+  {
+    cerr << exp_file.c_str () << " Exists!" << endl;
+    return 1;
+  }
+  
+  if(!joint_hist_file.empty() && !clobber && !access(joint_hist_file.c_str(),F_OK))
+  {
+    cerr<<joint_hist_file.c_str()<<" Exists!"<<endl;
+    return 1;
+  }
+  
 
 	try
 	{
@@ -288,11 +309,6 @@ int main (int argc, char **argv)
 		}
 		else
 		{
-			if (!clobber && !access (exp_file.c_str (), F_OK))
-			{
-				cerr << exp_file.c_str () << " Exists!" << endl;
-				return 1;
-			}
 			if (verbose)
 				cout << "Writing output to " << exp_file.c_str () << endl;
 			ofstream
@@ -326,12 +342,6 @@ int main (int argc, char **argv)
 
 		if(!joint_hist_file.empty())
 		{
-			if(!clobber && !access(joint_hist_file.c_str(),F_OK))
-			{
-				cerr<<joint_hist_file.c_str()<<" Exists!"<<endl;
-				return 1;
-			}
-
 			minc::joint_histogram<histogram_type> j_hist(buckets,hist1.min(),hist1.max());
 			j_hist.set_joint_limits(hist2.min(),hist2.max());
       
@@ -344,8 +354,30 @@ int main (int argc, char **argv)
 				return 1;
 			}
 			j_hist.save(out_joint);
-
 		}
+    
+    if(!outfile.empty())
+    {
+      //convert values 
+      for(int i=0;i<img1.c_buf_size();i++)
+      {
+        if(noclamp)
+          img1.c_buf()[i]=pol.fit(coeff2, img1.c_buf()[i]);
+        else
+          img1.c_buf()[i]=pol.fit(coeff2, img1.c_buf()[i], hist2.min(), hist2.max());
+      }
+      
+      if (verbose)
+        cout << "Writing output to " << outfile.c_str () << endl;
+      
+      minc_1_writer wrt;
+    
+      wrt.open(outfile.c_str(),rdr1);
+      wrt.append_history(history.c_str());
+    
+      save_simple_volume<double>(wrt,img1);
+      
+    }
 	}
   
 	catch (const minc::generic_error & err)
