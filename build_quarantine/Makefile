@@ -83,19 +83,52 @@
 # =============================================================================
 #
 
-.DEFAULT_GOAL = minc-only
+.DEFAULT_GOAL = help
 
 .PHONY : create_output_dirs output_dirs clean list models \
          minc-only minc-full minc-with-itk ezminc  \
          bicpl ebtks conglomerate n3 mincmorph mincblob oobicpl ray_trace \
          mni-models_average305-lin mni-models_colin27-lin mni-models_icbm152-lin \
-         mni-models_icbm152-nl-6gen mni-models_icbm152-nl-40gen mni_autoreg_model
+         mni-models_icbm152-nl-6gen mni-models_icbm152-nl-40gen mni_autoreg_model \
+         help
+
+help :
+	@echo      This script is supposed to download one or more packages, and the build em.
+	@echo  Now since one may not always want to compile the kitchen sink, Vlad has
+	@echo  conveniently provided an assortment of tagets which will permit you to
+	@echo  build various subsets of the totality.  Here are some options\:
+	@echo 
+	@echo  \(a\) make minc-full
+	@echo      -\> this makes a bunch of stuff \(but not ALL, ... not really\)
+	@echo      -\> for those of you who don\'t like reading Makefiles, \"minc-full\"
+	@echo         includes: netcdf, hdf5, minc,
+	@echo                   bicpl, N3, conglomerate, glim_image, mni_autoreg,
+	@echo                   mincblob, mni_perllib, ray_trace, mincbet
+	@echo 
+	@echo  \(b\) make minc-only
+	@echo      -\> just makes minc and dependencies \(netcdf, hdf5\)
+	@echo 
+	@echo  \(c\) make minc-with-itk
+	@echo      -\> just like it sounds: minc + itk + ezminc
+	@echo       
+	@echo  \(d\) make visual
+	@echo      -\> make the visualization programs: register + Display 
+	@echo      -\> I suspect that these have been segregated from the \"all\" build
+	@echo         since these programs are trickier to build ... i.e. more 
+	@echo         dependencies, therefore more to go wrong.
+	@echo 
+	@echo EXAMPLE\:
+	@echo make minc-only INSTALL_DIR=\`realpath install_dir\`  BUILD_DIR=\`realpath build_dir\` PARALLEL_BUILD=-j2
+
 
 
 # some important environment variables
-BUILD_DIR   ?= $(shell pwd)          # default to current dir
-INSTALL_DIR ?= $(shell pwd)          # default to current dir
-PARALLEL_BUILD ?= -j1                # specify number of parallel tasks in building 
+# default to current dir
+BUILD_DIR?=$(shell pwd)
+# default to current dir
+INSTALL_DIR?=$(shell pwd)
+# specify number of parallel tasks in building 
+PARALLEL_BUILD?=-j1
 #                                      (number of cores you can use for compiling)
 WGET := wget -c                      # wget command
 CMAKE := $(INSTALL_DIR)/bin/cmake    # where to find CMAKE (allow for over-ride)
@@ -135,9 +168,9 @@ GLIMIMAGE_VER    := 1.2
 ITK_VER          := 3.20.0
 FFTW_VER         := 3.2.2
 CMAKE_VER        := 2.8.4
-GSL_VER          := 1.14
+GSL_VER          := 1.15
 GETOPT_TABULAR_VER := 0.3
-EZMINC_VER       := r83
+EZMINC_VER       := 92519b5
 NETPBM_VER       := 10.35.74
 VTK_VER          := 5.6.1
 FLTK_VER         := 1.3.x-r7725
@@ -180,7 +213,7 @@ $(BUILD_DIR)/src/fftw-$(FFTW_VER).tar.gz \
 $(BUILD_DIR)/src/cmake-$(CMAKE_VER).tar.gz \
 $(BUILD_DIR)/src/gsl-$(GSL_VER).tar.gz \
 $(BUILD_DIR)/src/Getopt-Tabular-$(GETOPT_TABULAR_VER).tar.gz \
-$(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz  \
+$(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER).tar.gz  \
 $(BUILD_DIR)/src/netpbm-$(NETPBM_VER).tar.gz \
 $(BUILD_DIR)/src/Register-$(REGISTER_VER).tar.gz \
 $(BUILD_DIR)/src/Display-$(DISPLAY_VER).tar.gz \
@@ -290,7 +323,7 @@ ray_trace : $(ray_trace)
 
 getopt_tabular : $(getopt_tabular)
 
-$(warning  Start mni_perllib processing ...)mni_perllib : $(mni_perllib)
+mni_perllib : $(mni_perllib)
 
 visual : $(output_dirs) $(register) $(Display)
 
@@ -306,9 +339,6 @@ mni-models_icbm152-lin : $(mni-models_icbm152-lin)
 mni-models_icbm152-nl-6gen : $(mni-models_icbm152-nl-6gen)
 mni-models_icbm152-nl-40gen : $(mni-models_icbm152-nl-40gen)
 mni_autoreg_model : $(mni_autoreg_model)
-
-
-
 
 
 # *****************************************************************************
@@ -336,8 +366,7 @@ source_dirs := $(archives:.tar.gz=)
 # ... are used to generate the dependency names (one for each target)
 # ... In this case, we append ".tar.gz" to each source dir name ... which really
 # ... should equal the value in $(archives), yes?
-$(warning Evaluating .tar.gz rule ...)$(source_dirs) : % : %.tar.gz
-	$(warning ... about to cd to $(BUILD_DIR)/src and then do a tar extract of $< ... )
+$(source_dirs) : % : %.tar.gz
 	$(shell echo cd $(BUILD_DIR)/src && echo tar zxf  $< )
 	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
@@ -392,7 +421,7 @@ $(BUILD_DIR)/src/mni_autoreg-$(MNI_AUTOREG_VER).tar.gz :
 	$(WGET)  http://packages.bic.mni.mcgill.ca/tgz/mni_autoreg-$(MNI_AUTOREG_VER).tar.gz \
  -O $(BUILD_DIR)/src/mni_autoreg-$(MNI_AUTOREG_VER).tar.gz
 
-$(warning Evaluating mni_perllib wget rule ...)$(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER).tar.gz :
+$(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER).tar.gz :
 	$(warning ... IN the wget command code $(WGET)) \
 	$(WGET)  http://packages.bic.mni.mcgill.ca/tgz/mni_perllib-$(MNI_PERLLIB_VER).tar.gz \
  -O $(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER).tar.gz
@@ -429,7 +458,7 @@ $(BUILD_DIR)/src/fftw-$(FFTW_VER).tar.gz :
 	$(WGET)  http://www.fftw.org/fftw-$(FFTW_VER).tar.gz \
  -O $(BUILD_DIR)/src/fftw-$(FFTW_VER).tar.gz
 
-$(warning Evaluating cmake wget rule ...)$(BUILD_DIR)/src/cmake-$(CMAKE_VER).tar.gz :
+$(BUILD_DIR)/src/cmake-$(CMAKE_VER).tar.gz :
 	$(warning In the WGET recipe for cmake ... archives is $(archives))
 	$(warning In the WGET recipe for cmake ... source_dirs is $(source_dirs))
 	$(WGET)  http://www.cmake.org/files/v2.8/cmake-$(CMAKE_VER).tar.gz \
@@ -444,9 +473,9 @@ $(BUILD_DIR)/src/Getopt-Tabular-$(GETOPT_TABULAR_VER).tar.gz :
 	$(WGET) http://search.cpan.org/CPAN/authors/id/G/GW/GWARD/Getopt-Tabular-$(GETOPT_TABULAR_VER).tar.gz \
  -O $(BUILD_DIR)/src/Getopt-Tabular-$(GETOPT_TABULAR_VER).tar.gz
 
-$(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz : 
-	$(WGET) http://www.bic.mni.mcgill.ca/~vfonov/software/ezminc-$(EZMINC_VER).tar.gz \
- -O $(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz
+$(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER).tar.gz : 
+	$(WGET) --no-check-certificate https://github.com/vfonov/EZminc/tarball/92519b508742e8a37a82 \
+ -O $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER).tar.gz
 
 $(BUILD_DIR)/src/netpbm-$(NETPBM_VER).tar.gz : 
 	$(WGET) 'http://downloads.sourceforge.net/project/netpbm/super_stable/$(NETPBM_VER)/netpbm-$(NETPBM_VER).tgz?use_mirror=cdnetworks-us-1' \
@@ -536,7 +565,7 @@ $(fftw) : $(BUILD_DIR)/src/fftw-$(FFTW_VER)
 # ====================================================================================================================
 # existence of the package build directory is the dependency ...
 # ... if it's not there, then go off and WGET and unzip/untar
-$(warning Execute recipe? Target: $(cmake) Dep:$(BUILD_DIR)/src/cmake-$(CMAKE_VER))$(cmake) : $(BUILD_DIR)/src/cmake-$(CMAKE_VER)
+$(cmake) : $(BUILD_DIR)/src/cmake-$(CMAKE_VER)
 	$(warning In CMAKE recipe ... TGT is $(cmake) ... DEP is $(BUILD_DIR)/src/cmake-$(CMAKE_VER))
 	cd $(BUILD_DIR)/src/cmake-$(CMAKE_VER) && \
 	./configure --prefix=$(INSTALL_DIR) && \
@@ -619,7 +648,7 @@ $(mni_autoreg) : $(BUILD_DIR)/src/mni_autoreg-$(MNI_AUTOREG_VER) $(minc)
 	make install
 
 
-$(warning Execute recipe? Target: $(mni_perllib) Dep:$(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER))$(mni_perllib) : $(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER) 
+$(mni_perllib) : $(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER) 
 	$(warning In perllib recipe ...)
 	ls -l
 	cd $(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER) && \
@@ -801,7 +830,7 @@ $(vtk) : $(BUILD_DIR)/src/VTK
 	make $(PARALLEL_BUILD) && make install && \
 	touch $(vtk)
 
-$(ezminc) : $(BUILD_DIR)/src/ezminc $(minc) $(itk) $(cmake) $(fftw) $(gsl)
+$(ezminc) : $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER) $(minc) $(itk) $(cmake) $(fftw) $(gsl)
 	cd $(BUILD_DIR)/src && \
 	rm -rf   build_ezminc && \
 	mkdir -p build_ezminc && \
@@ -821,11 +850,10 @@ $(ezminc) : $(BUILD_DIR)/src/ezminc $(minc) $(itk) $(cmake) $(fftw) $(gsl)
       -D BUILD_DISTORTION_CORRECTION:BOOL=ON \
       -D BUILD_MINCNLM:BOOL=ON \
       -D BUILD_TOOLS:BOOL=ON \
-      $(BUILD_DIR)/src/ezminc && \
+      $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER) && \
 	make $(PARALLEL_BUILD) && \
 	make install && \
 	touch $(ezminc)
-
 
 # ensure that the output directories (build and install) exist
 ${output_dirs} : create_output_dirs 
