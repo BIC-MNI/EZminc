@@ -80,8 +80,13 @@ ADD_EXECUTABLE( minc_nuyl
 TARGET_LINK_LIBRARIES(minc_nuyl minc_image_proc minc_io)
 
 
+ADD_EXECUTABLE( minc_rank
+                minc_rank.cpp )
+TARGET_LINK_LIBRARIES(minc_rank minc_image_proc minc_io)
+
+
 INSTALL(TARGETS 
-        volume_dwt minc_downsample minc_nuyl
+        volume_dwt minc_downsample minc_nuyl minc_rank
         RUNTIME DESTINATION bin )
 
 INSTALL(PROGRAMS 

@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 namespace minc
 {
@@ -498,7 +499,9 @@ namespace minc
   template<class T> class simple_commulative_histogram
   {
     protected:
-      std::vector<T> values;
+      typedef typename std::vector<T> vector;
+      typedef typename vector::const_iterator const_iterator;
+      vector values;
     public:
       simple_commulative_histogram()
       {}
@@ -562,6 +565,19 @@ namespace minc
       T max(void) const
       {
         return values[values.size()-1];
+      }
+      
+      double rank(const T& val) const
+      {
+        if(val<=values[0]) return 0.0;
+        
+        const_iterator it=std::lower_bound (values.begin(), values.end(), val);
+        if(it!=values.end())
+        {
+          return (it-values.begin())*100.0/values.size();
+        } else {
+          return 100.0;
+        }
       }
   };
 
