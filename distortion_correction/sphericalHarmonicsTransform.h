@@ -36,7 +36,7 @@
 namespace minc
 {
 
-  typedef float basis_type;
+  typedef double basis_type;
   #ifdef _DEBUG
     typedef __gnu_debug::vector <basis_type> basis_vector;
   #else
@@ -48,13 +48,14 @@ namespace minc
   {
     public:
       double _scaling;
-      SphericalFunctions():_scaling(100.0)
+      SphericalFunctions():_scaling(1000.0)
       {}
     
     double operator()(int n, tag_point p) const;
     static unsigned int parameters_no(int order);
     static double scale(int n,double);
     void generate_basis(basis_vector &basis, int order, tag_point p);
+    void generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff);
   };
   
   class CylindricalFunctions
@@ -314,7 +315,7 @@ namespace minc
         itkExceptionMacro( << "Trying to use unallocated cache element" );
       for(int i=0;i<_param_no;i++)
       {
-        //TODO finish this
+
         double bs=bas[i];
         pnt[0]+=bs*_parameters[i];
         pnt[1]+=bs*_parameters[i+_param_no];
@@ -516,6 +517,7 @@ namespace minc
     minc::image3d::IndexType idx;
     _basis_cache->TransformPhysicalPointToIndex(point, idx);
     double rp=sqrt(point[0]*point[0]+point[1]*point[1]);
+    
     if(!_cache_on)
     {
       CylindricalFunctions sph;

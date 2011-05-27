@@ -17,6 +17,15 @@ TARGET_LINK_LIBRARIES(fit_harmonics_grids
   minc_io 
   spherical_harmonics gsl gslcblas)
   
+ADD_EXECUTABLE( fit_harmonics_grids_regularize
+                fit_harmonics_grids_regularize.cpp )
+                
+TARGET_LINK_LIBRARIES(fit_harmonics_grids_regularize 
+  minc4itk
+  minc_io 
+  spherical_harmonics gsl gslcblas)
+  
+  
 ADD_EXECUTABLE( c_fit_harmonics_grids
                 c_fit_harmonics_grids.cpp )
                 
@@ -35,6 +44,17 @@ TARGET_LINK_LIBRARIES( param2grid
   minc4itk
   minc_io 
   spherical_harmonics gsl gslcblas)   
+
+ADD_EXECUTABLE( sph_par2grid
+                sph_par2grid.cpp )
+                
+                
+TARGET_LINK_LIBRARIES( sph_par2grid 
+  minc4itk
+  minc_io 
+  spherical_harmonics gsl gslcblas)   
+
+
 
 ADD_EXECUTABLE( c_param2grid
                 c_param2grid.cpp )

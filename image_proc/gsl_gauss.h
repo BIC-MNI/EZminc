@@ -238,6 +238,16 @@ namespace minc
       return 0;
     }
     
+    gsl_double_matrix& alpha(void)
+    {
+      return _alpha;
+    }
+    
+    gsl_double_vector& beta(void)
+    {
+      return _beta;
+    }
+    
   };
 
 	template< class T > class Polinom

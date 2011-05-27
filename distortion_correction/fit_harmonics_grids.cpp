@@ -131,14 +131,16 @@ class Tag_fit
     }
     
     Tag_fit(int order_, double keep_, double max_dev_=5.0, int max_iter=100,bool verbose_=false,bool ll=false):
-      order(order_), keep(keep_), verbose(verbose_), max_dev(max_dev_),_max_iterations(max_iter),
-      max_distance(0), sd(0), coeff(3),limit_linear(ll)
+           order(order_), 
+           keep(keep_), 
+           verbose(verbose_), 
+           max_dev(max_dev_),
+           _max_iterations(max_iter),
+           max_distance(0), 
+           sd(0), 
+           coeff(3),
+           limit_linear(ll)
     {
-      //fun_x._scaling=scale;
-      /*
-      fun_y._scale=scale;
-      fun_z._scale=scale;
-      */
     }
     
     
@@ -166,10 +168,12 @@ class Tag_fit
       fittings::const_iterator bx=basis_x.begin();
       fittings::const_iterator by=basis_y.begin();
       fittings::const_iterator bz=basis_z.begin();
+      
       for(; i!=ideal.end(); i++, j++, m++, bx++, by++, bz++)
       {
         if(*m) continue;
           //this is a quick hack
+        
         if(limit_linear)
         {
           pol_x.accumulate(&(*bx)[3], (*j)[0]-(*i)[0]);
@@ -255,9 +259,11 @@ class Tag_fit
       minc::MNK_Gauss < tag_point, basis_functions_x> pol_x(order);
       minc::MNK_Gauss < tag_point, basis_functions_y> pol_y(order);
       minc::MNK_Gauss < tag_point, basis_functions_z> pol_z(order);
+      
       distances.resize(ideal.size());
       tag_points::const_iterator j=measured.begin();
       tag_points::const_iterator i=ideal.begin();
+      
       fittings::const_iterator bx=basis_x.begin();
       fittings::const_iterator by=basis_y.begin();
       fittings::const_iterator bz=basis_z.begin();
@@ -284,11 +290,7 @@ class Tag_fit
       sd=evaluate_distance(keep);
       if(verbose)
         cout<<sd<<":"<<max_distance<<"\t";
-      /*if( fabs(_last_distance-sd)>_distance_epsilon) 
-      {
-        _last_distance=sd;
-        return true;
-      }*/
+
       return true;
     }
     
@@ -450,8 +452,10 @@ int main (int argc, char **argv)
 		}
     
     std::ofstream cf(output.c_str());
+    
     if(!cf.good())
       REPORT_ERROR("Can't open file for writing!");
+    
     save_coeff(cf,fit.coeff[0]);
     save_coeff(cf,fit.coeff[1]);
     save_coeff(cf,fit.coeff[2]);

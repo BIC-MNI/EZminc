@@ -105,7 +105,7 @@ namespace minc
     basis[2]=p[1];
     cosphi=1.0;
     sinphi=0.0;
-    rr=r*r*_scaling;
+    rr=r*r;//*_scaling;
     for(int c=3;c<order;)
     {
       gsl_sf_result tmp;
@@ -135,6 +135,40 @@ namespace minc
       }
     }
   }
+  
+  void SphericalFunctions::generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff)
+  {
+    basis.resize(order);
+    int n=2,j=0,i=0;
+    
+    basis[0]=0;
+    basis[1]=0;
+    basis[2]=0;
+    
+    for(int c=3;c<order;)
+    {
+      
+      basis[c]= legendre_coeff* n*n*n*n *(n+1)*(n+1)*(n+1)*(n+1);
+      std::cout<<basis[c]<<"\t";
+      c++;
+      if(j)
+      {
+       if(c>=order)
+         REPORT_ERROR("Out of bounds!");
+       
+       basis[c]= legendre_coeff* n*n*n*n *(n+1)*(n+1)*(n+1)*(n+1);
+       std::cout<<basis[c]<<"\t";
+       c++;
+      }
+      j++;
+      if(j==(n+1)) 
+      { 
+        j=0; n++;
+      }
+    }
+    std::cout<<std::endl;
+  }
+
   
   double SphericalFunctions::scale(int n, double v)
 	{
@@ -274,14 +308,13 @@ namespace minc
 		for(it.GoToBegin();!it.IsAtEnd();++it,++itb)
 		{
       image3d::IndexType idx=it.GetIndex();
-      if( !itb.Value().empty() ) continue; // assume that we have already      
+      if( !itb.Value().empty() ) continue; // assume that we have already
       tag_point p;
       sample->TransformIndexToPhysicalPoint(idx,p);
       SphericalFunctions sph;
       sph.generate_basis(_tmp,_param_no,p);
       itb.Set(_tmp);
-#ifdef _DEBUG
-#endif //_DEBUG
+
 		}
 	}
 
@@ -301,7 +334,7 @@ namespace minc
 		scales.SetSize(GetNumberOfParameters());
 		for(int i=0;i<_par_count;i++)
 		{
-			scales[i            ]= _extent/SphericalFunctions::scale(i+_par_base, _extent);
+			scales[i             ]= _extent/SphericalFunctions::scale(i+_par_base, _extent);
 			scales[i+_par_count  ]= _extent/SphericalFunctions::scale(i+_par_base, _extent);
 			scales[i+_par_count*2]= _extent/SphericalFunctions::scale(i+_par_base, _extent);
 		}

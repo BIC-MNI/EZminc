@@ -226,7 +226,10 @@ namespace minc
 			_beta = 0.0;
 		};
     
-    MNK_Gauss_opt(const MNK_Gauss_opt& a):_basis_order(a._basis_order), _alpha(a._basis_order, a._basis_order), _beta(a._basis_order)
+    MNK_Gauss_opt(const MNK_Gauss_opt& a):
+        _basis_order(a._basis_order), 
+        _alpha(a._basis_order, a._basis_order), 
+        _beta(a._basis_order)
     {
 			_alpha = 0.0;
 			_beta = 0.0;

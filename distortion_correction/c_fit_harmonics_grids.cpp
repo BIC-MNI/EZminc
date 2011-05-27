@@ -304,6 +304,7 @@ class Tag_fit
         minc::def3d::IndexType idx=it.GetIndex();
         grid->TransformIndexToPhysicalPoint(idx,p);
         minc::mask3d::IndexType idx_m;
+        
         if(!mask->TransformPhysicalPointToIndex(p,idx_m) || !mask->GetPixel(idx_m)) continue;
 
         ideal.push_back(p);
