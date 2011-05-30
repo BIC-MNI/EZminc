@@ -45,6 +45,17 @@ IF(ITK_FOUND)
   TARGET_LINK_LIBRARIES( tags_rw_test
                 minc4itk)
     
+  ADD_EXECUTABLE( itk_transform_to_xfm
+                  itk_transform_to_xfm.cpp)
+  TARGET_LINK_LIBRARIES( itk_transform_to_xfm
+                minc4itk)
+  
+  ADD_EXECUTABLE( xfm_to_itk_transform
+                  xfm_to_itk_transform.cpp)
+  TARGET_LINK_LIBRARIES( xfm_to_itk_transform
+                minc4itk)
+  
+  
 ENDIF(ITK_FOUND)
 
 ADD_EXECUTABLE( minc_rw_test
