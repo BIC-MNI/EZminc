@@ -295,10 +295,19 @@ class Tag_fit
       return sd<max_dev;
     }
     
+    void save_error(const char *err_f,const char *mask_f)
+    {
+      minc::mask3d::Pointer mask(minc::mask3d::New());
+      load_minc(mask_f, mask);
+      
+      
+    }
+    
     void load_grid(const char *grid_f,const char *mask_f)
     {
       if(verbose)
         std::cout<<"Loading grid:"<<grid_f<<" and mask:"<<mask_f<<" ... ";
+      
       minc::def3d::Pointer grid (minc::def3d::New());
       minc::mask3d::Pointer mask(minc::mask3d::New());
       
@@ -339,7 +348,8 @@ void show_usage (const char * prog)
     << "--keep <part> 0.0-1.0 part of data points to keep (0.8)"<<endl
     << "--iter <n> maximum number of iterations (200)"<<endl
     << "--remove <pct> 0-1 (0) randomly remove voxels"<<endl
-    << "--cond calculate condition number"<<endl;
+    << "--legendre <f> legendre regularization coeefficient"<<endl
+    << "--error <errr.mnc> output error map"<<endl;
     //<< "--scale <d>"<<endl;
 }
 
@@ -353,7 +363,7 @@ int main (int argc, char **argv)
   int iter=200;
   int order=3;
   std::string grid_f,mask_f,output,dump_f;
-  std::string residuals_f;
+  std::string residuals_f,err_f;
   double legendre=1.0;
   
   static struct option long_options[] = {
@@ -364,8 +374,8 @@ int main (int argc, char **argv)
     {"keep",    required_argument,   0, 'k'},
     {"iter",    required_argument,   0, 'i'},
 		{"version", no_argument,         0, 'v'},
-    {"cond", no_argument,       &cond, 1},
     {"legendre",required_argument,   0, 'l'},
+    {"error",   required_argument,   0, 'e'},
     //{"scale", required_argument,      0, 's'},
     //{"remove",  required_argument,  0, 'e'},
 		{0, 0, 0, 0}
@@ -375,7 +385,7 @@ int main (int argc, char **argv)
       /* getopt_long stores the option index here. */
       int option_index = 0;
 
-      int c = getopt_long (argc, argv, "o:k:i:vs:l:", long_options, &option_index);
+      int c = getopt_long (argc, argv, "o:k:i:vs:l:e:", long_options, &option_index);
 
       /* Detect the end of the options. */
       if (c == -1) break;
@@ -396,7 +406,9 @@ int main (int argc, char **argv)
       case 'i':
         iter=atoi(optarg);break;
       case 'l':
-        legendre=atof(optarg);break;  
+        legendre=atof(optarg);break;
+      case 'e':
+        error_f=optarg;break;  
 			case '?':
 				/* getopt_long already printed an error message. */
 			default:
@@ -418,7 +430,7 @@ int main (int argc, char **argv)
     if(verbose)
       std::cout<<"Using legendre coeefecient:"<<legendre<<std::endl;
     
-		minc::def3d::Pointer grid(minc::def3d::New());
+		minc::def3d::Pointer  grid(minc::def3d::New());
 		minc::mask3d::Pointer mask(minc::mask3d::New());
     
     while((argc - optind)>1)
@@ -432,11 +444,16 @@ int main (int argc, char **argv)
       cerr << output.c_str () << " Exists!" << endl;
       return 1;
     }
+    
 		if(!fit.fit_tags(cond))
 		{
 			cerr<<"Fitting failed, due to large Standard Deviation !"<<endl;
 			return 10;
 		}
+    if(!error_f.empty())
+    {
+      fit.save_error(error_f.c_str());
+    }
     
     std::ofstream cf(output.c_str());
     
