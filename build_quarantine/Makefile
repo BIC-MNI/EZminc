@@ -80,6 +80,10 @@
 #         -> glutg3-dev (ray-trace)
 #         -> libxmu-dev, libxi-dev (ray-trace)
 #
+#  sudo apt-get install build-essential, realpath, \
+#                       zlib1g-dev, bison, flex, \
+#                       libx11-dev, glutg3-dev, libxmu-dev, libxi-dev
+#
 # =============================================================================
 #
 
