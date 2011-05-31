@@ -317,8 +317,8 @@ class Tag_fit
       minc::def3d::Pointer grid (minc::def3d::New());
       minc::mask3d::Pointer mask(minc::mask3d::New());
       
-      load_minc(grid_f, grid);
-      load_minc(mask_f, mask);
+      load_minc<minc::def3d>(grid_f, grid);
+      load_minc<minc::mask3d>(mask_f, mask);
       
       minc::def3d_iterator it(grid, grid->GetRequestedRegion() );
       int cnt=0;

@@ -278,18 +278,16 @@ namespace minc
     
   }
 
-	void SphericalHarmonicsTransform::calculate_basis(mask3d::Pointer sample)
+	void SphericalHarmonicsTransform::calculate_basis(mask3d::Pointer &sample)
 	{
-    allocate_same( _basis_cache, sample );
+    allocate_same<Basis_cache_vector,mask3d>(_basis_cache,sample );
+    
 		basis_iterator  itb(_basis_cache , sample->GetRequestedRegion() );
 		mask3d_iterator it ( sample      , sample->GetRequestedRegion() );
     _cache_on=true;
     
 		for(it.GoToBegin();!it.IsAtEnd();++it,++itb)
 		{
-			//if( !it.Value() ) 
-      //  continue;
-      //if( !itb.Value().empty() ) continue; // assume that we have already calculated coefficients here
       image3d::IndexType idx=it.GetIndex();
       tag_point p;
       sample->TransformIndexToPhysicalPoint(idx, p);
@@ -299,9 +297,9 @@ namespace minc
 		}
 	}
 
-	void SphericalHarmonicsTransform::calculate_basis(image3d::Pointer sample)
+	void SphericalHarmonicsTransform::calculate_basis(image3d::Pointer& sample)
 	{
-    allocate_same(_basis_cache,sample);
+    allocate_same<Basis_cache_vector,image3d>(_basis_cache,sample);
     _cache_on=true;
 		basis_iterator   itb(_basis_cache,sample->GetRequestedRegion());
 		image3d_iterator it(sample,sample->GetRequestedRegion());
@@ -395,9 +393,10 @@ namespace minc
     
   }
 
-	void CylindricalHarmonicsTransform::calculate_basis(mask3d::Pointer sample)
+	void CylindricalHarmonicsTransform::calculate_basis(mask3d::Pointer& sample)
 	{
-    allocate_same( _basis_cache, sample );
+    allocate_same<Basis_cache_vector,mask3d>( _basis_cache, sample );
+    
 		basis_iterator  itb(_basis_cache , sample->GetRequestedRegion() );
 		mask3d_iterator it ( sample      , sample->GetRequestedRegion() );
     _cache_on=true;
@@ -416,9 +415,10 @@ namespace minc
 		}
 	}
 
-	void CylindricalHarmonicsTransform::calculate_basis(image3d::Pointer sample)
+	void CylindricalHarmonicsTransform::calculate_basis(image3d::Pointer& sample)
 	{
-    allocate_same(_basis_cache,sample);
+    allocate_same<Basis_cache_vector,image3d>(_basis_cache,sample);
+    
     _cache_on=true;
 		basis_iterator   itb(_basis_cache,sample->GetRequestedRegion());
 		image3d_iterator it(sample,sample->GetRequestedRegion());

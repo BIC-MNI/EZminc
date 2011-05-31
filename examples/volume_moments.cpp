@@ -89,14 +89,14 @@ int main (int argc, char **argv)
       reader->Update();
       mask=reader->GetOutput();
       
-      if(!check_same(img,mask))
+      if(!minc::check_same<minc::image3d,minc::mask3d>(img,mask))
       {
         std::cerr<<"Error: mask & image dimensions (step size, direction cosines, dimension lengths) mismatch!"<<std::endl;
         return 1;
       }
     } else {
       mask=minc::mask3d::New();
-      allocate_same(mask,img);
+      allocate_same<minc::mask3d,minc::image3d>(mask,img);
       mask->FillBuffer(1);
     }
     

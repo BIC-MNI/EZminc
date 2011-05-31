@@ -106,7 +106,7 @@ int main (int argc, char **argv)
     
     cout<<"Imported!"<<endl;
 		minc::def3d::Pointer grid(minc::def3d::New());
-		allocate_image3d(grid, fixed_vec<3, unsigned int>(extent/spacing), fixed_vec<3, double>(spacing), fixed_vec<3, double>(-extent/2));
+    minc::allocate_image3d<minc::def3d>(grid, fixed_vec<3, unsigned int>(extent/spacing), fixed_vec<3, double>(spacing), fixed_vec<3, double>(-extent/2));
 		
 		if(verbose) 
 		{

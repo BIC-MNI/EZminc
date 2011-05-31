@@ -12,7 +12,6 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
-#include "minc_wrappers.h"
 #include <iostream>
 #include <fstream>
 #include "gsl_glue.h"
@@ -20,6 +19,9 @@
 #include <itkBSplineInterpolateImageFunction.h>
 #include <unistd.h>
 #include <getopt.h>
+
+#include "minc_helpers.h"
+
 #include "sphericalHarmonicsTransform.h"
 
 #include <gsl/gsl_rng.h>
@@ -295,11 +297,34 @@ class Tag_fit
       return sd<max_dev;
     }
     
-    void save_error(const char *err_f,const char *mask_f)
+    void save_error(const char *err_f,const char *grid_f,const char *mask_f)
     {
-      minc::mask3d::Pointer mask(minc::mask3d::New());
-      load_minc(mask_f, mask);
       
+      minc::def3d::Pointer grid=minc::load_minc<minc::def3d>(grid_f);
+      minc::mask3d::Pointer mask=minc::load_minc<minc::mask3d>(mask_f);
+      minc::image3d::Pointer error(minc::image3d::New());
+      
+      
+      minc::def3d_iterator it(grid, grid->GetRequestedRegion() );
+      int cnt=0;
+
+      for(it.GoToBegin();!it.IsAtEnd();++it)
+      {
+        tag_point p;
+        minc::def3d::IndexType idx=it.GetIndex();
+        grid->TransformIndexToPhysicalPoint(idx,p);
+        minc::mask3d::IndexType idx_m;
+        if(!mask->TransformPhysicalPointToIndex(p,idx_m) || !mask->GetPixel(idx_m)) continue;
+
+        ideal.push_back(p);
+        p[0]+=it.Value()[0];
+        p[1]+=it.Value()[1];
+        p[2]+=it.Value()[2];
+        measured.push_back(p);
+        cnt++;
+      }
+      if(verbose)
+        std::cout<<cnt<<" nodes"<<std::endl;
       
     }
     
@@ -311,8 +336,8 @@ class Tag_fit
       minc::def3d::Pointer grid (minc::def3d::New());
       minc::mask3d::Pointer mask(minc::mask3d::New());
       
-      load_minc(grid_f, grid);
-      load_minc(mask_f, mask);
+      load_minc<minc::def3d>(grid_f, grid);
+      load_minc<minc::mask3d>(mask_f, mask);
       
       minc::def3d_iterator it(grid, grid->GetRequestedRegion() );
       int cnt=0;
@@ -363,7 +388,7 @@ int main (int argc, char **argv)
   int iter=200;
   int order=3;
   std::string grid_f,mask_f,output,dump_f;
-  std::string residuals_f,err_f;
+  std::string residuals_f,error_f;
   double legendre=1.0;
   
   static struct option long_options[] = {
@@ -433,12 +458,12 @@ int main (int argc, char **argv)
 		minc::def3d::Pointer  grid(minc::def3d::New());
 		minc::mask3d::Pointer mask(minc::mask3d::New());
     
-    while((argc - optind)>1)
+    for(int i=0;(i+1)<(argc - optind);i+=2)
     {
-      fit.load_grid(argv[optind],argv[optind+1]);
-      optind+=2;
+      fit.load_grid(argv[optind+i],argv[optind+i+1]);
     }
-    output=argv[optind];
+    output=argv[argc-1];
+    
     if (!clobber && !access(output.c_str (), F_OK))
     {
       cerr << output.c_str () << " Exists!" << endl;
@@ -452,7 +477,7 @@ int main (int argc, char **argv)
 		}
     if(!error_f.empty())
     {
-      fit.save_error(error_f.c_str());
+      fit.save_error(error_f.c_str(),argv[optind],argv[optind+1]);
     }
     
     std::ofstream cf(output.c_str());

@@ -25,7 +25,7 @@
 #include <itkTransform.h>
 #include <itkObjectFactory.h>
 #include <memory>
-#include "minc_wrappers.h"
+#include "minc_helpers.h"
 
 #ifdef _DEBUG
 #include <debug/vector>
@@ -41,7 +41,6 @@ namespace minc
     typedef __gnu_debug::vector <basis_type> basis_vector;
   #else
     typedef std::vector<basis_type> basis_vector;
-  //typedef std::vector<basis_type,__gnu_cxx::__pool_alloc<basis_type> > basis_vector;
   #endif
   
   class SphericalFunctions
@@ -161,6 +160,11 @@ namespace minc
   
     typedef itk::Point<TScalarType,3 > OutputPointType;
     
+    
+    typedef itk::Image<basis_vector, 3 > Basis_cache_vector;
+    typedef itk::ImageRegionIteratorWithIndex < Basis_cache_vector > basis_iterator; 
+    
+    
     /**  Method to transform a point. */
     virtual OutputPointType TransformPoint(const InputPointType  &point ) const;
     OutputPointType TransformPointUnCached(const InputPointType  &point ) const;
@@ -224,8 +228,8 @@ namespace minc
     }
     
   
-    void calculate_basis(mask3d::Pointer sample);
-    void calculate_basis(image3d::Pointer sample);
+    void calculate_basis(mask3d::Pointer &sample);
+    void calculate_basis(image3d::Pointer &sample);
     void GetDeltas(ParametersType &delta);
     void GetScales(itk::Array< double > &scales);
     //void GetScales(basis_vector &scales);
@@ -252,8 +256,6 @@ namespace minc
     
     SphericalFunctions basis;
     unsigned int _param_no;
-    typedef itk::Image<basis_vector, 3 > Basis_cache_vector;
-    typedef itk::ImageRegionIteratorWithIndex < Basis_cache_vector > basis_iterator; 
     mutable Basis_cache_vector::Pointer _basis_cache;
     mutable basis_vector _tmp;
     itk::Array< double > _scales;
@@ -445,8 +447,8 @@ namespace minc
     }
     
   
-    void calculate_basis(mask3d::Pointer sample);
-    void calculate_basis(image3d::Pointer sample);
+    void calculate_basis(mask3d::Pointer &sample);
+    void calculate_basis(image3d::Pointer &sample);
     void GetDeltas(ParametersType &delta);
     void GetScales(itk::Array< double > &scales);
     void SetParBaseCount(int b,int c);

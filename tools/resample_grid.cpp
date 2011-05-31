@@ -1,4 +1,3 @@
-#include "minc_wrappers.h"
 #include <minc_helpers.h>
 
 #include <unistd.h>
@@ -88,14 +87,13 @@ int main (int argc, char **argv)
 	try
   {
     const double delta=1e-5;
-		minc::def3d::Pointer in_grid(minc::def3d::New());
+    minc::def3d::Pointer in_grid=minc::load_minc<minc::def3d>(input_f.c_str());
     minc::def3d::Pointer out_grid(minc::def3d::New());
-    load_minc(input_f.c_str(),in_grid);
     
     if(!like_f.empty())
-      imitate_minc(like_f.c_str(),out_grid);
+      minc::imitate_minc<minc::def3d>(like_f.c_str(),out_grid);
     else
-      allocate_same(out_grid,in_grid);
+      minc::allocate_same<minc::def3d,minc::def3d>(out_grid,in_grid);
     
     Vector_Interpolator::Pointer interpolator(Vector_Interpolator::New());
     interpolator->SetSplineOrder(order);

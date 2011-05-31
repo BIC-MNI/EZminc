@@ -69,7 +69,7 @@ namespace minc
   }
 
   //! allocate volume of the same dimension,spacing and origin
-  template<class T,class S> void allocate_same(T image,S sample)
+  template<class T,class S> void allocate_same(typename T::Pointer &image,typename S::Pointer &sample)
   {
 		image->SetLargestPossibleRegion(sample->GetLargestPossibleRegion());
 		image->SetBufferedRegion(sample->GetLargestPossibleRegion());
@@ -80,10 +80,25 @@ namespace minc
 		image->Allocate();
   }
   
-  //! allocate volume of the same dimension,spacing and origin and do nearest neighbour resampling
-  template<class T,class S,class E,class D> void nearest_resample_like(T dst,S sample,E src, const D& def)
+  //! allocate volume of the same dimension,spacing and origin
+  template<class T,class S> typename T::Pointer allocate_same(typename S::Pointer &sample)
   {
-    allocate_same(dst,sample);    
+    typename T::Pointer image=T::New();
+    image->SetLargestPossibleRegion(sample->GetLargestPossibleRegion());
+    image->SetBufferedRegion(sample->GetLargestPossibleRegion());
+    image->SetRequestedRegion(sample->GetLargestPossibleRegion());
+    image->SetSpacing( sample->GetSpacing() );
+    image->SetOrigin ( sample->GetOrigin() );
+    image->SetDirection(sample->GetDirection());
+    image->Allocate();
+    return image;
+  }
+  
+  
+  //! allocate volume of the same dimension,spacing and origin and do nearest neighbour resampling
+  template<class T,class S,class E,class D> void nearest_resample_like(typename T::Pointer &dst,typename T::Pointer &sample,typename T::Pointer &src, const D& def)
+  {
+    allocate_same<T,T>(dst,sample);    
 		itk::ImageRegionIteratorWithIndex<typename T::ObjectType> it(dst, dst->GetLargestPossibleRegion());
 		for(it.GoToBegin(); !it.IsAtEnd(); ++it)
     {
@@ -100,7 +115,7 @@ namespace minc
   }
   
   //! check if volumes have the same dimensions, spacing and origin
-  template<class T,class S> bool check_same(T image,S sample)
+  template<class T,class S> bool check_same(typename T::Pointer image,typename S::Pointer sample)
   {
 		return
       (image->GetLargestPossibleRegion() == sample->GetLargestPossibleRegion()) &&
@@ -115,7 +130,7 @@ namespace minc
   //! \param dims - dimensions (voxels)
   //! \param spacing - volume spacing (mm)
   //! \param origin  - volume origin (mm)
-  template<class T> void allocate_image3d(T image, 
+  template<class T> void allocate_image3d(typename T::Pointer image, 
       const itk::Array<unsigned int> &dims, 
       const itk::Array<double>& spacing, 
       const itk::Array<double>& origin)
@@ -138,7 +153,7 @@ namespace minc
   //! \param dims - dimensions (voxels)
   //! \param spacing - volume spacing (mm)
   //! \param origin  - volume origin (mm)
-  template<class T> void allocate_image3d(T image, 
+  template<class T> void allocate_image3d(typename T::Pointer image, 
       const itk::Vector<unsigned int,3> &dims, 
       const itk::Vector<double,3>& spacing, 
       const itk::Vector<double,3>& origin)
@@ -161,7 +176,7 @@ namespace minc
   //! \param dims - dimensions (voxels)
   //! \param spacing - volume spacing (mm)
   //! \param origin  - volume origin (mm)
-  template<class T> void allocate_image3d(T image, 
+  template<class T> void allocate_image3d(typename T::Pointer image, 
       const fixed_vec<3, unsigned int>&dims, 
       const fixed_vec<3, double>& spacing=fixed_vec<3, double>(1.0) , 
       const fixed_vec<3, double>& origin=fixed_vec<3, double>(0.0))
@@ -217,20 +232,7 @@ namespace minc
   void append_history(itk::Object* dst,const std::string& history);
    
   // a helper function for minc writing
-  template <class T> void save_minc(const char *file,const T& img)
-  {
-    typedef itk::MincImageIO ImageIOType;
-    ImageIOType::Pointer minc2ImageIO = ImageIOType::New();
-     
-    typename itk::ImageFileWriter< T >::Pointer writer = itk::ImageFileWriter<T>::New();
-    writer->SetFileName(file);
-    writer->SetImageIO( minc2ImageIO );
-    writer->SetInput( img );
-    writer->Update();
-  } 
-  
-  // a helper function for minc writing
-  template <class T> void save_minc(const char *file,const T* img)
+  template <class T> void save_minc(const char *file,typename T::Pointer img)
   {
     typedef itk::MincImageIO ImageIOType;
     ImageIOType::Pointer minc2ImageIO = ImageIOType::New();
@@ -245,9 +247,9 @@ namespace minc
   //! allocate volume with spacing 1mm and origin 0,0,0
   //! \param[out] image - volume to allocate
   //! \param dims - dimensions (voxels)
-  template<class T> void allocate_image3d(T image, const itk::Size<3> &dims)
+  template<class T> void allocate_image3d(typename T::Pointer image, const itk::Size<3> &dims)
   {
-    allocate_image3d(image,IDX<unsigned int>(dims[0],dims[1],dims[2]));
+    allocate_image3d<T>(image,IDX<unsigned int>(dims[0],dims[1],dims[2]));
   }
 
   //! calculate volume min and max
@@ -308,6 +310,47 @@ namespace minc
   void write_combined_xfm(const char *xfm,const char *grid, const itk::Matrix<double,2,2>& rot,const itk::Vector<double,2>& tran );
   
   void write_nonlinear_xfm(const char *xfm,const char *grid);
+
+  //! minc4itk compatibility function
+  template <class T> void  load_minc(const char *file,typename T::Pointer img)
+  {
+    img=load_minc<T>(file);
+  }
+  
+  template<class T> void setup_itk_image(const minc_1_base& minc_rw, typename T::Pointer img)
+  {
+    itk::Vector< unsigned int,3> dims;
+    itk::Vector< double,3> spacing;
+    itk::Vector< double,3> origin;
+    itk::Vector< double,3> start;
+    itk::Matrix< double, 3, 3> dir_cos;
+    dir_cos.SetIdentity();
+    //std::cout<<"setup_itk_image"<<std::endl;
+    for(int i=0;i<3;i++)
+    {
+      dims[i]=minc_rw.ndim(i+1);
+      spacing[i]=minc_rw.nspacing(i+1);
+      start[i]=minc_rw.nstart(i+1);
+      if(minc_rw.have_dir_cos(i+1))
+      {
+        for(int j=0;j<3;j++)
+          dir_cos[j][i]=minc_rw.ndir_cos(i+1,j); //TODO: check transpose?
+      }
+      //std::cout<<start[i]<<"\t";
+    }
+    //std::cout<<std::endl;
+    origin=dir_cos*start;
+    allocate_image3d<T>(img,dims,spacing,origin);
+    img->SetDirection(dir_cos);
+  }
+  
+  template<class T> void imitate_minc (const char *path, typename T::Pointer img)
+  {
+    minc_1_reader rdr;
+    rdr.open(path,true,true);
+    setup_itk_image<T>(rdr,img);
+  }
+
 };
 
 #endif //_MINC_HELPERS_H_
