@@ -15,16 +15,16 @@ my $extent=300;
 my $history=localtime() .">>> ".$me." ".join(' ',@ARGV);
 my $cylindric=0;
 
-GetOptions (    
-	  "verbose"   => \$verbose,
+GetOptions (
+          "verbose"   => \$verbose,
           "clobber"   => \$clobber,
           "spacing=f" => \$spacing,
           "max=f"     => \$max,
           "noinvert"  => \$noinvert,
           "extent=f"  => \$extent,
-	  "step=f"    => \$spacing,
-	  "cylindric" => \$cylindric); 
-          
+          "step=f"    => \$spacing,
+          "cylindric" => \$cylindric);
+
 die "Programm usage: $me <par_in> <xfm_out> [--clobber] [--verbose]  [--spacing <n>] [--max <f>] [--noinvert] [--extent <mm>] [--cylindric]\n" if $#ARGV<1;
 
 my ($par,$xfm)=@ARGV;
@@ -37,6 +37,9 @@ check_file($output_grid) if !$clobber;
 check_file($xfm) if !$clobber;
 
 do_cmd($cylindric?'c_param2grid':'param2grid',$par,$output_grid,'--spacing', $spacing,'--clobber', '--max', $max,'--extent',$extent);
+
+do_cmd('minc_modify_header','-sinsert',':history='.$history,$output_grid);
+
 
 #5 make xfm file
 open  OF,">$xfm" or die "Can't open ${xfm} for writing!\n";

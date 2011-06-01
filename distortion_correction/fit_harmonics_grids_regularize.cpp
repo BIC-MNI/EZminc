@@ -297,57 +297,65 @@ class Tag_fit
       return sd<max_dev;
     }
     
-    void save_error(const char *err_f,const char *grid_f,const char *mask_f)
+    //TODO: works only for the first image!!!
+    void save_error(const char *err_f,const char *grid_f)
     {
       
-      minc::def3d::Pointer grid=minc::load_minc<minc::def3d>(grid_f);
-      minc::mask3d::Pointer mask=minc::load_minc<minc::mask3d>(mask_f);
+      minc::MNK_Gauss_Polinomial pol_x(order);
+      minc::MNK_Gauss_Polinomial pol_y(order);
+      minc::MNK_Gauss_Polinomial pol_z(order);
+      
+      
+      minc::def3d::Pointer   grid=minc::load_minc<minc::def3d>(grid_f);
       minc::image3d::Pointer error(minc::image3d::New());
       
+      allocate_same<minc::image3d,minc::def3d>(error,grid);
       
-      minc::def3d_iterator it(grid, grid->GetRequestedRegion() );
-      int cnt=0;
+      error->FillBuffer(0.0);
+      
+      tag_points::const_iterator j=measured.begin();
+      tag_points::const_iterator i=ideal.begin();
 
-      for(it.GoToBegin();!it.IsAtEnd();++it)
+      fittings::const_iterator bx=basis_x.begin();
+      fittings::const_iterator by=basis_y.begin();
+      fittings::const_iterator bz=basis_z.begin();
+
+      for(;i!=ideal.end();i++, j++, bx++, by++, bz++)
       {
-        tag_point p;
-        minc::def3d::IndexType idx=it.GetIndex();
-        grid->TransformIndexToPhysicalPoint(idx,p);
-        minc::mask3d::IndexType idx_m;
-        if(!mask->TransformPhysicalPointToIndex(p,idx_m) || !mask->GetPixel(idx_m)) continue;
-
-        ideal.push_back(p);
-        p[0]+=it.Value()[0];
-        p[1]+=it.Value()[1];
-        p[2]+=it.Value()[2];
-        measured.push_back(p);
-        cnt++;
+        
+        minc::image3d::IndexType idx;
+        error->TransformPhysicalPointToIndex(*i,idx);
+        
+        tag_point moved;
+        moved[0]=pol_x.fit(*bx, coeff[0]);
+        moved[1]=pol_y.fit(*by, coeff[1]);
+        moved[2]=pol_z.fit(*bz, coeff[2]);
+        error->SetPixel(idx,(*j).EuclideanDistanceTo(moved));
       }
-      if(verbose)
-        std::cout<<cnt<<" nodes"<<std::endl;
-      
+      save_minc<minc::image3d>(err_f,error);
     }
     
     void load_grid(const char *grid_f,const char *mask_f)
     {
       if(verbose)
-        std::cout<<"Loading grid:"<<grid_f<<" and mask:"<<mask_f<<" ... ";
+        std::cout<<"Loading grid: "<<grid_f<<" and mask: "<<mask_f<<" ... ";
       
       minc::def3d::Pointer grid (minc::def3d::New());
       minc::mask3d::Pointer mask(minc::mask3d::New());
       
-      load_minc<minc::def3d>(grid_f, grid);
-      load_minc<minc::mask3d>(mask_f, mask);
+      grid=load_minc<minc::def3d>(grid_f);
+      mask=load_minc<minc::mask3d>(mask_f);
       
-      minc::def3d_iterator it(grid, grid->GetRequestedRegion() );
+      minc::def3d_iterator it(grid, grid->GetLargestPossibleRegion() );
       int cnt=0;
-
       for(it.GoToBegin();!it.IsAtEnd();++it)
       {
         tag_point p;
         minc::def3d::IndexType idx=it.GetIndex();
         grid->TransformIndexToPhysicalPoint(idx,p);
+        
         minc::mask3d::IndexType idx_m;
+        
         if(!mask->TransformPhysicalPointToIndex(p,idx_m) || !mask->GetPixel(idx_m)) continue;
 
         ideal.push_back(p);
@@ -357,6 +365,7 @@ class Tag_fit
         measured.push_back(p);
         cnt++;
       }
+      
       if(verbose)
         std::cout<<cnt<<" nodes"<<std::endl;
     }
@@ -381,15 +390,15 @@ void show_usage (const char * prog)
 int main (int argc, char **argv)
 {
   int verbose=0, clobber=0,skip_grid=0,cond=0;
-  double max=5.0;
-  double keep=0.8;
+  double max=10.0;
+  double keep=1.0;
   double remove=0;
   double scale=100;
-  int iter=200;
+  int iter=1;
   int order=3;
   std::string grid_f,mask_f,output,dump_f;
   std::string residuals_f,error_f;
-  double legendre=1.0;
+  double legendre=0.0;
   
   static struct option long_options[] = {
 		{"verbose", no_argument,       &verbose, 1},
@@ -460,6 +469,7 @@ int main (int argc, char **argv)
     
     for(int i=0;(i+1)<(argc - optind);i+=2)
     {
+     
       fit.load_grid(argv[optind+i],argv[optind+i+1]);
     }
     output=argv[argc-1];
@@ -477,7 +487,7 @@ int main (int argc, char **argv)
 		}
     if(!error_f.empty())
     {
-      fit.save_error(error_f.c_str(),argv[optind],argv[optind+1]);
+      fit.save_error(error_f.c_str(),argv[optind]);
     }
     
     std::ofstream cf(output.c_str());

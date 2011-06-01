@@ -59,10 +59,10 @@ TARGET_LINK_LIBRARIES( sph_par2grid
 ADD_EXECUTABLE( c_param2grid
                 c_param2grid.cpp )
                 
-TARGET_LINK_LIBRARIES( c_param2grid 
+TARGET_LINK_LIBRARIES(c_param2grid 
   minc4itk
   minc_io 
-  spherical_harmonics gsl gslcblas)   
+  spherical_harmonics gsl gslcblas)
   
                 
 

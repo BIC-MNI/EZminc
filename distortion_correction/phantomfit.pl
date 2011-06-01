@@ -19,27 +19,27 @@ my @conf = (
 
    {'step'         => 4,
     'blur_fwhm'    => 8,
-    'iterations'   => 6,
+    'iterations'   => 10,
     },
 
     {'step'         => 4,
      'blur_fwhm'    => 4,
-     'iterations'   => 5,
+     'iterations'   => 10,
     },
 
     {'step'         => 3,
      'blur_fwhm'    => 4,
-     'iterations'   => 3,
+     'iterations'   => 10,
     },
     
     {'step'         => 2,
      'blur_fwhm'    => 2,
-     'iterations'   => 3,
+     'iterations'   => 10,
     },
     
     {'step'         => 1,
      'blur_fwhm'    => 2,
-     'iterations'   => 3,
+     'iterations'   => 10,
     },
     
    );
@@ -246,14 +246,14 @@ for ($i=0; $i<=$#conf; $i++) {
       $tmp_xfm = "$tmpdir/$s_base\_${i}_${j}_${k}.xfm";
       # set up registration
       @args = ('minctracc',  @def_minctracc_args,
-            '-iterations', 2,
-            '-step', $conf[$i]{step}, $conf[$i]{step}, $conf[$i]{step},
-            '-lattice_diam', $conf[$i]{step} * 3, 
+               '-iterations', $conf[$i]{iterations},
+               '-step', $conf[$i]{step}, $conf[$i]{step}, $conf[$i]{step},
+               '-lattice_diam', $conf[$i]{step} * 3, 
                              $conf[$i]{step} * 3, 
                              $conf[$i]{step} * 3,
-            '-similarity_cost_ratio',$opt{similarity},
-            '-weight',$opt{weight},
-            '-stiffness',$opt{stiffness});
+               '-similarity_cost_ratio',$opt{similarity},
+               '-weight',$opt{weight},
+               '-stiffness',$opt{stiffness});
 
       # transformation
       my $transform;
@@ -306,7 +306,7 @@ sub cleanup_xfms {
   }
 }
 
-sub regularize_xfms{
+sub regularize_xfms {
   my ($_xfm,$_mask,$order,$out,$invert,$out_par)=@_;
   my @xfms=@{$_xfm};
   my @masks=@{$_mask};
