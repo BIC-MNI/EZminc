@@ -130,7 +130,7 @@ namespace minc
   //! \param dims - dimensions (voxels)
   //! \param spacing - volume spacing (mm)
   //! \param origin  - volume origin (mm)
-  template<class T> void allocate_image3d(typename T::Pointer image, 
+  template<class T> void allocate_image3d(typename T::Pointer &image, 
       const itk::Array<unsigned int> &dims, 
       const itk::Array<double>& spacing, 
       const itk::Array<double>& origin)
@@ -153,7 +153,7 @@ namespace minc
   //! \param dims - dimensions (voxels)
   //! \param spacing - volume spacing (mm)
   //! \param origin  - volume origin (mm)
-  template<class T> void allocate_image3d(typename T::Pointer image, 
+  template<class T> void allocate_image3d(typename T::Pointer &image, 
       const itk::Vector<unsigned int,3> &dims, 
       const itk::Vector<double,3>& spacing, 
       const itk::Vector<double,3>& origin)
@@ -176,7 +176,7 @@ namespace minc
   //! \param dims - dimensions (voxels)
   //! \param spacing - volume spacing (mm)
   //! \param origin  - volume origin (mm)
-  template<class T> void allocate_image3d(typename T::Pointer image, 
+  template<class T> void allocate_image3d(typename T::Pointer &image, 
       const fixed_vec<3, unsigned int>&dims, 
       const fixed_vec<3, double>& spacing=fixed_vec<3, double>(1.0) , 
       const fixed_vec<3, double>& origin=fixed_vec<3, double>(0.0))
@@ -247,7 +247,7 @@ namespace minc
   //! allocate volume with spacing 1mm and origin 0,0,0
   //! \param[out] image - volume to allocate
   //! \param dims - dimensions (voxels)
-  template<class T> void allocate_image3d(typename T::Pointer image, const itk::Size<3> &dims)
+  template<class T> void allocate_image3d(typename T::Pointer &image, const itk::Size<3> &dims)
   {
     allocate_image3d<T>(image,IDX<unsigned int>(dims[0],dims[1],dims[2]));
   }
@@ -312,12 +312,12 @@ namespace minc
   void write_nonlinear_xfm(const char *xfm,const char *grid);
 
   //! minc4itk compatibility function
-  template <class T> void  load_minc(const char *file,typename T::Pointer img)
+  template <class T> void  load_minc(const char *file,typename T::Pointer& img)
   {
     img=load_minc<T>(file);
   }
   
-  template<class T> void setup_itk_image(const minc_1_base& minc_rw, typename T::Pointer img)
+  template<class T> void setup_itk_image(const minc_1_base& minc_rw, typename T::Pointer& img)
   {
     itk::Vector< unsigned int,3> dims;
     itk::Vector< double,3> spacing;
@@ -344,7 +344,7 @@ namespace minc
     img->SetDirection(dir_cos);
   }
   
-  template<class T> void imitate_minc (const char *path, typename T::Pointer img)
+  template<class T> void imitate_minc (const char *path, typename T::Pointer &img)
   {
     minc_1_reader rdr;
     rdr.open(path,true,true);
