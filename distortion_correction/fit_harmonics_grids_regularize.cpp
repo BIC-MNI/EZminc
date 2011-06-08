@@ -31,13 +31,13 @@
 using namespace std;
 using namespace minc;
 
-void print_coeff (std::ostream & out, const std::vector < double >&coeff2)
+void print_coeff (std::ostream & out, const std::vector < double >&coeff)
 {
 	out.precision(40);
-	int order = coeff2.size ();
+	int order = coeff.size ();
 	for (int i = 0; i < order; i++)
 	{
-		out << coeff2[i] << " ";
+		out << coeff[i] << " ";
 		if(!out.good())
 			REPORT_ERROR("Can't write to file");
 		
@@ -45,16 +45,15 @@ void print_coeff (std::ostream & out, const std::vector < double >&coeff2)
 	out << std::endl;
 }
 
-void save_coeff (std::ostream & out, const std::vector < double >&coeff2)
+void save_coeff (std::ostream & out, const std::vector < double >&coeff)
 {
-	int order = coeff2.size ();
+	int order = coeff.size ();
 	out.precision(40);
 	for (int i = 0; i < order; i++)
 	{
-		out << coeff2[i] << endl;
+		out << coeff[i] << endl;
 		if(!out.good())
 			REPORT_ERROR("Can't write to file");
-		
 	}
 	//out << std::endl;
 }
@@ -73,15 +72,16 @@ class Tag_fit
     typedef std::vector <int> Index;
     typedef std::vector <double> Distances;
     
+    std::vector< std::vector<double> > pca_matrix;
+    
     tag_points ideal, measured;
     fitting_mask mask;
     bool     verbose;
-    double   keep;
     double   max_dev;
     double   sd,max_distance;
     int      order;
     fittings coeff;
-    fittings basis_x,basis_y,basis_z;
+    fittings basis_x;//,basis_y,basis_z;
     basis_vector regularize;
     Index    index;
     Distances distances;
@@ -99,47 +99,36 @@ class Tag_fit
     void calculate_basis(void)
     {
       basis_x.resize(ideal.size());
-      basis_y.resize(ideal.size());
-      basis_z.resize(ideal.size());
       
-
-      //tag_points::const_iterator j=measured.begin();
       tag_points::const_iterator i=ideal.begin();
       
       fittings::iterator mx=basis_x.begin();
-      fittings::iterator my=basis_y.begin();
-      fittings::iterator mz=basis_z.begin();
       basis_vector bas(order);
-      for(; i!=ideal.end(); i++, mx++,my++,mz++)
+      for(; i!=ideal.end(); i++, mx++)
       {
         mx->resize(order);
-        my->resize(order);
-        mz->resize(order);
         
         //all basis are the same
         fun_x.generate_basis(bas,order,*i);
         for(int k=0;k<order;k++)
         {
           (*mx)[k]=bas[k];
-          (*my)[k]=bas[k];
-          (*mz)[k]=bas[k];
         }
       }
       //used for regularization
       regularize.resize(order);
-      fun_x.generate_regularization_vector(regularize,order,legendre_coeff);
+      if(legendre_coeff>0.0)
+        fun_x.generate_regularization_vector(regularize,order,legendre_coeff);
       std::cout<<std::endl<<legendre_coeff<<std::endl;
     }
     
-    Tag_fit(int order_, double keep_, 
+    Tag_fit(int order_, 
             double legendre,
-            double max_dev_=5.0, 
-            int max_iter=100,bool verbose_=false,bool ll=false):
+            double max_dev_=10.0, 
+            bool verbose_=false,bool ll=false):
            order(order_), 
-           keep(keep_), 
            verbose(verbose_), 
            max_dev(max_dev_),
-           _max_iterations(max_iter),
            max_distance(0), 
            sd(0), 
            coeff(3),
@@ -156,131 +145,49 @@ class Tag_fit
         REPORT_ERROR("Mismatching number of points!");
     
       reset_index();
-      coeff.resize(3);
-      coeff[0].resize(order);
-      coeff[1].resize(order);
-      coeff[2].resize(order);
+      coeff.resize(1);
+      coeff[0].resize(order*3);
+      std::vector<double> tmp(order*3);
       
-      minc::MNK_Gauss_Polinomial pol_x(order);
-      minc::MNK_Gauss_Polinomial pol_y(order);
-      minc::MNK_Gauss_Polinomial pol_z(order);
+      minc::MNK_Gauss_Polinomial pol_x(order*3);
       
       tag_points::const_iterator j=measured.begin();
       tag_points::const_iterator i=ideal.begin();
       fitting_mask::const_iterator m=mask.begin();
       
       fittings::const_iterator bx=basis_x.begin();
-      fittings::const_iterator by=basis_y.begin();
-      fittings::const_iterator bz=basis_z.begin();
       
-      for(; i!=ideal.end(); i++, j++, m++, bx++, by++, bz++)
+      for(; i!=ideal.end(); i++, j++, m++, bx++/*, by++, bz++*/)
       {
         if(*m) continue;
           //this is a quick hack
         
-        pol_x.accumulate(*bx, (*j)[0]);
-        pol_y.accumulate(*by, (*j)[1]);
-        pol_z.accumulate(*bz, (*j)[2]);
+        for(int k=0;k<3;k++)
+        {
+          tmp.assign(tmp.size(),0.0);
+          for(int t=0;t<order;t++)
+            tmp[t+k*order]=(*bx)[t];
+          pol_x.accumulate(tmp,(*j)[k]);
+        }
         
       }
       
       //now add regularization coeffecients
-      for(int j=0;j<order;j++)
+      if(legendre_coeff>0.0)
       {
-        pol_x.alpha().set(j,j,pol_x.alpha().get(j,j)+regularize[j]);
-        pol_y.alpha().set(j,j,pol_y.alpha().get(j,j)+regularize[j]);
-        pol_z.alpha().set(j,j,pol_z.alpha().get(j,j)+regularize[j]);
+        for(int j=0;j<order;j++)
+        {
+          pol_x.alpha().set(j,j,pol_x.alpha().get(j,j)+regularize[j]);
+          pol_x.alpha().set(j+order,j+order,pol_x.alpha().get(j+order,j+order)+regularize[j]);
+          pol_x.alpha().set(j+order*2,j+order*2,pol_x.alpha().get(j+order*2,j+order*2)+regularize[j]);
+        }
       }
-      
       double cond_x,cond_y,cond_z;
       
       cond_x=pol_x.solve(coeff[0]);
-      cond_y=pol_y.solve(coeff[1]);
-      cond_z=pol_z.solve(coeff[2]);
-      
-      if(condition)
-      {
-        cout<<"cond_x="<<cond_x<<"\t";
-        cout<<"cond_y="<<cond_y<<"\t";
-        cout<<"cond_z="<<cond_z<<endl;
-      }
 
     }
 	
-    class IndexSort
-    {
-      Distances &distances;
-      public:
-      IndexSort(Distances &distances_):
-      distances(distances_)
-      {}
-      bool operator()(int i,int j)
-      {
-        return distances[i]<distances[j];
-      }
-    };
-    
-    void build_index(void)
-    {
-      IndexSort _sort(distances);
-      std::sort<Index::iterator,IndexSort>(index.begin(), index.end(), _sort);
-    }
-    
-    double evaluate_distance(double keep)
-    {
-      int size=ideal.size()*keep;
-      double sd=0.0;
-      for(int i=0;i<ideal.size();i++)
-      {
-        if(i<size) {
-          sd+=distances[index[i]];
-          mask[index[i]]=false;
-        } else mask[index[i]]=true;
-      }
-      sd/=size;
-      return sqrt(sd);
-    }
-    
-    bool remove_outliers(void)
-    {
-      minc::MNK_Gauss_Polinomial pol_x(order);
-      minc::MNK_Gauss_Polinomial pol_y(order);
-      minc::MNK_Gauss_Polinomial pol_z(order);
-      
-      distances.resize(ideal.size());
-      tag_points::const_iterator j=measured.begin();
-      tag_points::const_iterator i=ideal.begin();
-      
-      fittings::const_iterator bx=basis_x.begin();
-      fittings::const_iterator by=basis_y.begin();
-      fittings::const_iterator bz=basis_z.begin();
-      int k=0;
-      int max_k=-1;
-      int cnt=0;
-      max_distance=0.0;
-      sd=0.0;
-      for(;i!=ideal.end();i++, j++, k++, bx++, by++, bz++)
-      {
-        //if(mask[k]) continue;
-        cnt++;
-        tag_point moved;
-        moved[0]=pol_x.fit(*bx, coeff[0]);
-        moved[1]=pol_y.fit(*by, coeff[1]);
-        moved[2]=pol_z.fit(*bz, coeff[2]);
-        double d=(*j).SquaredEuclideanDistanceTo(moved);
-        distances[k]=d;
-        //sd+=d;
-        if(!mask[k]&&d>max_distance) { max_distance=d; max_k=k;}
-      }
-      max_distance=sqrt(max_distance);
-      build_index();
-      sd=evaluate_distance(keep);
-      if(verbose)
-        cout<<sd<<":"<<max_distance<<"\t";
-
-      return true;
-    }
-    
     bool fit_tags(bool condition=false)
     {
       _last_distance=0.0;
@@ -289,11 +196,8 @@ class Tag_fit
       mask.resize(ideal.size(),false);
       calculate_basis();
       int i=0;
-      do {
-        fit_coeff(condition);
-        i++;
-        //std::cout<<"\t"<<i;
-      } while(remove_outliers() && i<_max_iterations);
+      fit_coeff(condition);
+      
       return sd<max_dev;
     }
     
@@ -302,9 +206,6 @@ class Tag_fit
     {
       
       minc::MNK_Gauss_Polinomial pol_x(order);
-      minc::MNK_Gauss_Polinomial pol_y(order);
-      minc::MNK_Gauss_Polinomial pol_z(order);
-      
       
       minc::def3d::Pointer   grid=minc::load_minc<minc::def3d>(grid_f);
       minc::image3d::Pointer error(minc::image3d::New());
@@ -317,19 +218,23 @@ class Tag_fit
       tag_points::const_iterator i=ideal.begin();
 
       fittings::const_iterator bx=basis_x.begin();
-      fittings::const_iterator by=basis_y.begin();
-      fittings::const_iterator bz=basis_z.begin();
-
-      for(;i!=ideal.end();i++, j++, bx++, by++, bz++)
+      /*fittings::const_iterator by=basis_y.begin();
+      fittings::const_iterator bz=basis_z.begin();*/
+      std::vector<double> tmp(order*3);
+      for(;i!=ideal.end();i++, j++, bx++/*, by++, bz++*/)
       {
         
         minc::image3d::IndexType idx;
         error->TransformPhysicalPointToIndex(*i,idx);
         
         tag_point moved;
-        moved[0]=pol_x.fit(*bx, coeff[0]);
-        moved[1]=pol_y.fit(*by, coeff[1]);
-        moved[2]=pol_z.fit(*bz, coeff[2]);
+        for(int k=0;k<3;k++)
+        {
+          tmp.assign(tmp.size(),0.0);
+          for(int t=0;t<order;t++)
+            tmp[t+k*order]=(*bx)[t];
+          moved[k]=pol_x.fit(tmp,coeff[0]);
+        }
         error->SetPixel(idx,(*j).EuclideanDistanceTo(moved));
       }
       save_minc<minc::image3d>(err_f,error);
@@ -369,6 +274,38 @@ class Tag_fit
       if(verbose)
         std::cout<<cnt<<" nodes"<<std::endl;
     }
+    
+    void load_pca_matrix(const char * pca_f)
+    {
+      std::ifstream pca(pca_f);
+      pca_matrix.clear();
+      
+      int ncol=0;
+      while(pca.good() && !pca.eof())
+      {
+        char tmp[65535];
+        pca.getline(tmp,sizeof(tmp)-1);
+        
+        if(!strncmp(tmp,"\"PC",3)) //comment
+          continue;
+        
+        if(!strlen(tmp)) break; //eof?
+        istringstream ins(tmp);
+        std::vector<double> ln;
+        char* token;
+        for(token=strtok(tmp,",");token!=NULL;token=strtok(NULL,","))
+        {
+          double val=atof(token);
+          ln.push_back(val);
+        }
+        if(!ncol) ncol=ln.size();
+        else if(ncol!=ln.size())
+          REPORT_ERROR("Inconsistent number of columns!");
+        pca_matrix.push_back(ln);
+      }
+      if(verbose)
+        std::cout<<"Loaded "<<pca_matrix.size()<<"x"<<ncol<<" matrix"<<std::endl;
+    }
 };
 
 const double Tag_fit::_distance_epsilon=1e-10;
@@ -379,8 +316,8 @@ void show_usage (const char * prog)
     << "Usage: "<<prog<<" <grid1> <mask1> [<grid2> <mask2> .... <grid n> <mask n>] <output.par> " << endl
     << "--clobber overwrite files"    << endl
     << "--order <n> (3)"<<endl
-    << "--keep <part> 0.0-1.0 part of data points to keep (0.8)"<<endl
-    << "--iter <n> maximum number of iterations (200)"<<endl
+//    << "--keep <part> 0.0-1.0 part of data points to keep (0.8)"<<endl
+//    << "--iter <n> maximum number of iterations (200)"<<endl
     << "--remove <pct> 0-1 (0) randomly remove voxels"<<endl
     << "--legendre <f> legendre regularization coeefficient"<<endl
     << "--error <errr.mnc> output error map"<<endl;
@@ -397,7 +334,7 @@ int main (int argc, char **argv)
   int iter=1;
   int order=3;
   std::string grid_f,mask_f,output,dump_f;
-  std::string residuals_f,error_f;
+  std::string residuals_f,error_f,pca_f;
   double legendre=0.0;
   
   static struct option long_options[] = {
@@ -405,13 +342,10 @@ int main (int argc, char **argv)
 		{"quiet",   no_argument,       &verbose, 0},
 		{"clobber", no_argument,       &clobber, 1},
     {"order",   required_argument,   0, 'o'},
-    {"keep",    required_argument,   0, 'k'},
-    {"iter",    required_argument,   0, 'i'},
 		{"version", no_argument,         0, 'v'},
     {"legendre",required_argument,   0, 'l'},
     {"error",   required_argument,   0, 'e'},
-    //{"scale", required_argument,      0, 's'},
-    //{"remove",  required_argument,  0, 'e'},
+    {"pca",     required_argument,   0, 'p'},
 		{0, 0, 0, 0}
 		};
   
@@ -433,16 +367,14 @@ int main (int argc, char **argv)
 				return 0;
       case 'o':
         order=atoi(optarg);break;
-      case 'k':
-        keep=atof(optarg);break;
       case 's':
         scale=atof(optarg);break;
-      case 'i':
-        iter=atoi(optarg);break;
       case 'l':
         legendre=atof(optarg);break;
       case 'e':
-        error_f=optarg;break;  
+        error_f=optarg;break;
+      case 'p':
+        pca_f=optarg;break;
 			case '?':
 				/* getopt_long already printed an error message. */
 			default:
@@ -460,18 +392,20 @@ int main (int argc, char **argv)
     gsl_rng_env_setup();
     
     float max_dev=10;
-    Tag_fit fit(basis_functions_x::parameters_no(order),keep,legendre,max_dev,iter,verbose);
-    if(verbose)
-      std::cout<<"Using legendre coeefecient:"<<legendre<<std::endl;
+    Tag_fit fit(basis_functions_x::parameters_no(order),legendre,max_dev,verbose);
+    
+    if(verbose && legendre>0.0)
+      std::cout<<"Using legendre coeffecient:"<<legendre<<std::endl;
+    
+    if(!pca_f.empty() && verbose)
+      std::cout<<"Using PCA rotation matrix:"<<pca_f.c_str()<<std::endl;
+    
+    if(!pca_f.empty())
+      fit.load_pca_matrix(pca_f.c_str());
     
 		minc::def3d::Pointer  grid(minc::def3d::New());
 		minc::mask3d::Pointer mask(minc::mask3d::New());
     
-    for(int i=0;(i+1)<(argc - optind);i+=2)
-    {
-     
-      fit.load_grid(argv[optind+i],argv[optind+i+1]);
-    }
     output=argv[argc-1];
     
     if (!clobber && !access(output.c_str (), F_OK))
@@ -479,6 +413,13 @@ int main (int argc, char **argv)
       cerr << output.c_str () << " Exists!" << endl;
       return 1;
     }
+    
+    for(int i=0;(i+1)<(argc - optind);i+=2)
+    {
+     
+      fit.load_grid(argv[optind+i],argv[optind+i+1]);
+    }
+    
     
 		if(!fit.fit_tags(cond))
 		{
@@ -496,8 +437,6 @@ int main (int argc, char **argv)
       REPORT_ERROR("Can't open file for writing!");
     
     save_coeff(cf,fit.coeff[0]);
-    save_coeff(cf,fit.coeff[1]);
-    save_coeff(cf,fit.coeff[2]);
     
 	} catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;

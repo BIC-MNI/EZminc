@@ -47,7 +47,7 @@ namespace minc
   {
     public:
       double _scaling;
-      SphericalFunctions():_scaling(1000.0)
+      SphericalFunctions():_scaling(200.0)
       {}
     
     double operator()(int n, tag_point p) const;

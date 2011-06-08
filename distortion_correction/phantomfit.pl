@@ -19,27 +19,22 @@ my @conf = (
 
    {'step'         => 4,
     'blur_fwhm'    => 8,
-    'iterations'   => 10,
+    'iterations'   => 4,
     },
 
     {'step'         => 4,
      'blur_fwhm'    => 4,
-     'iterations'   => 10,
-    },
-
-    {'step'         => 3,
-     'blur_fwhm'    => 4,
-     'iterations'   => 10,
+     'iterations'   => 4,
     },
     
     {'step'         => 2,
      'blur_fwhm'    => 2,
-     'iterations'   => 10,
+     'iterations'   => 4,
     },
     
     {'step'         => 1,
      'blur_fwhm'    => 2,
-     'iterations'   => 10,
+     'iterations'   => 4,
     },
     
    );
@@ -54,14 +49,14 @@ $me = &basename($0);
    'clobber'   => 0,
    'fake'      => 0,
    'init_xfm'  => undef,
-   'order'     => 3,
+   'order'     => 5,
    'par'       => undef,
    'measure'   => undef,
    'step_iterations'=> undef,
    'min_step'  => 2,
    'limit'     => 0,
    'weight'    => 1,
-   'stiffness' => 1,
+   'stiffness' => 0.4,
    'similarity'=> 0.3,
    'keep'      => 1.0,
    'cyl'       => 0,
@@ -108,7 +103,7 @@ $Usage = "Usage: $me [options] source.mnc target.mnc fit_mask.mnc estimate_mask.
    ["-similarity", "float", 1, \$opt{similarity},
       "similarity parameter of minctracc" ],
    ["-keep", "float", 1, \$opt{keep},
-      "Fractioon of points to keep for LTSQ algorithm (0-1]" ],
+      "Fraction of points to keep for LTSQ algorithm (0-1]" ],
    ["-cylindric", "boolean", 0, \$opt{cyl},
       "Use cylindric functions instead of spherical" ],
    ["-init", "string", 1, \$opt{init},
@@ -246,7 +241,7 @@ for ($i=0; $i<=$#conf; $i++) {
       $tmp_xfm = "$tmpdir/$s_base\_${i}_${j}_${k}.xfm";
       # set up registration
       @args = ('minctracc',  @def_minctracc_args,
-               '-iterations', $conf[$i]{iterations},
+               '-iterations', 10,
                '-step', $conf[$i]{step}, $conf[$i]{step}, $conf[$i]{step},
                '-lattice_diam', $conf[$i]{step} * 3, 
                              $conf[$i]{step} * 3, 

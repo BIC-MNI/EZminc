@@ -126,20 +126,24 @@ if($ex_r) #making a spherical mask with specified radius
 
 if(!$acr && !$adni)
 {
+
   unless( -e "$tmpdir/skeleton.mnc") #creating a mask for ROI where fitting will happen
   {
-    do_cmd('itk_morph','--threshold',1,'--exp','D[1]',$model,"$tmpdir/skeleton.mnc") ;
+    do_cmd('itk_morph','--threshold',1,$model,"$tmpdir/skeleton.mnc") ;
+
     if($mask) {
       do_cmd('minccalc','-expression','A[0]>0&&A[1]>0?1:0',"$tmpdir/skeleton.mnc",$mask,"$tmpdir/skeleton_.mnc");
       do_cmd('mv',"$tmpdir/skeleton_.mnc","$tmpdir/skeleton.mnc");
     }
   }
+
   unless(-e "$tmpdir/fit.mnc")
   {
-    do_cmd('itk_morph','--threshold',1,'--exp','D[3]',$model,"$tmpdir/fit.mnc");
-    if($mask) {
-      do_cmd('minccalc','-expression','A[0]>0&&A[1]>0?1:0',"$tmpdir/fit.mnc",$mask,"$tmpdir/fit_.mnc");
-      do_cmd('mv',"$tmpdir/fit_.mnc","$tmpdir/fit.mnc");
+    if($mask)
+    {
+      do_cmd('cp',$mask,"$tmpdir/fit.mnc");
+    } else {
+      do_cmd('itk_morph','--threshold',1,'--exp','D[2] D[2] D[2] E[2]',$model,"$tmpdir/fit.mnc");
     }
   }
 } elsif( $adni) {
@@ -244,6 +248,9 @@ foreach $scan(@scans) {
     }
   }
   # create ideal representation
+
+  $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
+
   do_cmd('mincresample',$model,"$work_dir/ideal_${name}",'-like',
          "$work_dir/core_${name}",
          '-transform',"$work_dir/align_${name}.xfm") unless -e "$work_dir/ideal_${name}";
@@ -263,9 +270,12 @@ foreach $scan(@scans) {
              "$work_dir/fit_${name}",'-like',"$work_dir/core_${name}",
              '-transform',"$work_dir/align_${name}.xfm",'-nearest');
 
-      do_cmd('mincresample',"$tmpdir/skeleton.mnc","$work_dir/estimate_${name}",
+      do_cmd('mincresample',"$tmpdir/skeleton.mnc","$tmpdir/estimate_${name}",
              '-like',"$work_dir/core_${name}",
-             '-transform',"$work_dir/align_${name}.xfm",'-nearest');
+             '-transform',"$work_dir/align_${name}.xfm",'-trilinear','-float');
+
+      do_cmd('minccalc','-byte','-express','A[0]>0.5?1:0',"$tmpdir/estimate_${name}",
+              "$work_dir/estimate_${name}");
     }
   }
   if($acr) {
@@ -291,9 +301,9 @@ unless( $only_roi )
 #  push @args,'-work_dir',"$work_dir/pf" if $work_dir;
   push @args,'-debug' if $debug;
   
-  #test
-  push @args,'-weight',1;
-  push @args,'-stiffness',0;
+#  test
+#  push @args,'-weight',1;
+#  push @args,'-stiffness',0.4;
   
   do_cmd(@args);
 }
