@@ -71,7 +71,6 @@ class Tag_fit
     typedef std::vector <fitting_coeff> fittings;
     typedef std::vector <int> Index;
     typedef std::vector <double> Distances;
-    
     std::vector< std::vector<double> > pca_matrix;
     
     tag_points ideal, measured;
@@ -80,7 +79,8 @@ class Tag_fit
     double   max_dev;
     double   sd,max_distance;
     int      order;
-    fittings coeff;
+    int      pcs;
+    fitting_coeff coeff;
     fittings basis_x;//,basis_y,basis_z;
     basis_vector regularize;
     Index    index;
@@ -131,8 +131,8 @@ class Tag_fit
            max_dev(max_dev_),
            max_distance(0), 
            sd(0), 
-           coeff(3),
-            legendre_coeff(legendre)
+          legendre_coeff(legendre),
+            pcs(-1)
     {
     }
     
@@ -143,49 +143,112 @@ class Tag_fit
         REPORT_ERROR("Mismatching number of points!");
       if(ideal.size()!=mask.size())
         REPORT_ERROR("Mismatching number of points!");
-    
       reset_index();
-      coeff.resize(1);
-      coeff[0].resize(order*3);
-      std::vector<double> tmp(order*3);
       
-      minc::MNK_Gauss_Polinomial pol_x(order*3);
-      
-      tag_points::const_iterator j=measured.begin();
-      tag_points::const_iterator i=ideal.begin();
-      fitting_mask::const_iterator m=mask.begin();
-      
-      fittings::const_iterator bx=basis_x.begin();
-      
-      for(; i!=ideal.end(); i++, j++, m++, bx++/*, by++, bz++*/)
+      if(pcs>0)
       {
-        if(*m) continue;
-          //this is a quick hack
+        //going to use principal components
+        coeff.resize(order*3);
         
-        for(int k=0;k<3;k++)
+        std::vector<double> tmp[3];
+        std::vector<double> tmp2(pcs);
+        std::vector<double> coeff_pcs(pcs);
+        
+        tmp[0].resize(order*3);
+        tmp[1].resize(order*3);
+        tmp[2].resize(order*3);
+        
+        
+        minc::MNK_Gauss_Polinomial pol_pcs(pcs);
+        
+        tag_points::const_iterator j=measured.begin();
+        tag_points::const_iterator i=ideal.begin();
+        fitting_mask::const_iterator m=mask.begin();
+        fittings::const_iterator bx=basis_x.begin();
+        
+        for(; i!=ideal.end(); i++, j++, m++, bx++)
         {
-          tmp.assign(tmp.size(),0.0);
-          for(int t=0;t<order;t++)
-            tmp[t+k*order]=(*bx)[t];
-          pol_x.accumulate(tmp,(*j)[k]);
+          if(*m) continue;
+            //this is a quick hack
+          
+          for(int k=0;k<3;k++)
+          {
+            tmp[k].assign(order*3,0.0);
+            for(int t=0;t<order;t++)
+              tmp[k][t+k*order]=(*bx)[t];
+          }
+          
+          //calculcate PCS basis
+          for(int k=0;k<3;k++)
+          {
+            for(int t=0;t<pcs;t++)
+            {
+              tmp2[t]=0;
+              for(int e=0;e<(order*3);e++)
+                tmp2[t]+=tmp[k][e]*pca_matrix[e][t];
+            }
+            pol_pcs.accumulate(tmp2,(*j)[k]);
+          }
+        }
+        pol_pcs.solve_unstable(coeff_pcs,0.1,verbose);
+        //convert back to original coeffecients
+        std::cout<<"Solution:";
+        for(int j=0;j<pcs;j++)
+        {
+          std::cout<<coeff_pcs[j]<<" ";
+        }
+        std::cout<<std::endl;
+        
+        for(int e=0;e<(order*3);e++)
+        {
+          coeff[e]=0;
+          for(int j=0;j<pcs;j++)
+          {
+              coeff[e]+=coeff_pcs[j]*pca_matrix[e][j];
+          }
+        }
+      } else {
+        coeff.resize(order*3);
+        std::vector<double> tmp(order*3);
+        
+        minc::MNK_Gauss_Polinomial pol_x(order*3);
+        
+        tag_points::const_iterator j=measured.begin();
+        tag_points::const_iterator i=ideal.begin();
+        fitting_mask::const_iterator m=mask.begin();
+        
+        fittings::const_iterator bx=basis_x.begin();
+        
+        for(; i!=ideal.end(); i++, j++, m++, bx++/*, by++, bz++*/)
+        {
+          if(*m) continue;
+            //this is a quick hack
+          
+          for(int k=0;k<3;k++)
+          {
+            tmp.assign(tmp.size(),0.0);
+            for(int t=0;t<order;t++)
+              tmp[t+k*order]=(*bx)[t];
+            
+            pol_x.accumulate(tmp,(*j)[k]);
+          }
+          
         }
         
-      }
-      
-      //now add regularization coeffecients
-      if(legendre_coeff>0.0)
-      {
-        for(int j=0;j<order;j++)
+        //now add regularization coeffecients
+        if(legendre_coeff>0.0)
         {
-          pol_x.alpha().set(j,j,pol_x.alpha().get(j,j)+regularize[j]);
-          pol_x.alpha().set(j+order,j+order,pol_x.alpha().get(j+order,j+order)+regularize[j]);
-          pol_x.alpha().set(j+order*2,j+order*2,pol_x.alpha().get(j+order*2,j+order*2)+regularize[j]);
+          for(int j=0;j<order;j++)
+          {
+            pol_x.alpha().set(j,j,pol_x.alpha().get(j,j)+regularize[j]);
+            pol_x.alpha().set(j+order,j+order,pol_x.alpha().get(j+order,j+order)+regularize[j]);
+            pol_x.alpha().set(j+order*2,j+order*2,pol_x.alpha().get(j+order*2,j+order*2)+regularize[j]);
+          }
         }
+        double cond_x,cond_y,cond_z;
+        
+        cond_x=pol_x.solve(coeff);
       }
-      double cond_x,cond_y,cond_z;
-      
-      cond_x=pol_x.solve(coeff[0]);
-
     }
 	
     bool fit_tags(bool condition=false)
@@ -205,7 +268,7 @@ class Tag_fit
     void save_error(const char *err_f,const char *grid_f)
     {
       
-      minc::MNK_Gauss_Polinomial pol_x(order);
+      minc::MNK_Gauss_Polinomial pol_x(order*3);
       
       minc::def3d::Pointer   grid=minc::load_minc<minc::def3d>(grid_f);
       minc::image3d::Pointer error(minc::image3d::New());
@@ -221,6 +284,7 @@ class Tag_fit
       /*fittings::const_iterator by=basis_y.begin();
       fittings::const_iterator bz=basis_z.begin();*/
       std::vector<double> tmp(order*3);
+      
       for(;i!=ideal.end();i++, j++, bx++/*, by++, bz++*/)
       {
         
@@ -233,7 +297,7 @@ class Tag_fit
           tmp.assign(tmp.size(),0.0);
           for(int t=0;t<order;t++)
             tmp[t+k*order]=(*bx)[t];
-          moved[k]=pol_x.fit(tmp,coeff[0]);
+          moved[k]=pol_x.fit(tmp,coeff);
         }
         error->SetPixel(idx,(*j).EuclideanDistanceTo(moved));
       }
@@ -275,7 +339,7 @@ class Tag_fit
         std::cout<<cnt<<" nodes"<<std::endl;
     }
     
-    void load_pca_matrix(const char * pca_f)
+    void load_pca_matrix(const char * pca_f,int _pcs=-1)
     {
       std::ifstream pca(pca_f);
       pca_matrix.clear();
@@ -284,6 +348,7 @@ class Tag_fit
       while(pca.good() && !pca.eof())
       {
         char tmp[65535];
+        
         pca.getline(tmp,sizeof(tmp)-1);
         
         if(!strncmp(tmp,"\"PC",3)) //comment
@@ -303,8 +368,16 @@ class Tag_fit
           REPORT_ERROR("Inconsistent number of columns!");
         pca_matrix.push_back(ln);
       }
+      
       if(verbose)
         std::cout<<"Loaded "<<pca_matrix.size()<<"x"<<ncol<<" matrix"<<std::endl;
+      
+      if(_pcs<1) 
+        pcs=ncol;
+      else 
+        pcs=_pcs;
+      if(verbose)
+        std::cout<<"Going to use "<<pcs<<" PCs for fitting!"<<std::endl;
     }
 };
 
@@ -313,14 +386,16 @@ const double Tag_fit::_distance_epsilon=1e-10;
 void show_usage (const char * prog)
 {
   std::cerr 
-    << "Usage: "<<prog<<" <grid1> <mask1> [<grid2> <mask2> .... <grid n> <mask n>] <output.par> " << endl
-    << "--clobber overwrite files"    << endl
-    << "--order <n> (3)"<<endl
+      << "Usage: "<<prog<<" <grid1> <mask1> [<grid2> <mask2> .... <grid n> <mask n>] <output.par> " << std::endl
+      << "--clobber overwrite files"    << std::endl
+      << "--order <n> (3)"<<std::endl
 //    << "--keep <part> 0.0-1.0 part of data points to keep (0.8)"<<endl
 //    << "--iter <n> maximum number of iterations (200)"<<endl
-    << "--remove <pct> 0-1 (0) randomly remove voxels"<<endl
-    << "--legendre <f> legendre regularization coeefficient"<<endl
-    << "--error <errr.mnc> output error map"<<endl;
+      << "--remove <pct> 0-1 (0) randomly remove voxels"<<std::endl
+      << "--legendre <f> legendre regularization coeefficient"<<std::endl
+      << "--error <errr.mnc> output error map"<<std::endl
+      << "--pca <matrix.csv> use rotation matrix"<<std::endl
+      << "--pcs <N> use this number of PCs"<<std::endl;
     //<< "--scale <d>"<<endl;
 }
 
@@ -336,6 +411,7 @@ int main (int argc, char **argv)
   std::string grid_f,mask_f,output,dump_f;
   std::string residuals_f,error_f,pca_f;
   double legendre=0.0;
+  int pcs=-1;
   
   static struct option long_options[] = {
 		{"verbose", no_argument,       &verbose, 1},
@@ -346,14 +422,15 @@ int main (int argc, char **argv)
     {"legendre",required_argument,   0, 'l'},
     {"error",   required_argument,   0, 'e'},
     {"pca",     required_argument,   0, 'p'},
-		{0, 0, 0, 0}
+    {"pcs",     required_argument,   0, 'n'},
+    {0, 0, 0, 0}
 		};
   
   for (;;) {
       /* getopt_long stores the option index here. */
       int option_index = 0;
 
-      int c = getopt_long (argc, argv, "o:k:i:vs:l:e:", long_options, &option_index);
+      int c = getopt_long (argc, argv, "o:k:i:vs:l:e:p:n:", long_options, &option_index);
 
       /* Detect the end of the options. */
       if (c == -1) break;
@@ -375,6 +452,8 @@ int main (int argc, char **argv)
         error_f=optarg;break;
       case 'p':
         pca_f=optarg;break;
+      case 'n':
+        pcs=atoi(optarg);break;
 			case '?':
 				/* getopt_long already printed an error message. */
 			default:
@@ -401,7 +480,7 @@ int main (int argc, char **argv)
       std::cout<<"Using PCA rotation matrix:"<<pca_f.c_str()<<std::endl;
     
     if(!pca_f.empty())
-      fit.load_pca_matrix(pca_f.c_str());
+      fit.load_pca_matrix(pca_f.c_str(),pcs);
     
 		minc::def3d::Pointer  grid(minc::def3d::New());
 		minc::mask3d::Pointer mask(minc::mask3d::New());
@@ -436,7 +515,7 @@ int main (int argc, char **argv)
     if(!cf.good())
       REPORT_ERROR("Can't open file for writing!");
     
-    save_coeff(cf,fit.coeff[0]);
+    save_coeff(cf,fit.coeff);
     
 	} catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;

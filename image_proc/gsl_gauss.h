@@ -18,6 +18,7 @@
 
 #include "gsl_glue.h"
 #include <gsl/gsl_linalg.h>
+#include <iostream>
 
 namespace minc 
 {
@@ -202,38 +203,42 @@ namespace minc
 							)
 		{
 			//coeff.resize(dim ());	// make sure we have enough space!
-			int i;
-			for (i = 0; i < dim (); i++)
-				coeff[i] = 0;
+      coeff.assign(coeff.size(),0);
 	
       //int r=gsl_linalg_SV_decomp(_alpha,_V,_S,_work);
-      gsl_linalg_SV_decomp_jacobi(_alpha,_V,_S);
+      gsl_linalg_SV_decomp(_alpha,_V,_S,_work);
       gsl_linalg_SV_solve(_alpha,_V,_S,_beta,_x);
       //int r=gsl_linalg_QR_decomp(_alpha,_work);
       //gsl_linalg_QR_solve(_alpha,_work,_beta,_x);
-      for (i = 0; i < dim (); i++)
+      for (int i = 0; i < dim (); i++)
 				coeff[i] = _x.get(i);      
       return 0;
 		}
     
     //! solve MNK aproximation problem - return vector of coeffecients
-    int solve_unstable(valuesVec & coeff  //!< coeffecients
-              )
+    int solve_unstable(valuesVec & coeff,  //!< coeffecients
+              double sv_threshold=0.1,bool verbose=false)
     {
-      //coeff.resize(dim ()); // make sure we have enough space!
-      int i;
-      for (i = 0; i < dim (); i++)
-        coeff[i] = 0;
+      coeff.assign(coeff.size(),0);
   
       gsl_linalg_SV_decomp(_alpha,_V,_S,_work);
       //gsl_linalg_SV_decomp_jacobi(_alpha,_V,_S);
-      for (i = 0; i < dim (); i++)
-        if(_S.get(i)<0.1) _S.set(i,0.0);
+      int c=0;
+      for (int i = 0; i < dim (); i++)
+      {
+        if(_S.get(i)<sv_threshold) {
+          _S.set(i,0.0);
+          c++;
+        }
+      }
+      
+      if(verbose && c>0 ) 
+        std::cout<<"Removing "<<c<<" singular value below "<<sv_threshold<<" threshold"<<std::endl;
       
       gsl_linalg_SV_solve(_alpha,_V,_S,_beta,_x);
       //int r=gsl_linalg_QR_decomp(_alpha,_work);
       //gsl_linalg_QR_solve(_alpha,_work,_beta,_x);
-      for (i = 0; i < dim (); i++)
+      for (int i = 0; i < dim (); i++)
         coeff[i] = _x.get(i);      
       return 0;
     }
