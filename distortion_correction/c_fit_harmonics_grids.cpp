@@ -16,7 +16,10 @@
 //#include "minc_io.h"
 #include <iostream>
 #include <fstream>
-#include "data_proc.h"
+//#include "data_proc.h"
+#include "gsl_glue.h"
+#include "gsl_gauss.h"
+
 #include <itkBSplineInterpolateImageFunction.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -132,8 +135,11 @@ class Tag_fit
       coeff[0].resize(order);
       coeff[1].resize(order);
       
-      minc::MNK_Gauss_opt<tag_point> pol_x(limit_linear?order-2:order);
-      minc::MNK_Gauss_opt<tag_point> pol_z(limit_linear?order-2:order);
+      //minc::MNK_Gauss_opt<tag_point> pol_x(limit_linear?order-2:order);
+      //minc::MNK_Gauss_opt<tag_point> pol_z(limit_linear?order-2:order);
+      minc::MNK_Gauss_Polinomial pol_x(limit_linear?order-2:order);
+      minc::MNK_Gauss_Polinomial pol_z(limit_linear?order-2:order);
+      
       
       tag_points::const_iterator j=measured.begin();
       tag_points::const_iterator i=ideal.begin();
@@ -147,9 +153,10 @@ class Tag_fit
         if(limit_linear)
         {
           double dx=(*j)[0]-(*i)[0];
-          double dy =(*j)[1]-(*i)[1];
-          pol_x.accumulate(&(*bx)[2], sqrt(dx*dx+dy*dy));
-          pol_z.accumulate(&(*bx)[2], (*j)[2]-(*i)[2]);
+          double dy=(*j)[1]-(*i)[1];
+          
+          pol_x.accumulate((*bx), sqrt(dx*dx+dy*dy)); //TODO: fix the index issue (bx should be shifted by 2
+          pol_z.accumulate((*bx), (*j)[2]-(*i)[2]);
         } else {
           pol_x.accumulate(*bx, sqrt((*j)[0]*(*j)[0]+(*j)[1]*(*j)[1]));
           pol_z.accumulate(*bx, (*j)[2]);
@@ -160,14 +167,14 @@ class Tag_fit
       double cond_x,cond_y,cond_z;
       if(limit_linear)
       {
-        cond_x=pol_x.solve_svd(&coeff[0][2]);
-        cond_z=pol_z.solve_svd(&coeff[1][2]);
+        cond_x=pol_x.solve(coeff[0]);//TODO: fix the index issue (coeff should be shifted by 2
+        cond_z=pol_z.solve(coeff[1]);
         
         coeff[0][0]=coeff[1][1]=1.0;
         coeff[0][1]=coeff[1][0]=0;
       } else {
-        cond_x=pol_x.solve_svd(coeff[0]);
-        cond_z=pol_z.solve_svd(coeff[1]);
+        cond_x=pol_x.solve(coeff[0]);
+        cond_z=pol_z.solve(coeff[1]);
       }
       
       if(condition)
@@ -214,8 +221,11 @@ class Tag_fit
     
     bool remove_outliers(void)
     {
-      minc::MNK_Gauss < tag_point, basis_functions_x> pol_x(order);
-      minc::MNK_Gauss < tag_point, basis_functions_z> pol_z(order);
+      /*minc::MNK_Gauss < tag_point, basis_functions_x> pol_x(order);
+      minc::MNK_Gauss < tag_point, basis_functions_z> pol_z(order);*/
+      minc::MNK_Gauss_Polinomial pol_x(order);
+      minc::MNK_Gauss_Polinomial pol_z(order);
+      
       distances.resize(ideal.size());
       tag_points::const_iterator j=measured.begin();
       tag_points::const_iterator i=ideal.begin();
@@ -232,7 +242,7 @@ class Tag_fit
         //if(mask[k]) continue;
         cnt++;
         tag_point moved;
-        double r=pol_x.fit(*bx, coeff[0], *i);
+        double r=pol_x.fit(*bx, coeff[0]);
         double ir=sqrt((*i)[0]*(*i)[0]+(*i)[1]*(*i)[1]);
         if(ir>1e-6)
         {
@@ -242,7 +252,7 @@ class Tag_fit
           moved[0]=(*i)[0];
           moved[1]=(*i)[1];
         }
-        moved[2]=pol_z.fit(*bx, coeff[1], *i);
+        moved[2]=pol_z.fit(*bx, coeff[1]);
         double sx=(*j)[0]-moved[0];
         double sy=(*j)[1]-moved[1];
         double sz=(*j)[2]-moved[2];

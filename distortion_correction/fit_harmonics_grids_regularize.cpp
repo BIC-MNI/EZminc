@@ -31,7 +31,7 @@
 using namespace std;
 using namespace minc;
 
-void print_coeff (std::ostream & out, const std::vector < double >&coeff)
+void print_coeff(std::ostream & out, const std::vector < double >&coeff)
 {
 	out.precision(40);
 	int order = coeff.size ();
@@ -45,7 +45,7 @@ void print_coeff (std::ostream & out, const std::vector < double >&coeff)
 	out << std::endl;
 }
 
-void save_coeff (std::ostream & out, const std::vector < double >&coeff)
+void save_coeff(std::ostream & out, const std::vector < double >&coeff)
 {
 	int order = coeff.size ();
 	out.precision(40);
@@ -76,18 +76,21 @@ class Tag_fit
     tag_points ideal, measured;
     fitting_mask mask;
     bool     verbose;
+    bool     cylindric;
     double   max_dev;
     double   sd,max_distance;
-    int      order;
+    int      order,order_c;
     int      pcs;
     fitting_coeff coeff;
-    fittings basis_x;//,basis_y,basis_z;
+    fittings basis_x;
     basis_vector regularize;
+    basis_vector regularize_c;
     Index    index;
     Distances distances;
     double legendre_coeff;
 
-		basis_functions_x fun_x;
+		basis_functions_x    fun_x;
+    CylindricalFunctions fun_c;
 	
     void reset_index(void)
     {
@@ -101,41 +104,62 @@ class Tag_fit
       basis_x.resize(ideal.size());
       
       tag_points::const_iterator i=ideal.begin();
-      
       fittings::iterator mx=basis_x.begin();
-      basis_vector bas(order);
-      for(; i!=ideal.end(); i++, mx++)
+      
+      if(cylindric)
       {
-        mx->resize(order);
-        
-        //all basis are the same
-        fun_x.generate_basis(bas,order,*i);
-        for(int k=0;k<order;k++)
+        basis_vector bas(order_c);
+        for(; i!=ideal.end(); i++, mx++)
         {
-          (*mx)[k]=bas[k];
+          mx->resize(order);
+          
+          fun_c.generate_basis(bas,order_c,*i);
+          for(int k=0;k<order;k++)
+          {
+            (*mx)[k]=bas[k];
+          }
+        }
+      } else {
+        basis_vector bas(order);
+        for(; i!=ideal.end(); i++, mx++)
+        {
+          mx->resize(order);
+          
+          fun_x.generate_basis(bas,order,*i);
+          for(int k=0;k<order;k++)
+          {
+            (*mx)[k]=bas[k];
+          }
         }
       }
       //used for regularization
       regularize.resize(order);
+      regularize_c.resize(order_c);
+      
       if(legendre_coeff>0.0)
+      {
         fun_x.generate_regularization_vector(regularize,order,legendre_coeff);
+        fun_c.generate_regularization_vector(regularize_c,order_c,legendre_coeff);
+        
+      }
       std::cout<<std::endl<<legendre_coeff<<std::endl;
     }
     
     Tag_fit(int order_, 
+            int order_c_,
             double legendre,
             double max_dev_=10.0, 
-            bool verbose_=false,bool ll=false):
-           order(order_), 
+            bool verbose_=false,
+            bool cylindric_=false):
+           order(order_),
+           order_c(order_c_), 
            verbose(verbose_), 
            max_dev(max_dev_),
            max_distance(0), 
            sd(0), 
-          legendre_coeff(legendre),
-            pcs(-1)
+          legendre_coeff(legendre),pcs(-1),cylindric(cylindric_)
     {
     }
-    
     
     void fit_coeff(bool condition=false)
     {
@@ -145,110 +169,225 @@ class Tag_fit
         REPORT_ERROR("Mismatching number of points!");
       reset_index();
       
-      if(pcs>0)
+      if(cylindric)
       {
-        //going to use principal components
-        coeff.resize(order*3);
+        if(verbose)
+          std::cout<<"Performing cylindrical fit"<<std::endl;
         
-        std::vector<double> tmp[3];
-        std::vector<double> tmp2(pcs);
-        std::vector<double> coeff_pcs(pcs);
-        
-        tmp[0].resize(order*3);
-        tmp[1].resize(order*3);
-        tmp[2].resize(order*3);
-        
-        
-        minc::MNK_Gauss_Polinomial pol_pcs(pcs);
-        
-        tag_points::const_iterator j=measured.begin();
-        tag_points::const_iterator i=ideal.begin();
-        fitting_mask::const_iterator m=mask.begin();
-        fittings::const_iterator bx=basis_x.begin();
-        
-        for(; i!=ideal.end(); i++, j++, m++, bx++)
+        if(pcs>0)
         {
-          if(*m) continue;
-            //this is a quick hack
+          //going to use principal components
+          coeff.resize(order_c*2);
           
-          for(int k=0;k<3;k++)
-          {
-            tmp[k].assign(order*3,0.0);
-            for(int t=0;t<order;t++)
-              tmp[k][t+k*order]=(*bx)[t];
-          }
+          std::vector<double> tmp[2];
+          std::vector<double> tmp2(pcs);
+          std::vector<double> coeff_pcs(pcs);
           
-          //calculcate PCS basis
-          for(int k=0;k<3;k++)
+          tmp[0].resize(order_c*2);
+          tmp[1].resize(order_c*2);
+          
+          
+          minc::MNK_Gauss_Polinomial pol_pcs(pcs);
+          
+          tag_points::const_iterator j=measured.begin();
+          tag_points::const_iterator i=ideal.begin();
+          fitting_mask::const_iterator m=mask.begin();
+          fittings::const_iterator bx=basis_x.begin();
+          
+          for(; i!=ideal.end(); i++, j++, m++, bx++)
           {
-            for(int t=0;t<pcs;t++)
+            if(*m) continue;
+              //this is a quick hack
+            
+            for(int k=0;k<2;k++)
             {
-              tmp2[t]=0;
-              for(int e=0;e<(order*3);e++)
-                tmp2[t]+=tmp[k][e]*pca_matrix[e][t];
+              tmp[k].assign(order_c*2,0.0);
+              for(int t=0;t<order_c;t++)
+                tmp[k][t+k*order_c]=(*bx)[t];
             }
-            pol_pcs.accumulate(tmp2,(*j)[k]);
+            
+            //calculcate PCS basis
+            double cyl[2];
+            cyl[0]=sqrt((*j)[0]*(*j)[0]+(*j)[1]*(*j)[1]);
+            cyl[1]=(*j)[2];
+            
+            for(int k=0;k<2;k++)
+            {
+              for(int t=0;t<pcs;t++)
+              {
+                tmp2[t]=0;
+                for(int e=0;e<(order_c*2);e++)
+                  tmp2[t]+=tmp[k][e]*pca_matrix[e][t];
+              }
+              pol_pcs.accumulate(tmp2,cyl[k]);
+            }
           }
-        }
-        pol_pcs.solve_unstable(coeff_pcs,0.1,verbose);
-        //convert back to original coeffecients
-        std::cout<<"Solution:";
-        for(int j=0;j<pcs;j++)
-        {
-          std::cout<<coeff_pcs[j]<<" ";
-        }
-        std::cout<<std::endl;
-        
-        for(int e=0;e<(order*3);e++)
-        {
-          coeff[e]=0;
+          
+          pol_pcs.solve_unstable(coeff_pcs,0.001,verbose);
+          //convert back to original coeffecients
+          std::cout<<"Solution:";
           for(int j=0;j<pcs;j++)
           {
+            std::cout<<coeff_pcs[j]<<" ";
+          }
+          std::cout<<std::endl;
+          
+          for(int e=0;e<(order_c*2);e++)
+          {
+            coeff[e]=0;
+            for(int j=0;j<pcs;j++)
+            {
               coeff[e]+=coeff_pcs[j]*pca_matrix[e][j];
+            }
           }
-        }
-      } else {
-        coeff.resize(order*3);
-        std::vector<double> tmp(order*3);
-        
-        minc::MNK_Gauss_Polinomial pol_x(order*3);
-        
-        tag_points::const_iterator j=measured.begin();
-        tag_points::const_iterator i=ideal.begin();
-        fitting_mask::const_iterator m=mask.begin();
-        
-        fittings::const_iterator bx=basis_x.begin();
-        
-        for(; i!=ideal.end(); i++, j++, m++, bx++/*, by++, bz++*/)
-        {
-          if(*m) continue;
-            //this is a quick hack
+        } else {
+          coeff.resize(order_c*2);
+          std::vector<double> tmp(order_c*2);
           
-          for(int k=0;k<3;k++)
+          minc::MNK_Gauss_Polinomial pol_x(order_c*2);
+          
+          tag_points::const_iterator j=measured.begin();
+          tag_points::const_iterator i=ideal.begin();
+          fitting_mask::const_iterator m=mask.begin();
+          
+          fittings::const_iterator bx=basis_x.begin();
+          
+          for(; i!=ideal.end(); i++, j++, m++, bx++)
           {
-            tmp.assign(tmp.size(),0.0);
-            for(int t=0;t<order;t++)
-              tmp[t+k*order]=(*bx)[t];
+            if(*m) continue;
+              //this is a quick hack
             
-            pol_x.accumulate(tmp,(*j)[k]);
+            double cyl[2];
+            cyl[0]=sqrt((*j)[0]*(*j)[0]+(*j)[1]*(*j)[1]);
+            cyl[1]=(*j)[2];
+            
+            for(int k=0;k<2;k++)
+            {
+              tmp.assign(tmp.size(),0.0);
+              for(int t=0;t<order_c;t++)
+                tmp[t+k*order_c]=(*bx)[t];
+              
+              pol_x.accumulate(tmp,cyl[k]);
+            }
           }
           
-        }
-        
-        //now add regularization coeffecients
-        if(legendre_coeff>0.0)
-        {
-          for(int j=0;j<order;j++)
+          //now add regularization coeffecients
+          if(legendre_coeff>0.0)
           {
-            pol_x.alpha().set(j,j,pol_x.alpha().get(j,j)+regularize[j]);
-            pol_x.alpha().set(j+order,j+order,pol_x.alpha().get(j+order,j+order)+regularize[j]);
-            pol_x.alpha().set(j+order*2,j+order*2,pol_x.alpha().get(j+order*2,j+order*2)+regularize[j]);
+            for(int j=0;j<order_c;j++)
+            {
+              pol_x.alpha().set(j,j,pol_x.alpha().get(j,j)+regularize_c[j]);
+              pol_x.alpha().set(j+order_c,j+order_c,pol_x.alpha().get(j+order_c,j+order_c)+regularize_c[j]);
+            }
           }
+          pol_x.solve_unstable(coeff,0.001,verbose);
         }
-        double cond_x,cond_y,cond_z;
-        
-        cond_x=pol_x.solve(coeff);
-      }
+      } else { //non-cylindrical case
+      
+        if(pcs>0)
+        {
+          //going to use principal components
+          coeff.resize(order*3);
+          
+          std::vector<double> tmp[3];
+          std::vector<double> tmp2(pcs);
+          std::vector<double> coeff_pcs(pcs);
+          
+          tmp[0].resize(order*3);
+          tmp[1].resize(order*3);
+          tmp[2].resize(order*3);
+          
+          
+          minc::MNK_Gauss_Polinomial pol_pcs(pcs);
+          
+          tag_points::const_iterator j=measured.begin();
+          tag_points::const_iterator i=ideal.begin();
+          fitting_mask::const_iterator m=mask.begin();
+          fittings::const_iterator bx=basis_x.begin();
+          
+          for(; i!=ideal.end(); i++, j++, m++, bx++)
+          {
+            if(*m) continue;
+              //this is a quick hack
+            
+            for(int k=0;k<3;k++)
+            {
+              tmp[k].assign(order*3,0.0);
+              for(int t=0;t<order;t++)
+                tmp[k][t+k*order]=(*bx)[t];
+            }
+            
+            //calculcate PCS basis
+            for(int k=0;k<3;k++)
+            {
+              for(int t=0;t<pcs;t++)
+              {
+                tmp2[t]=0;
+                for(int e=0;e<(order*3);e++)
+                  tmp2[t]+=tmp[k][e]*pca_matrix[e][t];
+              }
+              pol_pcs.accumulate(tmp2,(*j)[k]);
+            }
+          }
+          pol_pcs.solve_unstable(coeff_pcs,0.001,verbose);
+          //convert back to original coeffecients
+          std::cout<<"Solution:";
+          for(int j=0;j<pcs;j++)
+          {
+            std::cout<<coeff_pcs[j]<<" ";
+          }
+          std::cout<<std::endl;
+          
+          for(int e=0;e<(order*3);e++)
+          {
+            coeff[e]=0;
+            for(int j=0;j<pcs;j++)
+            {
+                coeff[e]+=coeff_pcs[j]*pca_matrix[e][j];
+            }
+          }
+        } else {
+          coeff.resize(order*3);
+          std::vector<double> tmp(order*3);
+          
+          minc::MNK_Gauss_Polinomial pol_x(order*3);
+          
+          tag_points::const_iterator j=measured.begin();
+          tag_points::const_iterator i=ideal.begin();
+          fitting_mask::const_iterator m=mask.begin();
+          
+          fittings::const_iterator bx=basis_x.begin();
+          
+          for(; i!=ideal.end(); i++, j++, m++, bx++/*, by++, bz++*/)
+          {
+            if(*m) continue;
+              //this is a quick hack
+            
+            for(int k=0;k<3;k++)
+            {
+              tmp.assign(tmp.size(),0.0);
+              for(int t=0;t<order;t++)
+                tmp[t+k*order]=(*bx)[t];
+              
+              pol_x.accumulate(tmp,(*j)[k]);
+            }
+            
+          }
+          
+          //now add regularization coeffecients
+          if(legendre_coeff>0.0)
+          {
+            for(int j=0;j<order;j++)
+            {
+              pol_x.alpha().set(j,j,pol_x.alpha().get(j,j)+regularize[j]);
+              pol_x.alpha().set(j+order,j+order,pol_x.alpha().get(j+order,j+order)+regularize[j]);
+              pol_x.alpha().set(j+order*2,j+order*2,pol_x.alpha().get(j+order*2,j+order*2)+regularize[j]);
+            }
+          }
+          pol_x.solve(coeff);
+        }
+      } 
+      
     }
 	
     bool fit_tags(bool condition=false)
@@ -260,7 +399,6 @@ class Tag_fit
       calculate_basis();
       int i=0;
       fit_coeff(condition);
-      
       return sd<max_dev;
     }
     
@@ -268,38 +406,89 @@ class Tag_fit
     void save_error(const char *err_f,const char *grid_f)
     {
       
-      minc::MNK_Gauss_Polinomial pol_x(order*3);
-      
       minc::def3d::Pointer   grid=minc::load_minc<minc::def3d>(grid_f);
       minc::image3d::Pointer error(minc::image3d::New());
-      
       allocate_same<minc::image3d,minc::def3d>(error,grid);
-      
       error->FillBuffer(0.0);
       
-      tag_points::const_iterator j=measured.begin();
-      tag_points::const_iterator i=ideal.begin();
-
-      fittings::const_iterator bx=basis_x.begin();
-      /*fittings::const_iterator by=basis_y.begin();
-      fittings::const_iterator bz=basis_z.begin();*/
-      std::vector<double> tmp(order*3);
-      
-      for(;i!=ideal.end();i++, j++, bx++/*, by++, bz++*/)
+      if(cylindric)
       {
+        minc::MNK_Gauss_Polinomial pol_x(order_c*2);
         
-        minc::image3d::IndexType idx;
-        error->TransformPhysicalPointToIndex(*i,idx);
         
-        tag_point moved;
-        for(int k=0;k<3;k++)
+        tag_points::const_iterator j=measured.begin();
+        tag_points::const_iterator i=ideal.begin();
+  
+        fittings::const_iterator bx=basis_x.begin();
+        
+        std::vector<double> tmp(order_c*3);
+        
+        for(;i!=ideal.end();i++, j++, bx++)
         {
-          tmp.assign(tmp.size(),0.0);
-          for(int t=0;t<order;t++)
-            tmp[t+k*order]=(*bx)[t];
-          moved[k]=pol_x.fit(tmp,coeff);
+          
+          minc::image3d::IndexType idx;
+          error->TransformPhysicalPointToIndex(*i,idx);
+          
+          tag_point moved;
+          double cyl[2];
+          
+          for(int k=0;k<2;k++)
+          {
+            tmp.assign(tmp.size(),0.0);
+            
+            for(int t=0;t<order_c;t++)
+              tmp[t+k*order_c]=(*bx)[t];
+            
+            cyl[k]=pol_x.fit(tmp,coeff);
+          }
+          
+          double ir=sqrt((*i)[0]*(*i)[0]+(*i)[1]*(*i)[1]);
+          
+          if(ir>1e-6)
+          {
+            moved[0]=(*i)[0]*cyl[0]/ir;
+            moved[1]=(*i)[1]*cyl[0]/ir;
+          } else {
+            moved[0]=(*i)[0];
+            moved[1]=(*i)[1];
+          }
+          moved[2]=cyl[1];
+          
+          error->SetPixel(idx,(*j).EuclideanDistanceTo(moved));
         }
-        error->SetPixel(idx,(*j).EuclideanDistanceTo(moved));
+      } else {
+        minc::MNK_Gauss_Polinomial pol_x(order*3);
+        
+        minc::def3d::Pointer   grid=minc::load_minc<minc::def3d>(grid_f);
+        minc::image3d::Pointer error(minc::image3d::New());
+        
+        
+        error->FillBuffer(0.0);
+        
+        tag_points::const_iterator j=measured.begin();
+        tag_points::const_iterator i=ideal.begin();
+  
+        fittings::const_iterator bx=basis_x.begin();
+        /*fittings::const_iterator by=basis_y.begin();
+        fittings::const_iterator bz=basis_z.begin();*/
+        std::vector<double> tmp(order*3);
+        
+        for(;i!=ideal.end();i++, j++, bx++/*, by++, bz++*/)
+        {
+          
+          minc::image3d::IndexType idx;
+          error->TransformPhysicalPointToIndex(*i,idx);
+          
+          tag_point moved;
+          for(int k=0;k<3;k++)
+          {
+            tmp.assign(tmp.size(),0.0);
+            for(int t=0;t<order;t++)
+              tmp[t+k*order]=(*bx)[t];
+            moved[k]=pol_x.fit(tmp,coeff);
+          }
+          error->SetPixel(idx,(*j).EuclideanDistanceTo(moved));
+        }
       }
       save_minc<minc::image3d>(err_f,error);
     }
@@ -395,7 +584,8 @@ void show_usage (const char * prog)
       << "--legendre <f> legendre regularization coeefficient"<<std::endl
       << "--error <errr.mnc> output error map"<<std::endl
       << "--pca <matrix.csv> use rotation matrix"<<std::endl
-      << "--pcs <N> use this number of PCs"<<std::endl;
+      << "--pcs <N> use this number of PCs"<<std::endl
+      << "--cylindrical use cylindrical assumption"<<std::endl;
     //<< "--scale <d>"<<endl;
 }
 
@@ -412,11 +602,13 @@ int main (int argc, char **argv)
   std::string residuals_f,error_f,pca_f;
   double legendre=0.0;
   int pcs=-1;
+  int cylindrical=0;
   
   static struct option long_options[] = {
 		{"verbose", no_argument,       &verbose, 1},
 		{"quiet",   no_argument,       &verbose, 0},
 		{"clobber", no_argument,       &clobber, 1},
+    {"cylindrical", no_argument,   &cylindrical, 1},
     {"order",   required_argument,   0, 'o'},
 		{"version", no_argument,         0, 'v'},
     {"legendre",required_argument,   0, 'l'},
@@ -471,7 +663,9 @@ int main (int argc, char **argv)
     gsl_rng_env_setup();
     
     float max_dev=10;
-    Tag_fit fit(basis_functions_x::parameters_no(order),legendre,max_dev,verbose);
+    Tag_fit fit(basis_functions_x::parameters_no(order),
+                CylindricalFunctions::parameters_no(order),
+                legendre,max_dev,verbose,cylindrical);
     
     if(verbose && legendre>0.0)
       std::cout<<"Using legendre coeffecient:"<<legendre<<std::endl;

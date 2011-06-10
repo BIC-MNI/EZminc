@@ -61,13 +61,15 @@ namespace minc
   {
     public:
       double _scaling;
-      CylindricalFunctions():_scaling(100.0)
+      CylindricalFunctions():_scaling(200.0)
       {}
     
     double operator()(int n, tag_point p) const;
     static unsigned int parameters_no(int order);
     static double scale(int n,double);
     void generate_basis(basis_vector &basis, int order, tag_point p);
+    void generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff);
+    
   };
   
   template<class T> tag_point apply_transform(tag_point p,const basis_vector &basis, const T& parameters)

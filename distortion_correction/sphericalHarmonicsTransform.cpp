@@ -97,7 +97,6 @@ namespace minc
       sinphi1=0.0;
     }
 
-    //double sc=100.0;
     r/=_scaling;
     int n=2,j=0,i=0;
     basis[0]=p[2];
@@ -105,7 +104,7 @@ namespace minc
     basis[2]=p[1];
     cosphi=1.0;
     sinphi=0.0;
-    rr=r*r;//*_scaling;
+    rr=r*r;
     for(int c=3;c<order;)
     {
       gsl_sf_result tmp;
@@ -195,13 +194,12 @@ namespace minc
 		
 		double cosphi1,sinphi1,cosphi,sinphi,cosphi_,sinphi_;
 		double rr=1.0;
-    //double sc=100.0;
     r/=_scaling;
     int n=2,j=0,i=0;
     
     basis[0]=rxy;
     basis[1]=p[2];
-    rr=r*r*_scaling;
+    rr=r*r;
     for(int c=2;c<order;c++)
     {
       gsl_sf_result tmp;
@@ -216,6 +214,28 @@ namespace minc
       }
     }
   }
+  
+  void CylindricalFunctions::generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff)
+  {
+    basis.resize(order);
+    int n=2,j=0,i=0;
+    
+    basis[0]=0;
+    basis[1]=0;
+    
+    for(int c=2;c<order;c++)
+    {
+      basis[c]= legendre_coeff*n*n*n*n*(n+1)*(n+1)*(n+1)*(n+1);
+      std::cout<<basis[c]<<"\t";
+      j++;
+      if(j==(n+1)) 
+      { 
+        j=0; n++;
+      }
+    }
+    std::cout<<std::endl;
+  }
+  
   
   double CylindricalFunctions::scale(int n, double v)
 	{
