@@ -19,22 +19,27 @@ my @conf = (
 
    {'step'         => 4,
     'blur_fwhm'    => 8,
-    'iterations'   => 4,
+    'iterations'   => 6,
     },
 
     {'step'         => 4,
      'blur_fwhm'    => 4,
-     'iterations'   => 4,
+     'iterations'   => 5,
+    },
+
+    {'step'         => 3,
+     'blur_fwhm'    => 4,
+     'iterations'   => 3,
     },
     
     {'step'         => 2,
      'blur_fwhm'    => 2,
-     'iterations'   => 4,
+     'iterations'   => 3,
     },
     
     {'step'         => 1,
      'blur_fwhm'    => 2,
-     'iterations'   => 4,
+     'iterations'   => 3,
     },
     
    );
@@ -241,7 +246,7 @@ for ($i=0; $i<=$#conf; $i++) {
       $tmp_xfm = "$tmpdir/$s_base\_${i}_${j}_${k}.xfm";
       # set up registration
       @args = ('minctracc',  @def_minctracc_args,
-               '-iterations', 10,
+               '-iterations', 2, # 10
                '-step', $conf[$i]{step}, $conf[$i]{step}, $conf[$i]{step},
                '-lattice_diam', $conf[$i]{step} * 3, 
                              $conf[$i]{step} * 3, 

@@ -167,14 +167,14 @@ class Tag_fit
       double cond_x,cond_y,cond_z;
       if(limit_linear)
       {
-        cond_x=pol_x.solve(coeff[0]);//TODO: fix the index issue (coeff should be shifted by 2
-        cond_z=pol_z.solve(coeff[1]);
+        cond_x=pol_x.solve_unstable(coeff[0],0.01,verbose);//TODO: fix the index issue (coeff should be shifted by 2
+        cond_z=pol_z.solve_unstable(coeff[1],0.01,verbose);
         
         coeff[0][0]=coeff[1][1]=1.0;
         coeff[0][1]=coeff[1][0]=0;
       } else {
-        cond_x=pol_x.solve(coeff[0]);
-        cond_z=pol_z.solve(coeff[1]);
+        cond_x=pol_x.solve_unstable(coeff[0],0.01,verbose);
+        cond_z=pol_z.solve_unstable(coeff[1],0.01,verbose);
       }
       
       if(condition)

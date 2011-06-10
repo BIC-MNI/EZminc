@@ -302,8 +302,8 @@ unless( $only_roi )
   push @args,'-debug' if $debug;
   
 #  test
-#  push @args,'-weight',1;
-#  push @args,'-stiffness',0.4;
+  push @args,'-weight',1;
+  push @args,'-stiffness',0.4;
   
   do_cmd(@args);
 }

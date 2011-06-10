@@ -16,7 +16,9 @@
 //#include "minc_io.h"
 #include <iostream>
 #include <fstream>
-#include "data_proc.h"
+//#include "data_proc.h"
+#include "gsl_glue.h"
+#include "gsl_gauss.h"
 #include <itkBSplineInterpolateImageFunction.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -157,9 +159,13 @@ class Tag_fit
       coeff[1].resize(order);
       coeff[2].resize(order);
       
-      minc::MNK_Gauss_opt<tag_point> pol_x(limit_linear?order-3:order);
+/*      minc::MNK_Gauss_opt<tag_point> pol_x(limit_linear?order-3:order);
       minc::MNK_Gauss_opt<tag_point> pol_y(limit_linear?order-3:order);
-      minc::MNK_Gauss_opt<tag_point> pol_z(limit_linear?order-3:order);
+      minc::MNK_Gauss_opt<tag_point> pol_z(limit_linear?order-3:order);*/
+      
+      minc::MNK_Gauss_Polinomial pol_x(limit_linear?order-3:order);
+      minc::MNK_Gauss_Polinomial pol_y(limit_linear?order-3:order);
+      minc::MNK_Gauss_Polinomial pol_z(limit_linear?order-3:order);
       
       tag_points::const_iterator j=measured.begin();
       tag_points::const_iterator i=ideal.begin();
@@ -175,10 +181,11 @@ class Tag_fit
           //this is a quick hack
         
         if(limit_linear)
-        {
-          pol_x.accumulate(&(*bx)[3], (*j)[0]-(*i)[0]);
-          pol_y.accumulate(&(*by)[3], (*j)[1]-(*i)[1]);
-          pol_z.accumulate(&(*bz)[3], (*j)[2]-(*i)[2]);
+        { 
+          //TODO: fix indexing
+          pol_x.accumulate((*bx), (*j)[0]-(*i)[0]);
+          pol_y.accumulate((*by), (*j)[1]-(*i)[1]);
+          pol_z.accumulate((*bz), (*j)[2]-(*i)[2]);
         } else {
           pol_x.accumulate(*bx, (*j)[0]);
           pol_y.accumulate(*by, (*j)[1]);
@@ -191,18 +198,18 @@ class Tag_fit
       double cond_x,cond_y,cond_z;
       if(limit_linear)
       {
-        cond_x=pol_x.solve_svd(&coeff[0][3]);
-        cond_y=pol_y.solve_svd(&coeff[1][3]);
-        cond_z=pol_z.solve_svd(&coeff[2][3]);
+        cond_x=pol_x.solve_unstable(coeff[0],0.01,verbose);
+        cond_y=pol_y.solve_unstable(coeff[1],0.01,verbose);
+        cond_z=pol_z.solve_unstable(coeff[2],0.01,verbose);
         
         coeff[0][1]=coeff[1][2]=coeff[2][0]=1.0;
         coeff[0][0]=coeff[0][2]=0;
         coeff[1][0]=coeff[1][1]=0;
         coeff[2][1]=coeff[2][2]=0;
       } else {
-        cond_x=pol_x.solve_svd(coeff[0]);
-        cond_y=pol_y.solve_svd(coeff[1]);
-        cond_z=pol_z.solve_svd(coeff[2]);
+        cond_x=pol_x.solve_unstable(coeff[0],0.01,verbose);
+        cond_y=pol_y.solve_unstable(coeff[1],0.01,verbose);
+        cond_z=pol_z.solve_unstable(coeff[2],0.01,verbose);
       }
       
       if(condition)
@@ -211,13 +218,6 @@ class Tag_fit
         cout<<"cond_y="<<cond_y<<"\t";
         cout<<"cond_z="<<cond_z<<endl;
       }
-      /*  
-      }else {
-        pol_x.solve(&coeff[0][3]);
-        pol_y.solve(&coeff[1][3]);
-        pol_z.solve(&coeff[2][3]);
-      }*/
-     
     }
 	
     class IndexSort
@@ -256,9 +256,12 @@ class Tag_fit
     
     bool remove_outliers(void)
     {
-      minc::MNK_Gauss < tag_point, basis_functions_x> pol_x(order);
+/*      minc::MNK_Gauss < tag_point, basis_functions_x> pol_x(order);
       minc::MNK_Gauss < tag_point, basis_functions_y> pol_y(order);
-      minc::MNK_Gauss < tag_point, basis_functions_z> pol_z(order);
+      minc::MNK_Gauss < tag_point, basis_functions_z> pol_z(order);*/
+      minc::MNK_Gauss_Polinomial pol_x(order);
+      minc::MNK_Gauss_Polinomial pol_y(order);
+      minc::MNK_Gauss_Polinomial pol_z(order);
       
       distances.resize(ideal.size());
       tag_points::const_iterator j=measured.begin();
@@ -277,9 +280,10 @@ class Tag_fit
         //if(mask[k]) continue;
         cnt++;
         tag_point moved;
-        moved[0]=pol_x.fit(*bx, coeff[0], *i);
-        moved[1]=pol_y.fit(*by, coeff[1], *i);
-        moved[2]=pol_z.fit(*bz, coeff[2], *i);
+        moved[0]=pol_x.fit(*bx, coeff[0]);
+        moved[1]=pol_y.fit(*by, coeff[1]);
+        moved[2]=pol_z.fit(*bz, coeff[2]);
+        
         double d=(*j).SquaredEuclideanDistanceTo(moved);
         distances[k]=d;
         //sd+=d;

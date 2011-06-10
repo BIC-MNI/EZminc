@@ -223,7 +223,7 @@ class Tag_fit
             }
           }
           
-          pol_pcs.solve_unstable(coeff_pcs,0.001,verbose);
+          pol_pcs.solve_unstable(coeff_pcs,0.01,verbose);
           //convert back to original coeffecients
           std::cout<<"Solution:";
           for(int j=0;j<pcs;j++)
@@ -280,7 +280,7 @@ class Tag_fit
               pol_x.alpha().set(j+order_c,j+order_c,pol_x.alpha().get(j+order_c,j+order_c)+regularize_c[j]);
             }
           }
-          pol_x.solve_unstable(coeff,0.001,verbose);
+          pol_x.solve_unstable(coeff,0.01,verbose);
         }
       } else { //non-cylindrical case
       
@@ -329,7 +329,7 @@ class Tag_fit
               pol_pcs.accumulate(tmp2,(*j)[k]);
             }
           }
-          pol_pcs.solve_unstable(coeff_pcs,0.001,verbose);
+          pol_pcs.solve_unstable(coeff_pcs,0.01,verbose);
           //convert back to original coeffecients
           std::cout<<"Solution:";
           for(int j=0;j<pcs;j++)
