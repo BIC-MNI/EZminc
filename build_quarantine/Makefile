@@ -23,7 +23,7 @@
 #     -> just like it sounds: minc + itk + ezminc
 #      
 # (d) make visual
-#     -> make the visualization programs: register + Display 
+#     -> make the visualization programs: register + Display + postf
 #     -> I suspect that these have been segregated from the "all" build
 #        since these programs are trickier to build ... i.e. more 
 #        dependencies, therefore more to go wrong.
@@ -59,7 +59,7 @@
 #
 # Notes -- 
 # (1) make all ... and use up to 2 cores
-# (2) make register and Display (needs the previous make to finish first)
+# (2) make register, Display and postf (needs the previous make to finish first)
 #     NB: currently (20May2011) Display needs to have its final link line corrected in order
 #         to produce an executable
 # (3) install a whack of MNI-BIC models for use with mritotal, etc.
@@ -116,7 +116,7 @@ help :
 	@echo      -\> just like it sounds: minc + itk + ezminc
 	@echo       
 	@echo  \(d\) make visual
-	@echo      -\> make the visualization programs: register + Display 
+	@echo      -\> make the visualization programs: register, Display, and postf 
 	@echo      -\> I suspect that these have been segregated from the \"all\" build
 	@echo         since these programs are trickier to build ... i.e. more 
 	@echo         dependencies, therefore more to go wrong.
@@ -180,13 +180,13 @@ VTK_VER          := 5.6.1
 FLTK_VER         := 1.3.x-r7725
 REGISTER_VER     := 1.4.0
 DISPLAY_VER      := 1.5.0
+POSTF_VER        := 1.0.03
 MNI_MODELS_AVERAGE305_LIN_VER  := 1.1
 MNI_MODELS_COLIN27_LIN_VER     := 1.1
 MNI_MODELS_ICBM_LIN_VER        := 1.1
 MNI_MODELS_ICBM_NL_6GEN_VER    := 1.0
 MNI_MODELS_ICBM_NL_40GEN_VER   := 1.0
 MNI_AUTOREG_MODEL_VER          := 1.1
-
 
 
 
@@ -221,6 +221,7 @@ $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER).tar.gz  \
 $(BUILD_DIR)/src/netpbm-$(NETPBM_VER).tar.gz \
 $(BUILD_DIR)/src/Register-$(REGISTER_VER).tar.gz \
 $(BUILD_DIR)/src/Display-$(DISPLAY_VER).tar.gz \
+$(BUILD_DIR)/src/postf-$(POSTF_VER).tar.gz \
 $(BUILD_DIR)/src/mni-models_average305-lin-$(MNI_MODELS_AVERAGE305_LIN_VER).tar.gz  \
 $(BUILD_DIR)/src/mni-models_colin27-lin-$(MNI_MODELS_COLIN27_LIN_VER).tar.gz     \
 $(BUILD_DIR)/src/mni-models_icbm152-lin-$(MNI_MODELS_ICBM_LIN_VER).tar.gz     \
@@ -234,7 +235,7 @@ $(BUILD_DIR)/src/mni_autoreg_model-$(MNI_AUTOREG_MODEL_VER).tar.gz
 
 # *****************************************************************************
 # Install target files
-# ... these are there files that Make uses to check whether the target
+# ... these are the files that Make uses to check whether the target
 #     needs to be rebuilt or not. 
 # ... Make will look for these files and :
 #     (1) if non-existent, will rebuild the package
@@ -265,6 +266,7 @@ getopt_tabular := $(INSTALL_DIR)/perl/Getopt/Tabular.pm
 mni_perllib    := $(INSTALL_DIR)/perl/MNI.pm
 register       := $(INSTALL_DIR)/bin/register
 Display        := $(INSTALL_DIR)/bin/Display
+postf          := $(INSTALL_DIR)/bin/postf
 vtk            := $(INSTALL_DIR)/lib/vtk-5.6/UseVTK.cmake
 fltk           := $(INSTALL_DIR)/lib/FLTK-1.3/UseFLTK.cmake
 mni-models_average305-lin   := $(INSTALL_DIR)/share/mni-models/average305_t1_tal_lin.mnc.gz
@@ -329,11 +331,13 @@ getopt_tabular : $(getopt_tabular)
 
 mni_perllib : $(mni_perllib)
 
-visual : $(output_dirs) $(register) $(Display)
+visual : $(output_dirs)  $(postf) $(register) $(Display)
 
 register : $(output_dirs) $(register)
 
 Display : $(output_dirs) $(Display)
+
+postf : $(output_dirs) $(postf)
 
 cmake : $(output_dirs) $(cmake)
 
@@ -493,6 +497,9 @@ $(BUILD_DIR)/src/Register-$(REGISTER_VER).tar.gz :
 	$(WGET) http://packages.bic.mni.mcgill.ca/tgz/Register-$(REGISTER_VER).tar.gz \
  -O $(BUILD_DIR)/src/Register-$(REGISTER_VER).tar.gz
 
+$(BUILD_DIR)/src/postf-$(POSTF_VER).tar.gz :
+	$(WGET) http://packages.bic.mni.mcgill.ca/tgz/postf-$(POSTF_VER).tar.gz \
+ -O $(BUILD_DIR)/src/postf-$(POSTF_VER).tar.gz
 
 $(BUILD_DIR)/src/mni-models_average305-lin-$(MNI_MODELS_AVERAGE305_LIN_VER).tar.gz :
 	$(WGET) http://packages.bic.mni.mcgill.ca/tgz/mni-models_average305-lin-$(MNI_MODELS_AVERAGE305_LIN_VER).tar.gz \
@@ -720,6 +727,13 @@ $(register) : $(BUILD_DIR)/src/Register-$(REGISTER_VER) $(bicpl)
 $(Display) :$(BUILD_DIR)/src/Display-$(DISPLAY_VER) $(bicpl)
 	cd $(BUILD_DIR)/src/Display-1.5.0 && \
 	./configure --prefix=$(INSTALL_DIR) --with-build-path=$(INSTALL_DIR)  --with-minc2 --with-x LDFLAGS="-L$(INSTALL_DIR)/lib" LIBS="-lnetpbm" && \
+	make clean   && \
+	make $(PARALLEL_BUILD)  && \
+	make install 
+
+$(postf) : $(BUILD_DIR)/src/postf-$(POSTF_VER) $(bicpl)
+	cd $(BUILD_DIR)/src/postf-$(POSTF_VER) && \
+	./configure --prefix=$(INSTALL_DIR) --with-build-path=$(INSTALL_DIR)  --with-minc2 --with-x && \
 	make clean   && \
 	make $(PARALLEL_BUILD)  && \
 	make install 
