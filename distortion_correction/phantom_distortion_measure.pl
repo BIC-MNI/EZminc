@@ -31,6 +31,8 @@ my $adni;
 my $out_roi;
 my $only_roi;
 my $dilate_roi=0;
+my $pca;
+my $pcs;
 
 #additional parameters
 GetOptions( 
@@ -56,6 +58,8 @@ GetOptions(
           "out-roi=s" =>       \$out_roi,
           "only-roi"  =>       \$only_roi,
           "dilate-roi=n" =>    \$dilate_roi,
+          "pca=s" =>    \$pca,
+          "pcs=n" =>    \$pcs,
           );
 
 die <<END 
@@ -78,6 +82,8 @@ die <<END
   --adni                - treat the phantom as adni 
   --out-roi <output>    - create ROI describing volume where distortions may be applied
   --only-roi            - a HACK to skip actual distortion correction field calculations 
+  --pca <rotation.csv>
+  --pcs <n>
 ] 
 END
   if $#ARGV<2; #number of arguments -1 
@@ -274,10 +280,15 @@ foreach $scan(@scans) {
              '-like',"$work_dir/core_${name}",
              '-transform',"$work_dir/align_${name}.xfm",'-trilinear','-float');
 
-      do_cmd('minccalc','-byte','-express','A[0]>0.5?1:0',"$tmpdir/estimate_${name}",
-              "$work_dir/estimate_${name}");
     }
   }
+
+  unless(-e "$work_dir/estimate_${name}" || $acr)
+  {
+      do_cmd('minccalc','-byte','-express','A[0]>0.5?1:0',"$tmpdir/estimate_${name}",
+              "$work_dir/estimate_${name}");
+  }
+
   if($acr) {
     push @args,"$work_dir/ideal_${name}","$work_dir/core_${name}","$work_dir/fit_${name}","$work_dir/fit_${name}";
   } else {
@@ -300,6 +311,8 @@ unless( $only_roi )
 
 #  push @args,'-work_dir',"$work_dir/pf" if $work_dir;
   push @args,'-debug' if $debug;
+  push @args,'-pca',$pca if $pca;
+  push @args,'-pcs',$pcs if $pcs;
   
 #  test
   push @args,'-weight',1;

@@ -66,7 +66,9 @@ $me = &basename($0);
    'keep'      => 1.0,
    'cyl'       => 0,
    'init'      => undef,
-   'work_dir'  => undef
+   'work_dir'  => undef,
+   'pca'       => undef,
+   'pcs'       => undef,
    );
 
 $Help = <<HELP;
@@ -115,6 +117,10 @@ $Usage = "Usage: $me [options] source.mnc target.mnc fit_mask.mnc estimate_mask.
       "Initial estimation" ],
    ["-work_dir", "string", 1, \$opt{work_dir},
       "Work directory (instead of temp), usefull for debugging" ],
+   ["-pca", "string", 1, \$opt{pca},
+      "Use pca rotation matrix" ],
+   ["-pcs", "integer", 1, \$opt{pcs},
+      "limit number of PCs" ],
    );
 
 # Check arguments
@@ -312,7 +318,19 @@ sub regularize_xfms {
   my @masks=@{$_mask};
   die "XFMs and MASKs don't match!" if $#xfms!=$#masks;
   
-  my @args=($opt{cyl}?'c_fit_harmonics_grids':'fit_harmonics_grids','--order',$opt{order});
+  my @args;
+  if($opt{pca})
+  {
+    @args='fit_harmonics_grids_regularize','--order',$opt{order};
+    push @args,'--cylindrical' if $opt{cyl};
+    push @args,'--pca',$opt{pca};
+    push @args,'--pcs',$opt{pcs} if $opt{pcs};
+  } else {
+    @args=($opt{cyl}?'c_fit_harmonics_grids':'fit_harmonics_grids','--order',$opt{order});
+    push(@args,"--limit") if $opt{limit};
+    push(@args,"--keep",$opt{keep}) if $opt{keep};
+    push(@args,'--iter',10);
+  } 
   for(my $i=0;$i<=$#xfms;$i++)
   {
     my $grid=$xfms[$i];
@@ -320,9 +338,7 @@ sub regularize_xfms {
     die "Can't find  grid file: $grid" unless -e $grid;
     push (@args,$grid,$masks[$i]);
   }
-  push(@args,"$tmpdir/regularize.par",'--iter',10,'--clobber');
-  push(@args,"--limit") if $opt{limit};
-  push(@args,"--keep",$opt{keep}) if $opt{keep};
+  push(@args,"$tmpdir/regularize.par",'--clobber');
   
   do_cmd(@args);
   @args=('par2xfm.pl',"$tmpdir/regularize.par",$out,'--clobber','--max',20,'--extent',400,'--step',4);
