@@ -30,6 +30,9 @@ TARGET_LINK_LIBRARIES( volume_avg minc_io)
 ADD_EXECUTABLE( volume_similarity volume_similarity.cpp)
 TARGET_LINK_LIBRARIES( volume_similarity minc_io)
 
+ADD_EXECUTABLE( fuzzy_volume_similarity fuzzy_volume_similarity.cpp)
+TARGET_LINK_LIBRARIES( fuzzy_volume_similarity minc_io)
+
 ADD_EXECUTABLE( trilinear_resample trilinear_resample.cpp)
 TARGET_LINK_LIBRARIES( trilinear_resample minc_io)
 
@@ -38,5 +41,6 @@ INSTALL(TARGETS
         volume_msq_dist
         volume_avg
         volume_similarity
+        fuzzy_volume_similarity
         RUNTIME DESTINATION bin )
         

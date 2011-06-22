@@ -49,7 +49,7 @@ my(@opt_table, %opt, $outxfm, $outfile, @args, $tmpdir);
 
 $me = &basename($0);
 %opt = (
-   'verbose'   => 0,
+   'verbose'   => 1,
    'debug'     => 0,
    'clobber'   => 0,
    'fake'      => 0,
@@ -321,7 +321,7 @@ sub regularize_xfms {
   my @args;
   if($opt{pca})
   {
-    @args='fit_harmonics_grids_regularize','--order',$opt{order};
+    @args=('fit_harmonics_grids_regularize','--order',$opt{order});
     push @args,'--cylindrical' if $opt{cyl};
     push @args,'--pca',$opt{pca};
     push @args,'--pcs',$opt{pcs} if $opt{pcs};
