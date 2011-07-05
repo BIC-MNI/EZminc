@@ -69,7 +69,7 @@ namespace minc
   }
 
   //! allocate volume of the same dimension,spacing and origin
-  template<class T,class S> void allocate_same(typename T::Pointer &image,typename S::Pointer &sample)
+  template<class T,class S> void allocate_same(typename T::Pointer &image,const typename S::Pointer &sample)
   {
 		image->SetLargestPossibleRegion(sample->GetLargestPossibleRegion());
 		image->SetBufferedRegion(sample->GetLargestPossibleRegion());
@@ -81,7 +81,21 @@ namespace minc
   }
   
   //! allocate volume of the same dimension,spacing and origin
-  template<class T,class S> typename T::Pointer allocate_same(typename S::Pointer &sample)
+  template<class T,class S> void allocate_same(typename T::Pointer &image,const typename S::ConstPointer &sample)
+  {
+    image->SetLargestPossibleRegion(sample->GetLargestPossibleRegion());
+    image->SetBufferedRegion(sample->GetLargestPossibleRegion());
+    image->SetRequestedRegion(sample->GetLargestPossibleRegion());
+    image->SetSpacing( sample->GetSpacing() );
+    image->SetOrigin ( sample->GetOrigin() );
+    image->SetDirection(sample->GetDirection());
+    image->Allocate();
+  }
+  
+  
+  
+  //! allocate volume of the same dimension,spacing and origin
+  template<class T,class S> typename T::Pointer allocate_same(const typename S::Pointer &sample)
   {
     typename T::Pointer image=T::New();
     image->SetLargestPossibleRegion(sample->GetLargestPossibleRegion());
@@ -96,7 +110,7 @@ namespace minc
   
   
   //! allocate volume of the same dimension,spacing and origin and do nearest neighbour resampling
-  template<class T,class S,class E,class D> void nearest_resample_like(typename T::Pointer &dst,typename T::Pointer &sample,typename T::Pointer &src, const D& def)
+  template<class T,class S,class E,class D> void nearest_resample_like(typename T::Pointer &dst,const typename S::Pointer &sample,const typename E::Pointer &src, const D& def)
   {
     allocate_same<T,T>(dst,sample);    
 		itk::ImageRegionIteratorWithIndex<typename T::ObjectType> it(dst, dst->GetLargestPossibleRegion());
