@@ -112,12 +112,12 @@ namespace minc
   //! allocate volume of the same dimension,spacing and origin and do nearest neighbour resampling
   template<class T,class S,class E,class D> void nearest_resample_like(typename T::Pointer &dst,const typename S::Pointer &sample,const typename E::Pointer &src, const D& def)
   {
-    allocate_same<T,T>(dst,sample);    
-		itk::ImageRegionIteratorWithIndex<typename T::ObjectType> it(dst, dst->GetLargestPossibleRegion());
+    allocate_same<T,S>(dst,sample);
+		itk::ImageRegionIteratorWithIndex<T> it(dst, dst->GetLargestPossibleRegion());
 		for(it.GoToBegin(); !it.IsAtEnd(); ++it)
     {
       tag_point p;
-      typename E::ObjectType::IndexType idx;
+      typename E::IndexType idx;
       dst->TransformIndexToPhysicalPoint(it.GetIndex(),p);
       if(src->TransformPhysicalPointToIndex(p,idx))
       {
