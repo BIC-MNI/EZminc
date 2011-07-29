@@ -181,6 +181,7 @@ FLTK_VER         := 1.3.x-r7725
 REGISTER_VER     := 1.4.0
 DISPLAY_VER      := 1.5.0
 POSTF_VER        := 1.0.03
+INORMALIZE_VER   := 1.0.2
 MNI_MODELS_AVERAGE305_LIN_VER  := 1.1
 MNI_MODELS_COLIN27_LIN_VER     := 1.1
 MNI_MODELS_ICBM_LIN_VER        := 1.1
@@ -222,6 +223,7 @@ $(BUILD_DIR)/src/netpbm-$(NETPBM_VER).tar.gz \
 $(BUILD_DIR)/src/Register-$(REGISTER_VER).tar.gz \
 $(BUILD_DIR)/src/Display-$(DISPLAY_VER).tar.gz \
 $(BUILD_DIR)/src/postf-$(POSTF_VER).tar.gz \
+$(BUILD_DIR)/src/inormalize-${INORMALIZE_VER}.tar.gz \
 $(BUILD_DIR)/src/mni-models_average305-lin-$(MNI_MODELS_AVERAGE305_LIN_VER).tar.gz  \
 $(BUILD_DIR)/src/mni-models_colin27-lin-$(MNI_MODELS_COLIN27_LIN_VER).tar.gz     \
 $(BUILD_DIR)/src/mni-models_icbm152-lin-$(MNI_MODELS_ICBM_LIN_VER).tar.gz     \
@@ -270,7 +272,7 @@ postf          := $(INSTALL_DIR)/bin/postf
 vtk            := $(INSTALL_DIR)/lib/vtk-5.6/UseVTK.cmake
 fltk           := $(INSTALL_DIR)/lib/FLTK-1.3/UseFLTK.cmake
 classify       := $(INSTALL_DIR)/bin/classify
-
+inormalize     := $(INSTALL_DIR)/bin/inormalize
 mni-models_average305-lin   := $(INSTALL_DIR)/share/mni-models/average305_t1_tal_lin.mnc.gz
 mni-models_colin27-lin      := $(INSTALL_DIR)/share/mni-models/colin27_t1_tal_lin.mnc.gz
 mni-models_icbm152-lin      := $(INSTALL_DIR)/share/mni-models/icbm_avg_152_t2_tal_lin.mnc.gz
@@ -288,7 +290,7 @@ mni_autoreg_model           := $(INSTALL_DIR)/share/mni_autoreg/average_305.mnc.
 #
 # *****************************************************************************
 #
-minc-full : create_output_dirs bicpl n3 conglomerate glim_image mni_autoreg mincblob mni_perllib ray_trace ezminc mincbet classify mincmorph
+minc-full : create_output_dirs bicpl n3 conglomerate glim_image mni_autoreg mincblob mni_perllib ray_trace ezminc mincbet classify mincmorph inormalize
 
 minc-with-itk : $(output_dirs) minc itk ezminc 
 
@@ -346,6 +348,8 @@ cmake : $(output_dirs) $(cmake)
 classify : $(output_dirs) $(classify) 
 
 fftw : $(output_dirs) $(fftw)
+
+inormalize : $(output_dirs)  $(inormalize)
 
 mni-models_average305-lin : $(mni-models_average305-lin)
 mni-models_colin27-lin : $(mni-models_colin27-lin)
@@ -505,6 +509,10 @@ $(BUILD_DIR)/src/Register-$(REGISTER_VER).tar.gz :
 $(BUILD_DIR)/src/postf-$(POSTF_VER).tar.gz :
 	$(WGET) http://packages.bic.mni.mcgill.ca/tgz/postf-$(POSTF_VER).tar.gz \
  -O $(BUILD_DIR)/src/postf-$(POSTF_VER).tar.gz
+ 
+$(BUILD_DIR)/src/inormalize-${INORMALIZE_VER}.tar.gz : 
+	$(WGET) http://packages.bic.mni.mcgill.ca/tgz/inormalize-$(INORMALIZE_VER).tar.gz \
+ -O $(BUILD_DIR)/src/inormalize-$(INORMALIZE_VER).tar.gz
 
 $(BUILD_DIR)/src/mni-models_average305-lin-$(MNI_MODELS_AVERAGE305_LIN_VER).tar.gz :
 	$(WGET) http://packages.bic.mni.mcgill.ca/tgz/mni-models_average305-lin-$(MNI_MODELS_AVERAGE305_LIN_VER).tar.gz \
@@ -612,6 +620,7 @@ $(ebtks) : $(BUILD_DIR)/src/ebtks-$(EBTKS_VER) $(minc)
 	./configure --prefix=$(INSTALL_DIR) --with-build-path=$(INSTALL_DIR)  --disable-shared --with-minc2 && make clean  && \
 	make $(PARALLEL_BUILD) && \
 	make install
+
 
 $(netpbm) : $(BUILD_DIR)/src/netpbm-$(NETPBM_VER)
 	cd $(BUILD_DIR)/src/netpbm-$(NETPBM_VER)  && \
@@ -742,6 +751,14 @@ $(postf) : $(BUILD_DIR)/src/postf-$(POSTF_VER) $(bicpl)
 	make clean   && \
 	make $(PARALLEL_BUILD)  && \
 	make install 
+
+$(inormalize) : $(BUILD_DIR)/src/inormalize-$(INORMALIZE_VER) $(ebtks)
+	cd $(BUILD_DIR)/src/inormalize-$(INORMALIZE_VER) && \
+	./configure --prefix=$(INSTALL_DIR) --with-build-path=$(INSTALL_DIR)  --with-minc2 && \
+	make clean   && \
+	make $(PARALLEL_BUILD)  && \
+	make install 
+
 
 
 # build the MODELS
