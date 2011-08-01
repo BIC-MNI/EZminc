@@ -190,14 +190,15 @@ REGISTER_VER     := 1.4.0
 DISPLAY_VER      := 1.5.0
 POSTF_VER        := 1.0.03
 INORMALIZE_VER   := 1.0.2
+ARGUMENTS_VER    := 0.2.1
+PCRE_VER         := 8.12
+PCREPP_VER       := 0.9.5
 MNI_MODELS_AVERAGE305_LIN_VER  := 1.1
 MNI_MODELS_COLIN27_LIN_VER     := 1.1
 MNI_MODELS_ICBM_LIN_VER        := 1.1
 MNI_MODELS_ICBM_NL_6GEN_VER    := 1.0
 MNI_MODELS_ICBM_NL_40GEN_VER   := 1.0
 MNI_AUTOREG_MODEL_VER          := 1.1
-
-
 
 
 # *****************************************************************************
@@ -232,14 +233,15 @@ $(BUILD_DIR)/src/Register-$(REGISTER_VER).tar.gz \
 $(BUILD_DIR)/src/Display-$(DISPLAY_VER).tar.gz \
 $(BUILD_DIR)/src/postf-$(POSTF_VER).tar.gz \
 $(BUILD_DIR)/src/inormalize-${INORMALIZE_VER}.tar.gz \
+$(BUILD_DIR)/src/arguments-$(ARGUMENTS_VER).tar.gz \
+$(BUILD_DIR)/src/pcre-$(PCRE_VER).tar.gz \
+$(BUILD_DIR)/src//pcre++-$(PCREPP_VER).tar.gz \
 $(BUILD_DIR)/src/mni-models_average305-lin-$(MNI_MODELS_AVERAGE305_LIN_VER).tar.gz  \
 $(BUILD_DIR)/src/mni-models_colin27-lin-$(MNI_MODELS_COLIN27_LIN_VER).tar.gz     \
 $(BUILD_DIR)/src/mni-models_icbm152-lin-$(MNI_MODELS_ICBM_LIN_VER).tar.gz     \
 $(BUILD_DIR)/src/mni-models_icbm152-nl-$(MNI_MODELS_ICBM_NL_6GEN_VER).tar.gz  \
 $(BUILD_DIR)/src/mni-models_icbm152-nl-2009-$(MNI_MODELS_ICBM_NL_40GEN_VER).tar.gz  \
-$(BUILD_DIR)/src/mni_autoreg_model-$(MNI_AUTOREG_MODEL_VER).tar.gz
-
-
+$(BUILD_DIR)/src/mni_autoreg_model-$(MNI_AUTOREG_MODEL_VER).tar.gz \
 
 
 
@@ -281,6 +283,9 @@ vtk            := $(INSTALL_DIR)/lib/vtk-5.6/UseVTK.cmake
 fltk           := $(INSTALL_DIR)/lib/FLTK-1.3/UseFLTK.cmake
 classify       := $(INSTALL_DIR)/bin/classify
 inormalize     := $(INSTALL_DIR)/bin/inormalize
+arguments      := $(INSTALL_DIR)/lib/libarguments.a
+pcre           := $(INSTALL_DIR)/lib/libpcre.a
+pcrepp         := $(INSTALL_DIR)/lib/libpcre++.a
 mni-models_average305-lin   := $(INSTALL_DIR)/share/mni-models/average305_t1_tal_lin.mnc.gz
 mni-models_colin27-lin      := $(INSTALL_DIR)/share/mni-models/colin27_t1_tal_lin.mnc.gz
 mni-models_icbm152-lin      := $(INSTALL_DIR)/share/mni-models/icbm_avg_152_t2_tal_lin.mnc.gz
@@ -316,55 +321,33 @@ clean :
 	rm -rf $(source_dirs)
 
 ezminc : $(output_dirs)  $(ezminc)  
-
 itk : $(output_dirs)  $(itk)
-
 vtk : $(output_dirs) $(vtk)
-
 fltk : $(output_dirs) $(fltk)
-
 bicpl : $(output_dirs) $(bicpl)
-
 ebtks : $(output_dirs) $(ebtks)
-
 n3 : $(output_dirs) $(n3)
-
 oobicpl : $(output_dirs) $(oobicpl)
-
 conglomerate : $(output_dirs)  $(conglomerate)
-
 mincmorph : $(output_dirs) $(mincmorph)
-
 mincblob : $(output_dirs) $(mincblob)
-
 mincbet : $(output_dirs) $(mincbet)
-
 ray_trace : $(output_dirs) $(ray_trace)
-
 getopt_tabular : $(output_dirs) $(getopt_tabular)
-
 mni_perllib : $(output_dirs) $(mni_perllib)
-
 visual : $(output_dirs)  $(postf) $(register) $(Display)
-
 register : $(output_dirs) $(register)
-
 Display : $(output_dirs) $(Display)
-
 postf : $(output_dirs) $(postf)
-
 cmake : $(output_dirs) $(cmake)
-
 classify : $(output_dirs) $(classify) 
-
 fftw : $(output_dirs) $(fftw)
-
 glim_image : $(output_dirs) $(glim_image)
-
 mni_autoreg : $(output_dirs) $(mni_autoreg)
-
 inormalize : $(output_dirs)  $(inormalize)
-
+arguments : $(output_dirs) $(arguments) 
+pcre      : $(output_dirs) $(pcre)
+pcrepp    : $(output_dirs) $(pcrepp)
 mni-models_average305-lin : $(mni-models_average305-lin)
 mni-models_colin27-lin : $(mni-models_colin27-lin)
 mni-models_icbm152-lin : $(mni-models_icbm152-lin)
@@ -402,8 +385,6 @@ $(source_dirs) : % : %.tar.gz
 	$(shell echo cd $(BUILD_DIR)/src && echo tar zxf  $< )
 	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
-
-
 
 
 
@@ -504,6 +485,18 @@ $(BUILD_DIR)/src/gsl-$(GSL_VER).tar.gz :
 $(BUILD_DIR)/src/Getopt-Tabular-$(GETOPT_TABULAR_VER).tar.gz : 
 	$(WGET) http://search.cpan.org/CPAN/authors/id/G/GW/GWARD/Getopt-Tabular-$(GETOPT_TABULAR_VER).tar.gz \
  -O $(BUILD_DIR)/src/Getopt-Tabular-$(GETOPT_TABULAR_VER).tar.gz
+
+$(BUILD_DIR)/src/arguments-$(ARGUMENTS_VER).tar.gz : 
+	$(WGET) http://packages.bic.mni.mcgill.ca/tgz/arguments-$(ARGUMENTS_VER).tar.gz \
+ -O $(BUILD_DIR)/src/arguments-$(ARGUMENTS_VER).tar.gz
+
+$(BUILD_DIR)/src/pcre-$(PCRE_VER).tar.gz :
+	$(WGET) http://downloads.sourceforge.net/project/pcre/pcre/$(PCRE_VER)/pcre-$(PCRE_VER).tar.gz \
+ -O $(BUILD_DIR)/src/pcre-$(PCRE_VER).tar.gz
+
+$(BUILD_DIR)/src//pcre++-$(PCREPP_VER).tar.gz :
+	$(WGET) http://www.daemon.de/idisk/Apps/pcre++/pcre++-$(PCREPP_VER).tar.gz \
+ -O $(BUILD_DIR)/src//pcre++-$(PCREPP_VER).tar.gz
 
 $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER).tar.gz : 
 	$(WGET) --no-check-certificate https://github.com/vfonov/EZminc/tarball/92519b508742e8a37a82 \
@@ -653,7 +646,7 @@ $(bicpl) : $(BUILD_DIR)/src/bicpl-$(BICPL_VER) $(netpbm) $(minc)
 	make clean   && \
 	make $(PARALLEL_BUILD) && make install
 
-$(oobicpl) : $(BUILD_DIR)/src/oobicpl-$(OOBICPL_VER) $(bicpl)
+$(oobicpl) : $(BUILD_DIR)/src/oobicpl-$(OOBICPL_VER) $(bicpl) $(arguments) $(pcre) $(pcrepp)
 	cd $(BUILD_DIR)/src/oobicpl-$(OOBICPL_VER) && \
 	./configure --prefix=$(INSTALL_DIR) --with-build-path=$(INSTALL_DIR)  --disable-shared --with-minc2 --with-image-netpbm  && \
 	make clean   && \
@@ -770,6 +763,30 @@ $(postf) : $(BUILD_DIR)/src/postf-$(POSTF_VER) $(bicpl)
 $(inormalize) : $(BUILD_DIR)/src/inormalize-$(INORMALIZE_VER) $(ebtks)
 	cd $(BUILD_DIR)/src/inormalize-$(INORMALIZE_VER) && \
 	./configure --prefix=$(INSTALL_DIR) --with-build-path=$(INSTALL_DIR)  --with-minc2 && \
+	make clean   && \
+	make $(PARALLEL_BUILD)  && \
+	make install 
+
+
+$(arguments) : $(BUILD_DIR)/src/arguments-$(ARGUMENTS_VER)
+	cd $(BUILD_DIR)/src/arguments-$(ARGUMENTS_VER) && \
+	./configure --prefix=$(INSTALL_DIR) --with-build-path=$(INSTALL_DIR) --disable-shared --disable-dependency-tracking && \
+	make clean   && \
+	make $(PARALLEL_BUILD)  && \
+	make install 
+
+
+$(pcre) : $(BUILD_DIR)/src/pcre-$(PCRE_VER)
+	cd $(BUILD_DIR)/src/pcre-$(PCRE_VER) && \
+	./configure --prefix=$(INSTALL_DIR) --disable-shared --disable-dependency-tracking && \
+	make clean   && \
+	make $(PARALLEL_BUILD)  && \
+	make install 
+
+
+$(pcrepp) : $(BUILD_DIR)/src//pcre++-$(PCREPP_VER)
+	cd $(BUILD_DIR)/src//pcre++-$(PCREPP_VER) && \
+	./configure --prefix=$(INSTALL_DIR) --disable-shared --disable-dependency-tracking && \
 	make clean   && \
 	make $(PARALLEL_BUILD)  && \
 	make install 
@@ -914,8 +931,6 @@ $(ezminc) : $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER) $(minc) $(itk) $(cmake)
 ${output_dirs} : create_output_dirs 
   
 create_output_dirs : 
-	$(warning In create_output_dirs ... output_dirs multi-target is $(output_dirs))
-	$(warning In create_output_dirs ... BUILD_DIR is $(BUILD_DIR) ... INSTALL_DIR is $(INSTALL_DIR))
 	mkdir -p $(BUILD_DIR)/src
 	mkdir -p $(INSTALL_DIR)/bin
 	mkdir -p $(INSTALL_DIR)/lib
