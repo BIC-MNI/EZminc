@@ -325,6 +325,8 @@ fltk : $(output_dirs) $(fltk)
 
 bicpl : $(output_dirs) $(bicpl)
 
+ebtks : $(output_dirs) $(ebtks)
+
 n3 : $(output_dirs) $(n3)
 
 oobicpl : $(output_dirs) $(oobicpl)
@@ -356,6 +358,10 @@ cmake : $(output_dirs) $(cmake)
 classify : $(output_dirs) $(classify) 
 
 fftw : $(output_dirs) $(fftw)
+
+glim_image : $(output_dirs) $(glim_image)
+
+mni_autoreg : $(output_dirs) $(mni_autoreg)
 
 inormalize : $(output_dirs)  $(inormalize)
 
@@ -427,6 +433,10 @@ $(BUILD_DIR)/src/ebtks-$(EBTKS_VER).tar.gz :
 	$(WGET)  http://packages.bic.mni.mcgill.ca/tgz/ebtks-$(EBTKS_VER).tar.gz  \
  -O $(BUILD_DIR)/src/ebtks-$(EBTKS_VER).tar.gz
 
+$(BUILD_DIR)/src/ebtks-1.6.4-VF.patch.gz : 
+	$(WGET) http://www.bic.mni.mcgill.ca/~vfonov/software/ebtks-1.6.4-VF.patch.gz \
+ -O $(BUILD_DIR)/src/ebtks-1.6.4-VF.patch.gz
+
 $(BUILD_DIR)/src/oobicpl-$(OOBICPL_VER).tar.gz : 
 	$(WGET) http://packages.bic.mni.mcgill.ca/tgz/oobicpl-$(OOBICPL_VER).tar.gz \
  -O $(BUILD_DIR)/src/oobicpl-$(OOBICPL_VER).tar.gz
@@ -448,7 +458,6 @@ $(BUILD_DIR)/src/mni_autoreg-$(MNI_AUTOREG_VER).tar.gz :
  -O $(BUILD_DIR)/src/mni_autoreg-$(MNI_AUTOREG_VER).tar.gz
 
 $(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER).tar.gz :
-	$(warning ... IN the wget command code $(WGET)) \
 	$(WGET)  http://packages.bic.mni.mcgill.ca/tgz/mni_perllib-$(MNI_PERLLIB_VER).tar.gz \
  -O $(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER).tar.gz
 
@@ -485,8 +494,6 @@ $(BUILD_DIR)/src/fftw-$(FFTW_VER).tar.gz :
  -O $(BUILD_DIR)/src/fftw-$(FFTW_VER).tar.gz
 
 $(BUILD_DIR)/src/cmake-$(CMAKE_VER).tar.gz :
-	$(warning In the WGET recipe for cmake ... archives is $(archives))
-	$(warning In the WGET recipe for cmake ... source_dirs is $(source_dirs))
 	$(WGET)  http://www.cmake.org/files/v2.8/cmake-$(CMAKE_VER).tar.gz \
  -O $(BUILD_DIR)/src/cmake-$(CMAKE_VER).tar.gz
 
@@ -623,12 +630,12 @@ $(minc) : $(BUILD_DIR)/src/andrewjanke-minc-$(MINC_VER) $(netcdf) $(hdf5)
 	make $(PARALLEL_BUILD) && \
 	make install 
 
-$(ebtks) : $(BUILD_DIR)/src/ebtks-$(EBTKS_VER) $(minc)
-	cd $(BUILD_DIR)/src/ebtks-$(EBTKS_VER)  && \
+$(ebtks) : $(BUILD_DIR)/src/ebtks-$(EBTKS_VER) $(BUILD_DIR)/src/ebtks-1.6.4-VF.patch.gz $(minc)
+	cd $(BUILD_DIR)/src/ebtks-$(EBTKS_VER) && \
+	zcat $(BUILD_DIR)/src/ebtks-1.6.4-VF.patch.gz|patch -p1 && \
 	./configure --prefix=$(INSTALL_DIR) --with-build-path=$(INSTALL_DIR)  --disable-shared --with-minc2 && make clean  && \
 	make $(PARALLEL_BUILD) && \
 	make install
-
 
 $(netpbm) : $(BUILD_DIR)/src/netpbm-$(NETPBM_VER)
 	cd $(BUILD_DIR)/src/netpbm-$(NETPBM_VER)  && \
