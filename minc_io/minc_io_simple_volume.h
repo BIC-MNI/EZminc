@@ -515,6 +515,9 @@ namespace minc
     
     for(int i=0;i<v.c_buf_size();i++)
     {
+			if(isnan(v.c_buf()[i]) || isinf(v.c_buf()[i])) 
+				continue;
+			
       if(v.c_buf()[i]>_max) _max=v.c_buf()[i];
       else if(v.c_buf()[i]<_min) _min=v.c_buf()[i];
     }
@@ -532,6 +535,8 @@ namespace minc
     {
       if(mask.c_buf()[i])
       {
+				if(isnan(v.c_buf()[i]) || isinf(v.c_buf()[i])) 
+					continue;
         if(v.c_buf()[i]>_max) _max=v.c_buf()[i];
         else if(v.c_buf()[i]<_min) _min=v.c_buf()[i];
       }

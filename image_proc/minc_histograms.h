@@ -416,6 +416,9 @@ namespace minc
     int cnt=0;
 		//2. populate histogram
     for (int i=0; i<count; i++) {
+			if(isnan(img.c_buf()[i]) || isinf(img.c_buf()[i])) 
+				continue;
+
       hist.seed(img.c_buf()[i]);
       cnt++;
     }
@@ -435,11 +438,14 @@ namespace minc
 		//2. populate histogram
     
     int cnt=0;
-    for (int i=0; i<img.c_buf_size(); i++) {
- 
+    for (int i=0; i<img.c_buf_size(); i++) 
+		{
       if (mask.c_buf()[i])
       {
-        hist.seed(img.c_buf()[i]);
+				if(isnan(img.c_buf()[i]) || isinf(img.c_buf()[i])) 
+					continue;
+
+				hist.seed(img.c_buf()[i]);
         cnt++;
       }
     }
@@ -468,6 +474,13 @@ namespace minc
 	
 		//2. populate histogram
     for (int i=0; i<img1.c_buf_size(); i++) {
+			
+			if(isnan(img1.c_buf()[i]) || isinf(img1.c_buf()[i])) 
+				continue;
+			
+			if(isnan(img2.c_buf()[i]) || isinf(img2.c_buf()[i])) 
+				continue;
+			
       hist[img1.c_buf()[i]]++;
       hist(img1.c_buf()[i],img2.c_buf()[i])++;
       count++;
