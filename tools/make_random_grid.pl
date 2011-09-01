@@ -64,7 +64,7 @@ if($edge_smooth && $mask)
 }
 
 for($iter=0;$iter<3;$iter++){
-  do_cmd('random_volume',$sample,"${tmpdir}/${iter}.mnc");
+  do_cmd('random_volume',$sample,"${tmpdir}/${iter}.mnc",'--float');
   do_cmd('mincblur','-fwhm',$fwhm, "${tmpdir}/${iter}.mnc", "${tmpdir}/${iter}");
   if($mask) 
   {

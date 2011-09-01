@@ -122,7 +122,7 @@ unless($t1w_xfm&&$brain_mask)
           "$tmpdir/clp_t2w.mnc","$tmpdir/clp_t1w.mnc",
           "$tmpdir/t2t1.xfm");
           
-      do_cmd('xfmconcat',"$tmpdir/t2t1.xfm","$tmpdir/t1w_stx.xfm","$tmpdir/t2w_stx.xfm");
+      do_cmd('xfmconcat',"$tmpdir/t2t1.xfm",$t1w_xfm,"$tmpdir/t2w_stx.xfm");
       $t2w_xfm="$tmpdir/t2w_stx.xfm";
   }
 
@@ -135,7 +135,7 @@ unless($t1w_xfm&&$brain_mask)
       do_cmd('mritoself','-mi','-lsq6','-close','-nothreshold',
           "$tmpdir/clp_pdw.mnc","$tmpdir/clp_t1w.mnc",
           "$tmpdir/pdt1.xfm");
-      do_cmd('xfmconcat',"$tmpdir/pdt1.xfm","$tmpdir/t1w_stx.xfm","$tmpdir/pdw_stx.xfm");    
+      do_cmd('xfmconcat',"$tmpdir/pdt1.xfm",$t1w_xfm,"$tmpdir/pdw_stx.xfm");    
     }
     $pdw_xfm="$tmpdir/pdw_stx.xfm";
   }
@@ -163,7 +163,7 @@ unless( -e $out_grid )
     do_cmd('mincresample','-nearest',$model_face,'-transform',"$tmpdir/nl.xfm",'-use_input_sampling',"$tmpdir/face.mnc",'-invert_transformation');
     $model_face="$tmpdir/face.mnc";
   }
-
+  #do_cmd('mincreshape','-float',$model_face,"$tmpdir/face_float.mnc");
   # create a defacing grid in stx space
   do_cmd('make_random_grid.pl', '--clobber',
          '--mask', $model_face, $model_face, 
@@ -180,13 +180,13 @@ unless( -e $out_grid )
   do_cmd('mincresample',"$tmpdir/face2.mnc","$tmpdir/face.mnc",'-like',"$tmpdir/grid.mnc",'-nearest','-clobber');
 
   do_cmd('mincconcat', '-clobber', '-concat_dimension', 'vector_dimension', '-coordlist',"0,1,2", "$tmpdir/face.mnc","$tmpdir/face.mnc","$tmpdir/face.mnc", "$tmpdir/face2.mnc",'-clobber');
-  do_cmd('minccalc', '-expression', 'A[0]*A[1]',"$tmpdir/face2.mnc", "$tmpdir/grid.mnc", "$tmpdir/face_grid.mnc",'-clobber');
+  do_cmd('minccalc', '-expression', 'A[0]*A[1]',"$tmpdir/face2.mnc", "$tmpdir/grid.mnc" , "$tmpdir/face_grid.mnc",'-clobber','-float');
   do_cmd('cp',"$tmpdir/face_grid.mnc",$out_grid);
 }
 
-deface_volume("$tmpdir/face_grid.mnc",$t1w_xfm,$t1w,"$tmpdir/deface_t1w.mnc");
-deface_volume("$tmpdir/face_grid.mnc",$t2w_xfm,$t2w,"$tmpdir/deface_t2w.mnc") if $t2w;
-deface_volume("$tmpdir/face_grid.mnc",$pdw_xfm,$pdw,"$tmpdir/deface_pdw.mnc") if $pdw;
+deface_volume($out_grid,$t1w_xfm,$t1w,"$tmpdir/deface_t1w.mnc");
+deface_volume($out_grid,$t2w_xfm,$t2w,"$tmpdir/deface_t2w.mnc") if $t2w;
+deface_volume($out_grid,$pdw_xfm,$pdw,"$tmpdir/deface_pdw.mnc") if $pdw;
 
 $ENV{MINC_COMPRESS}=$compress if $compress;
 
