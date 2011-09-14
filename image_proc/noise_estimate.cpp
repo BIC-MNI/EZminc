@@ -40,20 +40,20 @@ static double epsi(double SNR)
 
 }
 
-static double noise_correct(double SIG,double NSIG)
+static double noise_correct(double sig,double nsig)
 {
-  double SNR1=SIG/NSIG;
+  double snr1=sig/nsig;
 
   for(int i=0;i<500;i++)
   {
-    double SNR2 = sqrt(epsi(SNR1)*(1.0 + SIG*SIG  / (NSIG*NSIG) )-2.0);
+    double snr2 = sqrt(epsi(snr1)*(1.0 + sig*sig  / (nsig*nsig) )-2.0);
     
-    if( fabs(SNR1-SNR2) < 1e-9)
+    if( fabs(snr1-snr2) < 1e-9)
             break;
-    SNR1 = SNR2;
+    snr1 = snr2;
   }    
 
-  return sqrt((NSIG*NSIG / epsi(SNR1)));
+  return sqrt((nsig*nsig / epsi(snr1)));
 }
 
 double minc::noise_estimate(const minc::simple_volume<float>& input,double &mean_signal,bool gaussian,bool verbose)
