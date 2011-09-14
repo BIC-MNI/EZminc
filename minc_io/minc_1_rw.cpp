@@ -254,6 +254,33 @@ namespace minc
     return att_value_double(varid,att_name);
   }
   
+  std::vector<short> minc_1_base::att_value_short(const char *var_name,const char *att_name) const
+  {
+    int varid;
+    if (*var_name=='\0') 
+      varid = NC_GLOBAL;
+    else 
+    {
+      if((varid = ncvarid(_mincid, var_name))==MI_ERROR)
+        return std::vector<short>(0);
+    }
+    return att_value_short(varid,att_name);
+  }
+  
+  std::vector<unsigned char> minc_1_base::att_value_byte(const char *var_name,const char *att_name) const
+  {
+    int varid;
+    if (*var_name=='\0') 
+      varid = NC_GLOBAL;
+    else 
+    {
+      if((varid = ncvarid(_mincid, var_name))==MI_ERROR)
+        return std::vector<unsigned char>(0);
+    }
+    return att_value_byte(varid,att_name);    
+  }
+  
+  
   std::vector<int> minc_1_base::att_value_int(const char *var_name,const char *att_name) const
   {
     int varid;
@@ -302,6 +329,43 @@ namespace minc
     //ncopts=op;
     return r;
   }
+  
+  std::vector<short> minc_1_base::att_value_short(int varid,const char *att_name) const
+  {
+    int att_length;
+    nc_type datatype;
+    
+    //TODO: make this handle other (double?) data types correctly
+    if ((ncattinq(_mincid, varid, (char *)att_name, &datatype,&att_length) == MI_ERROR) ||
+         (datatype != NC_SHORT))
+    {
+      //ncopts=op;
+      return std::vector<short>(0);
+    }
+    std::vector<short> r(att_length);
+    miattget(_mincid, varid, (char*)att_name, NC_SHORT, att_length,&r[0], NULL) ;
+    //ncopts=op;
+    return r;
+  }
+  
+  std::vector<unsigned char> minc_1_base::att_value_byte(int varid,const char *att_name) const
+  {
+    int att_length;
+    nc_type datatype;
+    
+    //TODO: make this handle other (double?) data types correctly
+    if ((ncattinq(_mincid, varid, (char *)att_name, &datatype,&att_length) == MI_ERROR) ||
+         (datatype != NC_BYTE))
+    {
+      //ncopts=op;
+      return std::vector<unsigned char>(0);
+    }
+    std::vector<unsigned char> r(att_length);
+    miattget(_mincid, varid, (char*)att_name, NC_BYTE, att_length,&r[0], NULL) ;
+    //ncopts=op;
+    return r;
+  }
+  
   
   nc_type minc_1_base::att_type(const char *var_name,const char *att_name) const
   {
@@ -1343,4 +1407,15 @@ namespace minc
   {
     ncattput(_mincid, create_var_id(varname),attname, NC_INT, val.size(), (void *) &val[0]);
   }
+  
+  void minc_1_base::insert(const char *varname,const char *attname,const std::vector<short> &val)
+  {
+    ncattput(_mincid, create_var_id(varname),attname, NC_SHORT, val.size(), (void *) &val[0]);
+  }
+  
+  void minc_1_base::insert(const char *varname,const char *attname,const std::vector<unsigned char> &val)
+  {
+    ncattput(_mincid, create_var_id(varname),attname, NC_BYTE, val.size(), (void *) &val[0]);
+  }
+  
 };

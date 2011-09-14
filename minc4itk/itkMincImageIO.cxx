@@ -318,6 +318,12 @@ namespace itk
               itk::EncapsulateMetaData<std::vector<double> >(thisDic,path, _rdr->att_value_double(var_id,att.c_str()));
               //std::cout<<"double";
               break;
+            case NC_SHORT:
+              itk::EncapsulateMetaData<std::vector<short> >(thisDic,path, _rdr->att_value_short(var_id,att.c_str()));
+              break;
+            case NC_BYTE:
+              itk::EncapsulateMetaData<std::vector<unsigned char> >(thisDic,path, _rdr->att_value_byte(var_id,att.c_str()));
+              break;
             default:
               //std::cout<<"Unknown";
               break; //don't know what it is, skipping for now!  
@@ -598,7 +604,13 @@ namespace itk
           } else if(!strcmp(tname,typeid(std::vector<int>).name())) {
             _wrt->insert(var.c_str(),att.c_str(),
               dynamic_cast<MetaDataObject<std::vector<int> > * >(bs)->GetMetaDataObjectValue());
-          } // don't know how to enterpret this, skipping it for now
+          } else if(!strcmp(tname,typeid(std::vector<short>).name())) {
+            _wrt->insert(var.c_str(),att.c_str(),
+                         dynamic_cast<MetaDataObject<std::vector<short> > * >(bs)->GetMetaDataObjectValue());
+          } else if(!strcmp(tname,typeid(std::vector<unsigned char>).name())) {
+            _wrt->insert(var.c_str(),att.c_str(),
+                         dynamic_cast<MetaDataObject<std::vector<unsigned char> > * >(bs)->GetMetaDataObjectValue());
+          }
         } else if((*it).first=="history") {
           itk::MetaDataObjectBase *bs=(*it).second;
           _wrt->append_history(dynamic_cast<MetaDataObject<std::string> *>(bs)->GetMetaDataObjectValue().c_str());

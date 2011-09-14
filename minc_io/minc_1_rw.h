@@ -263,11 +263,19 @@ namespace minc
     std::vector<double> att_value_double(const char *var_name,const char *att_name) const;
     //! get the int attribute value , given the name
     std::vector<int> att_value_int(const char *var_name,const char *att_name) const;
+    //! get the short attribute value , given the variable id
+    std::vector<short> att_value_short(const char *var_name,const char *att_name) const;
+    //! get the byte attribute value , given the variable id
+    std::vector<unsigned char> att_value_byte(const char *var_name,const char *att_name) const;
     
     //! get the double attribute value , given the variable id
     std::vector<double> att_value_double(int varid,const char *att_name) const;
     //! get the int attribute value , given the variable id
     std::vector<int> att_value_int(int varid,const char *att_name) const;
+    //! get the short attribute value , given the variable id
+    std::vector<short> att_value_short(int varid,const char *att_name) const;
+    //! get the byte attribute value , given the variable id
+    std::vector<unsigned char> att_value_byte(int varid,const char *att_name) const;
     
     //! enquire about attribute data type
     nc_type att_type(const char *var_name,const char *att_name) const;
@@ -287,6 +295,8 @@ namespace minc
     void insert(const char *varname,const char *attname,const char* val);
     void insert(const char *varname,const char *attname,const std::vector<double> &val);
     void insert(const char *varname,const char *attname,const std::vector<int> &val);
+    void insert(const char *varname,const char *attname,const std::vector<short> &val);
+    void insert(const char *varname,const char *attname,const std::vector<unsigned char> &val);
     
     
     //! check if the file in MINC2 format
