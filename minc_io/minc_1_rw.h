@@ -131,7 +131,7 @@ namespace minc
       for(int i=_ndims-_slice_dimensions-1;i>=0;i--)
       {
         _cur[i]++;
-        if(_cur[i]<_info[i].length)
+        if(_cur[i]<static_cast<long>(_info[i].length))
           break;
         if(!i)
           _last=true;
@@ -156,7 +156,8 @@ namespace minc
     //! get the dimension information
     const dim_info& dim(unsigned int n) const
     {
-      if(n>=_ndims) REPORT_ERROR("Dimension is not defined");
+      if(n>=static_cast<unsigned int>(_ndims)) 
+	REPORT_ERROR("Dimension is not defined");
       return _info[n];
     }
     

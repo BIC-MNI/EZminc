@@ -22,8 +22,10 @@ namespace minc
   class generic_error
   {
   public:
-    const char *_file, *_msg;
-    int _line, _code;
+    const char *_file;
+    int _line;
+    const char *_msg;
+    int _code;
   public:
 
     generic_error (const char *file, int line, const char *msg = "Error", int code = 0):
