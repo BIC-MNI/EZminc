@@ -7,6 +7,11 @@ ADD_EXECUTABLE( itk_resample
                 itk_resample.cpp )
 TARGET_LINK_LIBRARIES( itk_resample minc4itk)
 
+ADD_EXECUTABLE( itk_distance 
+                itk_distance.cpp )
+TARGET_LINK_LIBRARIES( itk_distance minc4itk)
+
+
 ADD_EXECUTABLE( volume_moments 
                 volume_moments.cpp )
 TARGET_LINK_LIBRARIES( volume_moments minc4itk)
@@ -16,7 +21,7 @@ ADD_EXECUTABLE( itk_dti
 TARGET_LINK_LIBRARIES( itk_dti minc4itk)
 
 INSTALL(TARGETS 
-        itk_resample volume_moments
+        itk_resample volume_moments itk_distance
         RUNTIME DESTINATION bin )
         
 ENDIF(ITK_FOUND)
