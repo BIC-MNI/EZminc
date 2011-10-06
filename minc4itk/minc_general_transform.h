@@ -154,7 +154,34 @@ namespace minc
       _cleanup();
     }
     
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    virtual void SetFixedParameters(const ParametersType &)
+    {
+      itkExceptionMacro( << "Not Implemented" );
+    }
+    
+    virtual void ComputeJacobianWithRespectToParameters(
+                const InputPointType &,
+                JacobianType &) const
+    {
+      itkExceptionMacro( << "Not Implemented" );
+    }
+    
+   virtual void ComputeJacobianWithRespectToPosition(
+                const InputPointType & x,
+                JacobianType &jacobian ) const
+    {
+      itkExceptionMacro( << "Not Implemented" );
+    }
+    
+#endif
+
+    
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    virtual NumberOfParametersType GetNumberOfParameters(void) const
+#else
     virtual unsigned int GetNumberOfParameters(void) const
+#endif
     {
       //this transform is defined by XFM file
       itkExceptionMacro( << "Not Defined" );
@@ -174,11 +201,13 @@ namespace minc
       return _parameters;
     }
     
+#if ( ITK_VERSION_MAJOR == 3 ) 
     virtual const JacobianType & GetJacobian(const InputPointType  & point) const
     { 
       itkExceptionMacro( << "Not Implemented" );
       return this->m_Jacobian;
     }
+#endif    
     
     void OpenXfm(const char *xfm)
     {
@@ -202,9 +231,15 @@ namespace minc
     
   protected:
     
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    XfmTransform(): itk::Transform< double,3,3 >(0),_invert(false),_initialized(false),_initialized_invert(false)
+    { 
+    }
+#else  
     XfmTransform(): itk::Transform< double,3,3 >(3,3),_invert(false),_initialized(false),_initialized_invert(false)
     { 
     }
+#endif  
     
     virtual ~XfmTransform() 
     {

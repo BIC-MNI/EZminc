@@ -2,7 +2,9 @@
 
 #include <itkMetaDataObject.h>
 #include <itkVectorImage.h>
-#include <itkOrientedImage.h>
+
+#include <itkImage.h>
+
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>

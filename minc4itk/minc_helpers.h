@@ -6,7 +6,13 @@
 #include <algorithm>
 
 #include <itkArray.h>
+
+#if ( ITK_VERSION_MAJOR > 3 ) 
+#include <itkImage.h>
+#else
 #include <itkOrientedImage.h>
+#endif 
+
 #include <itkImageRegionIteratorWithIndex.h>
 #include <itkImageRegionConstIteratorWithIndex.h>
 
@@ -29,14 +35,21 @@ namespace minc
   typedef itk::Vector<float,volume_dimensions>    def_vector;
   typedef itk::Point<double,volume_dimensions>    tag_point;
   typedef std::vector<tag_point>  tag_points;
-  
 	typedef std::complex < voxel_type > complex;
 
-  
+#if ( ITK_VERSION_MAJOR > 3 ) 
+	typedef itk::Image < complex, volume_dimensions > image3d_complex;
+	typedef itk::Image < voxel_type, volume_dimensions > image3d;
+	typedef itk::Image < minc_mask_voxel, volume_dimensions > mask3d;
+	typedef itk::Image < def_vector, volume_dimensions > def3d;
+#else
 	typedef itk::OrientedImage < complex, volume_dimensions > image3d_complex;
 	typedef itk::OrientedImage < voxel_type, volume_dimensions > image3d;
 	typedef itk::OrientedImage < minc_mask_voxel, volume_dimensions > mask3d;
 	typedef itk::OrientedImage < def_vector, volume_dimensions > def3d;
+#endif
+
+  
 	
 	typedef itk::ImageRegionIteratorWithIndex < image3d > image3d_iterator;
 	typedef itk::ImageRegionConstIteratorWithIndex < image3d > image3d_const_iterator;

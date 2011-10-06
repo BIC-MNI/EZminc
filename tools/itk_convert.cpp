@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include <itkOrientedImage.h>
+#include <itkImage.h>
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
@@ -182,28 +182,28 @@ int main(int argc,char **argv)
         switch(ct)
         {
           case itk::ImageIOBase::UCHAR :
-            load_and_save_image<itk::OrientedImage<unsigned char, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<unsigned char, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break;
           case itk::ImageIOBase::CHAR :
-            load_and_save_image<itk::OrientedImage<char, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<char, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break;
           case itk::ImageIOBase::USHORT :
-            load_and_save_image<itk::OrientedImage<unsigned short, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<unsigned short, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break;
           case itk::ImageIOBase::SHORT :
-            load_and_save_image<itk::OrientedImage<short, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<short, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break;
           case itk::ImageIOBase::INT :
-            load_and_save_image<itk::OrientedImage<int, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<int, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break; 
           case itk::ImageIOBase::UINT:
-            load_and_save_image<itk::OrientedImage<unsigned int, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<unsigned int, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break; 
           case itk::ImageIOBase::FLOAT :
-            load_and_save_image<itk::OrientedImage<float, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<float, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break; 
           case itk::ImageIOBase::DOUBLE:
-            load_and_save_image<itk::OrientedImage<double, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<double, 3> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break; 
           default:
             itk::ExceptionObject("Unsupported component type");
@@ -213,28 +213,28 @@ int main(int argc,char **argv)
         switch(ct)
         {
           case itk::ImageIOBase::UCHAR:
-            load_and_save_image<itk::OrientedImage<unsigned char, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<unsigned char, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break;
           case itk::ImageIOBase::CHAR:
-            load_and_save_image<itk::OrientedImage<char, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<char, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break;
           case itk::ImageIOBase::USHORT:
-            load_and_save_image<itk::OrientedImage<unsigned short, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<unsigned short, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break;
           case itk::ImageIOBase::SHORT:
-            load_and_save_image<itk::OrientedImage<short, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<short, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break;
           case itk::ImageIOBase::INT:
-            load_and_save_image<itk::OrientedImage<int, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<int, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break; 
           case itk::ImageIOBase::UINT:
-            load_and_save_image<itk::OrientedImage<unsigned int, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<unsigned int, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break; 
           case itk::ImageIOBase::FLOAT:
-            load_and_save_image<itk::OrientedImage<float, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<float, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break; 
           case itk::ImageIOBase::DOUBLE:
-            load_and_save_image<itk::OrientedImage<double, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
+            load_and_save_image<itk::Image<double, 4> >(io,output.c_str(),inv_x,inv_y,inv_z,center,verbose);
             break; 
           default:
             itk::ExceptionObject("Unsupported component type");
