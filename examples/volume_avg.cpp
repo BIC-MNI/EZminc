@@ -1,6 +1,6 @@
 /* ----------------------------- MNI Header -----------------------------------
-@NAME       : 
-@DESCRIPTION: 
+@NAME       : volume_avg
+@DESCRIPTION: an example of calculating volume average
 @COPYRIGHT  :
               Copyright 2009 Vladimir Fonov, McConnell Brain Imaging Centre, 
               Montreal Neurological Institute, McGill University.

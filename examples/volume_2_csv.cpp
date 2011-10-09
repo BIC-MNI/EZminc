@@ -1,3 +1,17 @@
+/* ----------------------------- MNI Header -----------------------------------
+@NAME       :  volume_2_csv
+@DESCRIPTION:  an example of converting a minc file volume to a text format
+@COPYRIGHT  :
+              Copyright 2011 Vladimir Fonov, McConnell Brain Imaging Centre, 
+              Montreal Neurological Institute, McGill University.
+              Permission to use, copy, modify, and distribute this
+              software and its documentation for any purpose and without
+              fee is hereby granted, provided that the above copyright
+              notice appear in all copies.  The author and McGill University
+              make no representations about the suitability of this
+              software for any purpose.  It is provided "as is" without
+              express or implied warranty.
+---------------------------------------------------------------------------- */
 #include <iostream>
 #include <fstream>
 #include <getopt.h>
