@@ -495,9 +495,9 @@ namespace itk
       {
         for(int i=0;i<dimorder.size();i++)
         {
-          if(dimorder[i]==MIvector_dimension)
+          if(dimorder[i]==MIvector_dimension && GetNumberOfComponents()>1)
             have_vectors=true;
-          else if(dimorder[i]==MItime)
+          else if(dimorder[i]==MItime && (GetNumberOfComponents()>1||GetNumberOfDimensions()>3))
             have_time=true;
         }
       } else {
