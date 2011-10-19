@@ -179,13 +179,13 @@ RAYTRACE_VER     := 1.0.3
 GLIMIMAGE_VER    := 1.2
 ITK_VER          := 3.20.0
 FFTW_VER         := 3.2.2
-CMAKE_VER        := 2.8.4
+CMAKE_VER        := 2.8.6
 GSL_VER          := 1.15
 GETOPT_TABULAR_VER := 0.3
 EZMINC_VER       := 5a4df1d
 NETPBM_VER       := 10.35.74
 VTK_VER          := 5.6.1
-FLTK_VER         := 1.3.x-r7725
+FLTK_VER         := 1.3.0
 REGISTER_VER     := 1.4.0
 DISPLAY_VER      := 1.5.0
 POSTF_VER        := 1.0.03
@@ -370,8 +370,8 @@ $(BUILD_DIR)/src/VTK : $(BUILD_DIR)/src/vtk-$(VTK_VER).tar.gz
 	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
 
-$(BUILD_DIR)/src/fltk-$(FLTK_VER) :  $(BUILD_DIR)/src/fltk-$(FLTK_VER).tar.bz2
-	cd $(BUILD_DIR)/src && tar jxf  $<
+$(BUILD_DIR)/src/fltk-$(FLTK_VER) :  $(BUILD_DIR)/src/fltk-$(FLTK_VER)-source.tar.gz
+	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
 
 # strip the .tar.gz suffix from the tarball to create the source directory name 
@@ -466,9 +466,9 @@ $(BUILD_DIR)/src/vtk-$(VTK_VER).tar.gz :
 	$(WGET) http://www.vtk.org/files/release/5.6/vtk-$(VTK_VER).tar.gz \
  -O $(BUILD_DIR)/src/vtk-$(VTK_VER).tar.gz
 
-$(BUILD_DIR)/src/fltk-$(FLTK_VER).tar.bz2 : 
-	$(WGET) http://ftp2.easysw.com/pub/fltk/snapshots/fltk-$(FLTK_VER).tar.bz2 \
- -O $(BUILD_DIR)/src/fltk-$(FLTK_VER).tar.bz2
+$(BUILD_DIR)/src/fltk-$(FLTK_VER)-source.tar.gz : 
+	$(WGET) http://ftp2.easysw.com/pub/fltk/$(FLTK_VER)/fltk-$(FLTK_VER)-source.tar.gz \
+ -O $(BUILD_DIR)/src/fltk-$(FLTK_VER)-source.tar.gz
 
 $(BUILD_DIR)/src/fftw-$(FFTW_VER).tar.gz :
 	$(WGET)  http://www.fftw.org/fftw-$(FFTW_VER).tar.gz \
@@ -882,7 +882,7 @@ $(fltk) : $(BUILD_DIR)/src/fltk-$(FLTK_VER) $(cmake)
 	-D OPTION_USE_SYSTEM_LIBPNG:BOOL=OFF \
 	-D OPTION_USE_SYSTEM_ZLIB:BOOL=OFF \
 	-D USE_OPENGL:BOOL=ON \
-	$(BUILD_DIR)/src/fltk-1.3.x-r7725 && \
+	$(BUILD_DIR)/src/fltk-$(FLTK_VER) && \
 	make $(PARALLEL_BUILD) && \
 	make install && \
 	touch $(fltk)
