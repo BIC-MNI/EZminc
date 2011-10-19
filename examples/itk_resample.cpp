@@ -43,7 +43,7 @@
 //typedef itk::MincImageIO ImageIOType;
 typedef itk::BSplineInterpolateImageFunction< minc::image3d, double, double >  InterpolatorType;
 typedef itk::ResampleImageFilter<minc::image3d, minc::image3d> FilterType;
-typedef minc::XfmTransform  TransformType;
+typedef minc::XfmTransform<double,3,3>  TransformType;
 
 using namespace  std;
 

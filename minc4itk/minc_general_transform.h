@@ -39,15 +39,15 @@ namespace minc
    * \ingroup Transforms
    *
    */
-  class XfmTransform : public itk::Transform < double, 3, 3>
+  template < class TScalarType=double, unsigned int NInputDimensions=3,unsigned int NOutputDimensions=3> 
+   class XfmTransform : public itk::Transform < TScalarType, NInputDimensions, NOutputDimensions>
   {
   public:
-    typedef double TScalarType;
     /** Standard class typedefs. */
     typedef XfmTransform  Self;
-    typedef itk::Transform< double, 3, 3 > Superclass;
-    typedef itk::SmartPointer< Self >   Pointer;
-    typedef itk::SmartPointer< const Self >  ConstPointer;
+    typedef typename itk::Transform < TScalarType, NInputDimensions, NOutputDimensions> Superclass;
+    typedef typename itk::SmartPointer< Self >   Pointer;
+    typedef typename itk::SmartPointer< const Self >  ConstPointer;
     
     
     /** New method for creating an object using a factory. */
@@ -57,18 +57,18 @@ namespace minc
     itkTypeMacro( XfmTransform, itk::Transform );
   
     /** Dimension of the domain space. */
-    itkStaticConstMacro(InputSpaceDimension, unsigned int, 3);
-    itkStaticConstMacro(OutputSpaceDimension, unsigned int, 3);
+    itkStaticConstMacro(InputSpaceDimension, unsigned int, NInputDimensions);
+    itkStaticConstMacro(OutputSpaceDimension, unsigned int, NOutputDimensions);
     
     /** Type of the input parameters. */
     
     typedef  double ScalarType;
   
     /** Type of the input parameters. */
-    typedef Superclass::ParametersType ParametersType;
+    typedef typename Superclass::ParametersType ParametersType;
   
     /** Type of the Jacobian matrix. */
-    typedef Superclass::JacobianType  JacobianType;
+    typedef typename Superclass::JacobianType  JacobianType;
   
     /** Standard vector type for this class. */
     typedef itk::Vector<TScalarType,
@@ -84,9 +84,9 @@ namespace minc
                             itkGetStaticConstMacro(OutputSpaceDimension)> OutputCovariantVectorType;
     
     /** Standard coordinate point type for this class */
-    typedef itk::Point<TScalarType,3 > InputPointType;
+    typedef itk::Point<TScalarType,NInputDimensions > InputPointType;
   
-    typedef itk::Point<TScalarType,3 > OutputPointType;
+    typedef itk::Point<TScalarType,NInputDimensions > OutputPointType;
     
     /**  Method to transform a point. */
     virtual OutputPointType TransformPoint(const InputPointType  &point ) const
@@ -94,7 +94,10 @@ namespace minc
       if(!_initialized) return point;
       if(_invert && !_initialized_invert)  return point;
       OutputPointType pnt;
-      general_transform_point((_invert ? &_xfm_inv : &_xfm), point[0], point[1], point[2],&pnt[0], &pnt[1], &pnt[2]);
+      if(NInputDimensions==3 && NOutputDimensions==3)
+	general_transform_point((_invert ? &_xfm_inv : &_xfm), point[0], point[1], point[2],&pnt[0], &pnt[1], &pnt[2]);
+      else
+	itkExceptionMacro(<< "Sorry, only 3D to 3d minc xfm transform is currently implemented");
       return pnt;
     }
     //! use finate element difference to estimate local jacobian 
@@ -131,11 +134,11 @@ namespace minc
     }
   
     /**  Method to transform a vnl_vector. */
-    virtual OutputVnlVectorType TransformVector(const InputVnlVectorType &vector) const
+/*    virtual OutputVnlVectorType TransformVector(const InputVnlVectorType &vector) const
     {
       itkExceptionMacro( << "Not Implemented" );
       return vector; 
-    }
+    }*/
   
     
     /**  Method to transform a CovariantVector. */
@@ -232,11 +235,11 @@ namespace minc
   protected:
     
 #if ( ITK_VERSION_MAJOR > 3 ) 
-    XfmTransform(): itk::Transform< double,3,3 >(0),_invert(false),_initialized(false),_initialized_invert(false)
+    XfmTransform(): itk::Transform< TScalarType, NInputDimensions, NOutputDimensions>(0),_invert(false),_initialized(false),_initialized_invert(false)
     { 
     }
 #else  
-    XfmTransform(): itk::Transform< double,3,3 >(3,3),_invert(false),_initialized(false),_initialized_invert(false)
+    XfmTransform(): itk::Transform< TScalarType, NInputDimensions, NOutputDimensions>(NInputDimensions,NOutputDimensions),_invert(false),_initialized(false),_initialized_invert(false)
     { 
     }
 #endif  
