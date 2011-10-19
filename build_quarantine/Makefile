@@ -182,7 +182,7 @@ FFTW_VER         := 3.2.2
 CMAKE_VER        := 2.8.6
 GSL_VER          := 1.15
 GETOPT_TABULAR_VER := 0.3
-EZMINC_VER       := 5a4df1d
+EZMINC_VER       := 24ce294
 NETPBM_VER       := 10.35.74
 VTK_VER          := 5.6.1
 FLTK_VER         := 1.3.0
@@ -499,7 +499,7 @@ $(BUILD_DIR)/src//pcre++-$(PCREPP_VER).tar.gz :
  -O $(BUILD_DIR)/src//pcre++-$(PCREPP_VER).tar.gz
 
 $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER).tar.gz : 
-	$(WGET) --no-check-certificate https://github.com/vfonov/EZminc/tarball/5a4df1d \
+	$(WGET) --no-check-certificate https://github.com/vfonov/EZminc/tarball/$(EZMINC_VER) \
  -O $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER).tar.gz
 
 $(BUILD_DIR)/src/netpbm-$(NETPBM_VER).tar.gz : 
