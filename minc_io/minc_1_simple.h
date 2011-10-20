@@ -144,7 +144,7 @@ namespace minc
       for(int i=_rw->dim_no()-1;i>(_rw->dim_no()-_rw->slice_dimensions()-1);i--)
       {
         _cur[i]++;
-        if(_cur[i]<_rw->dim(i).length)
+        if(_cur[i]<static_cast<long>(_rw->dim(i).length))
           break;
         if(i>(_rw->dim_no()-_rw->slice_dimensions())) 
           _cur[i]=0;
@@ -207,7 +207,7 @@ namespace minc
     for(in.begin();!in.last();in.next())
     {
       size_t address=0;
-      for(size_t i=0;i<static_cast<unsigned int>(rw.dim_no());i++)
+      for(size_t i=0;i<static_cast<size_t>(rw.dim_no());i++)
         address+=in.cur()[i]*strides[i];
         
       volume[address]=in.value();
@@ -230,7 +230,7 @@ namespace minc
     for(out.begin();!out.last();out.next())
     {
       size_t address=0;
-      for(size_t i=0;i<rw.dim_no();i++)
+      for(size_t i=0;i<static_cast<size_t>(rw.dim_no());i++)
         address+=out.cur()[i]*strides[i];
         
       out.value(volume[address]);
