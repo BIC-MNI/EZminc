@@ -303,7 +303,7 @@ mni_autoreg_model           := $(INSTALL_DIR)/share/mni_autoreg/average_305.mnc.
 #
 # *****************************************************************************
 #
-minc-full : create_output_dirs bicpl n3 conglomerate glim_image mni_autoreg mincblob mni_perllib ray_trace ezminc mincbet classify mincmorph inormalize
+minc-full : create_output_dirs bicpl n3 conglomerate glim_image mni_autoreg mincblob mni_perllib ray_trace ezminc mincbet classify mincmorph inormalize oobicpl
 
 minc-with-itk : $(output_dirs) minc itk ezminc 
 
@@ -786,7 +786,7 @@ $(pcre) : $(BUILD_DIR)/src/pcre-$(PCRE_VER)
 
 $(pcrepp) : $(BUILD_DIR)/src//pcre++-$(PCREPP_VER)
 	cd $(BUILD_DIR)/src//pcre++-$(PCREPP_VER) && \
-	./configure --prefix=$(INSTALL_DIR) --disable-shared --disable-dependency-tracking && \
+	./configure --prefix=$(INSTALL_DIR) --disable-shared --disable-dependency-tracking  --with-pcre-include=$(INSTALL_DIR)/include --with-pcre-lib=$(INSTALL_DIR)/lib && \
 	make clean   && \
 	make $(PARALLEL_BUILD)  && \
 	make install 
@@ -955,10 +955,10 @@ list :
 environment : $(INSTALL_DIR)/environment.sh $(INSTALL_DIR)/environment.csh
 
 $(INSTALL_DIR)/environment.sh : 
-	echo -e export PATH=$(INSTALL_DIR)/bin:'$$PATH' \\nexport PERL5LIB=$(INSTALL_DIR)/perl:'$$PERL5LIB' >$(INSTALL_DIR)/environment.sh
+	echo export PATH=$(INSTALL_DIR)/bin:'$$PATH' \\nexport PERL5LIB=$(INSTALL_DIR)/perl:'$$PERL5LIB' >$(INSTALL_DIR)/environment.sh
 
 $(INSTALL_DIR)/environment.csh : 
-	echo -e setenv PATH $(INSTALL_DIR)/bin:'$${PATH}' \\nsetenv PERL5LIB=$(INSTALL_DIR)/perl:'$${PERL5LIB}' >$(INSTALL_DIR)/environment.csh
+	echo setenv PATH $(INSTALL_DIR)/bin:'$${PATH}' \\nsetenv PERL5LIB=$(INSTALL_DIR)/perl:'$${PERL5LIB}' >$(INSTALL_DIR)/environment.csh
 
 
 # *****************************************************************************
