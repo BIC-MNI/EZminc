@@ -57,12 +57,6 @@ IF(ITK_FOUND)
 
 	TARGET_LINK_LIBRARIES(itk_convert minc4itk)
 	
-	
-	INSTALL(TARGETS 
-        resample_grid itk_convert
-        RUNTIME DESTINATION bin )
-
-
 	ADD_EXECUTABLE( multiple_volume_similarity multiple_volume_similarity.cpp)
 	TARGET_LINK_LIBRARIES( multiple_volume_similarity minc4itk)
         
