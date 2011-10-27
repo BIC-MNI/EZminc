@@ -61,9 +61,18 @@ IF(ITK_FOUND)
 	INSTALL(TARGETS 
         resample_grid itk_convert
         RUNTIME DESTINATION bin )
+
+
+	ADD_EXECUTABLE( multiple_volume_similarity multiple_volume_similarity.cpp)
+	TARGET_LINK_LIBRARIES( multiple_volume_similarity minc4itk)
         
   ADD_EXECUTABLE( tag2csv  tag2csv.cpp)
   TARGET_LINK_LIBRARIES(tag2csv minc4itk)
+	
+	INSTALL(TARGETS 
+        itk_convert resample_grid multiple_volume_similarity 
+        RUNTIME DESTINATION bin )
+
 ENDIF(ITK_FOUND)
 
 

@@ -42,6 +42,8 @@ ADD_EXECUTABLE( trilinear_resample trilinear_resample.cpp)
 TARGET_LINK_LIBRARIES( trilinear_resample minc_io)
 
 
+
+
 INSTALL(TARGETS 
         volume_msq_dist
         volume_avg
