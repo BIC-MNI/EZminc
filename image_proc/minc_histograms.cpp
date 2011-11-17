@@ -144,4 +144,83 @@ void simple_k_means( histogram<double>& hist, std::vector<double>& mu,int k_mean
   }
 }
 
+double kl_distance(const histogram<double>& sample1,const histogram<double>& sample2)
+{
+  //let's include the whole range 
+  double _min=std::min(sample1.min(),sample2.min());
+  double _max=std::max(sample1.max(),sample2.max());
+  double _range=_max-_min;
+  
+  //now we are going to iterate through samples
+  double distance=0.0;
+  int _size=std::max(sample1.size(),sample2.size());
+  double _bin=_range/_size;
+  double v=_min+_bin/2.0;
+  
+  for(int i=0;i<_size;i++,v+=_bin)
+  {
+    double _P=0.0;
+    if(v>=sample1.min() && v<=sample1.max()) _P=sample1[v];
+    double _Q=0.0;
+    if(v>=sample2.min() && v<=sample2.max()) _Q=sample2[v];
+    
+    if(_P>0.0 && _Q>0.0)//TODO: epsilon?
+      distance+=_P*log(_P/_Q);
+  }
+  return distance;
+}
+
+double ks_distance(const histogram<double>& sample1,const histogram<double>& sample2)
+{
+  //let's include the whole range 
+  double _min=std::min(sample1.min(),sample2.min());
+  double _max=std::max(sample1.max(),sample2.max());
+  double _range=_max-_min;
+  
+  histogram<double> _s1(sample1);
+  histogram<double> _s2(sample2);
+  
+  _s1.convert_to_commulative();
+  _s2.convert_to_commulative();
+  
+  int _size=std::max(_s1.size(),_s2.size())*2;
+  double _bin=_range/_size;
+  
+  double dist=0.0;
+  double v=0.0;
+  for(int i=0;i<_size;i++,v+=_bin)
+  {
+    double d=fabs(_s1[v]-_s2[v]);
+    if(d>dist) dist=d;
+  }
+  return dist;
+}
+
+
+// Code adapted from "Numerical Recipes in C" 
+static double probks(double alam)
+{
+  const double EPS1=0.001;
+  const double EPS2=1e-8;
+  
+  double a2,fac=2.0,sum=0.0,term,termbf=0.0;
+  a2 = -2.0*alam*alam;
+  
+  for (int j=1;j<=100;j++) {
+    term=fac*exp(a2*j*j);
+    sum += term;
+    if (fabs(term) <= EPS1*termbf || fabs(term) <= EPS2*sum) 
+      return sum;
+    fac = -fac;
+    termbf=fabs(term);
+  }
+  return 1.0;
+}
+
+double ks_significance(double dist, double n1,double n2)
+{
+  double en=sqrt(n1*n2/(n1+n2));
+  return probks((en+0.12+0.11/en)*dist);
+}
+
 };

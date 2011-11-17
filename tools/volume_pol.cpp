@@ -66,7 +66,9 @@ void show_usage(void)
 	<< "[--version] print version" << endl
   << "[--min <min>] map 0.1% to min" << endl
   << "[--max <max>] map 99.9% to max" << endl
-  << "[--noclamp] don't clamp highlights" <<endl;
+  << "[--noclamp] don't clamp highlights" <<endl
+  << "[--kl] calculate Kullback–Leibler divergence instead of fitting"<<endl
+  << "[--ks] calculate Kolmogorov–Smirnov distance instead of fitting"<<endl;
 }
 
 
@@ -83,6 +85,7 @@ int main (int argc, char **argv)
   histogram_type map_min=0,map_max=0;
 	bool use_mask = false;
 	int  order = 4;
+  int calc_kl=0,calc_ks=0;
 	std::string source_mask_file,target_mask_file;
 	std::string hist_file, joint_hist_file;
 	std::string outfile, infile, templatefile, exp_file;
@@ -105,6 +108,8 @@ int main (int argc, char **argv)
       {"min", required_argument, 0, 'i'},
       {"max", required_argument, 0, 'a'},
       {"noclamp",no_argument,&noclamp,1},
+      {"kl",no_argument,&calc_kl,1},
+      {"ks",no_argument,&calc_ks,1},
 		  {0, 0, 0, 0}
 	  };
 
@@ -242,27 +247,44 @@ int main (int argc, char **argv)
       if(trg_msk.size()!=img2.size())
         REPORT_ERROR("Target mask size mismatch");
 		}
-
-		MNK_Gauss_Polinomial_Mod pol(order);
+		
+		int size_hist1=0,size_hist2=0;
 
 		if (!source_mask_file.empty())
-      build_histogram(hist1,img1,src_msk);
+      size_hist1=build_histogram(hist1,img1,src_msk);
 		else
-      build_histogram(hist1,img1);
+      size_hist1=build_histogram(hist1,img1);
 
 		if (verbose)
 			cout << "Image min=" << hist1.min () << " max=" << hist1.max() << endl;
 
 		if (!target_mask_file.empty())
-      build_histogram(hist2,img2,trg_msk);
+      size_hist2=build_histogram(hist2,img2,trg_msk);
 		else
-      build_histogram(hist2,img2);
+      size_hist2=build_histogram(hist2,img2);
 
 		if (verbose)
 			cout << "Template min=" << hist2.min() << " max=" << hist2.max() << endl;
 
+    MNK_Gauss_Polinomial_Mod pol(order);
 		//MNK_Gauss_Polinomial pol2(order);
     MNK_Gauss_Polinomial pol2(order); 
+    
+    if(calc_kl)
+    {
+      if(verbose)
+        std::cout<<"Kullback–Leibler divergence:";
+      std::cout<<kl_distance(hist1,hist2)<<std::endl;
+      return 0;
+    } else if(calc_ks) {
+      if(verbose)
+        std::cout<<"Kolmogorov–Smirnov distance:";
+      double dist=ks_distance(hist1,hist2);
+      std::cout<<dist<<std::endl;
+/*      if(verbose)
+        std::cout<<"p="<<ks_significance(dist,size_hist1,size_hist2)<<std::endl;*/
+      return 0;
+    }
 
 
     histogram_type omin,omax;

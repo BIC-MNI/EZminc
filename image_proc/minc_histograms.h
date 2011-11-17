@@ -32,12 +32,12 @@ namespace minc
 	{
 	protected:
 		std::valarray< T > _hist;
-		T _min, _max, _range;
+		T _min, _max, _range,_bin;
 		T _k;
 	
 		int _idx (T idx) const
 		{
-			int i = int (floor (_k * (idx - _min)));
+			int i = int (floor (_k * (idx - _min-0.5/_k)));
       
 			if (i < 0)
 				i = 0;
@@ -68,11 +68,27 @@ namespace minc
 	
 		histogram (int buckets, T min = 0, T max = 1):
 				_hist (buckets), _min (min), _max (max),
-				_range (_max - _min)
+				_range (_max - _min),_bin(_range/buckets)
 		{
 			_hist = 0.0;
 			_k = T (_hist.size ()) / _range;
   	}
+  	
+  	histogram( const histogram<T> &a):
+      _hist(a._hist),_min(a._min),_max(a._max),
+      _range(a._range),_bin(a._bin),_k(a._k)
+    {
+    }
+    
+    histogram& operator=(const histogram<T> &a)
+    {
+      _hist=a._hist;
+      _min=a._min;
+      _max=a._max;
+      _range=a._range;
+      _bin=a._bin;
+      _k=a._k;
+    }
 	
 		void set_limits(T min, T max)
 		{
@@ -80,12 +96,18 @@ namespace minc
 			_min = min;
 			_range = _max - _min;
 			_k = T (_hist.size ()) / _range;
+      _bin=T(_range/_hist.size ());
 		}
 	
 		T range() const
 		{
 			return _range;
 		}
+		
+		T bin() const
+		{
+      return _bin;
+    }
 	
 		T min(void) const
 		{
@@ -116,6 +138,16 @@ namespace minc
 		{
 			return _hist[_idx (i)];
 		}
+		
+    T & get(int i)
+    {
+      return _hist[i];
+    }
+  
+    T get(int i) const
+    {
+      return _hist[i];
+    }
 	
 		const histogram & operator=(histogram & a)
 		{
@@ -269,7 +301,25 @@ namespace minc
         //_hist[i]+=count;
       }
     }
-
+    
+    T interpolate(const T& val) const
+    {
+      int i = idx(val);
+      
+      T d=fabs(val-value(i));
+      
+      if(i<(_hist.size()-1))
+        return _hist[i]*(_bin-d)+_hist[i+1]*d;
+      else
+        _hist[i];
+    }
+    
+    //! convert histogram to commulative one
+    void convert_to_commulative(void)
+    {
+      for(size_t i=1;i<_hist.size();i++)
+        _hist[i]+=_hist[i-1];
+    }
 	};
 
 	template< class T> class joint_histogram: public histogram<T>
@@ -403,7 +453,7 @@ namespace minc
 	
 	};
 	
-  template < class T,class D > void build_histogram(histogram<D > &hist,const simple_volume<T> & img)
+  template < class T,class D > int  build_histogram(histogram<D > &hist,const simple_volume<T> & img)
   {
 		//1. get min, max
     T img_min, img_max;
@@ -423,9 +473,10 @@ namespace minc
       cnt++;
     }
     hist /= cnt;
+    return cnt;
   }
 	
-  template < class T,class D> void build_histogram (histogram < D > &hist,
+  template < class T,class D> int  build_histogram (histogram < D > &hist,
                                              const simple_volume<T> & img,
                                              const simple_volume<unsigned char> & mask)
   {
@@ -450,6 +501,7 @@ namespace minc
       }
     }
     hist /= cnt;
+    return cnt;
   }
 	
   template < class T > void build_joint_histogram (joint_histogram < T > &hist,
@@ -507,6 +559,15 @@ namespace minc
                            
   //! perform simple k-means classify
   void simple_k_means( histogram<double>& hist, std::vector<double> & mu,int k_means,int maxiter);
+  
+  //! calculate Kullback-Leibler Distance 
+  double kl_distance(const histogram<double>& sample1,const histogram<double>& sample2);
+
+  //! calculate Kolmogorov–Smirnov Distance 
+  double ks_distance(const histogram<double>& sample1,const histogram<double>& sample2);
+  
+  //! calculate Kolmogorov–Smirnov Difference significance
+  double ks_significance(double dist, double n1,double n2);
   
   
   template<class T> class simple_commulative_histogram
