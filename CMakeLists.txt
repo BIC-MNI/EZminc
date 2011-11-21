@@ -9,6 +9,7 @@ INCLUDE_DIRECTORIES(
   )
 
 SET(MINC_ROOT "/usr/local/bic" CACHE PATH "minc library base")
+SET(NETCDF_ROOT "/usr/local" CACHE PATH "Netcdf library base")
 
 OPTION(USE_MINC2      "Use minc 2 library" ON)
 OPTION(BUILD_TESTS    "Build tests" OFF)
@@ -21,9 +22,11 @@ OPTION(HAVE_FFTW3     "FFTW3 is installed" OFF)
 
 LINK_DIRECTORIES(
 "${MINC_ROOT}/lib"
+"${NETCDF_ROOT}/lib"
 )
 INCLUDE_DIRECTORIES( 
 "${MINC_ROOT}/include"
+"${NETCDF_ROOT}/include"
 )
 
 
