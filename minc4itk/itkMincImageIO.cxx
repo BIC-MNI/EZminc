@@ -165,11 +165,7 @@ namespace itk
           break;
         
         default:
-          ExceptionObject exception(__FILE__, __LINE__);
-          std::string ErrorMessage=
-              "Unsupported data type";
-          exception.SetDescription(ErrorMessage.c_str());
-          throw exception;
+          throw ExceptionObject(__FILE__,__LINE__,"Unsupported data type");
       }
       
       if(_rdr->ndim(0)==0 && _rdr->ndim(4)==0) //vector dimension
@@ -179,12 +175,7 @@ namespace itk
       } else {
         m_PixelType=VECTOR;
         if(_rdr->ndim(0)>0 && _rdr->ndim(4)>0)
-        {
-          ExceptionObject exception(__FILE__, __LINE__);
-          std::string ErrorMessage="Combining time and vector dimension in one file is not supported!";
-          exception.SetDescription(ErrorMessage.c_str());
-          throw exception;
-        }
+          throw ExceptionObject(__FILE__,__LINE__,"Combining time and vector dimension in one file is not supported!");
         SetNumberOfComponents(_rdr->ndim(0)+_rdr->ndim(4));
       }
       
@@ -333,10 +324,7 @@ namespace itk
       }
       
     } catch(const minc::generic_error & err) {
-      ExceptionObject exception(__FILE__, __LINE__);
-      std::string ErrorMessage="Error reading minc file";
-      exception.SetDescription(ErrorMessage.c_str());
-      throw exception;
+      throw ExceptionObject(__FILE__,__LINE__,"Error reading minc file");
     }
   }
     
@@ -376,10 +364,7 @@ namespace itk
         load_non_standard_volume<double>(*_rdr,(double*)buffer);
         break;
       default:
-        ExceptionObject exception(__FILE__, __LINE__);
-        std::string ErrorMessage="Unsupported data type";
-        exception.SetDescription(ErrorMessage.c_str());
-        throw exception;
+        throw ExceptionObject(__FILE__, __LINE__,"Unsupported data type");
     }
     delete _rdr;
     _rdr=NULL;
@@ -482,39 +467,67 @@ namespace itk
           break;
         default:
         {
-          ExceptionObject exception(__FILE__, __LINE__);
-          std::string ErrorMessage="Unsupported data type";
-          exception.SetDescription(ErrorMessage.c_str());
-          throw exception;
+          throw ExceptionObject(__FILE__, __LINE__,"Unsupported data type");
         }
       }
       std::vector<std::string> dimorder;
+      std::vector<int> dimmap(5,-1);
       minc_info info;
       
       if(itk::ExposeMetaData(thisDic,"dimorder",dimorder))
       {
+        dimmap.resize(dimorder.size());
         for(int i=0;i<dimorder.size();i++)
         {
           if(dimorder[i]==MIvector_dimension && GetNumberOfComponents()>1)
+          {
             have_vectors=true;
+            dimmap[0]=i;
+          }
           else if(dimorder[i]==MItime && (GetNumberOfComponents()>1||GetNumberOfDimensions()>3))
+          {
             have_time=true;
+            dimmap[4]=i;
+          } else if(dimorder[i]==MIxspace) {
+            dimmap[1]=i;
+          } else if(dimorder[i]==MIyspace) {
+            dimmap[2]=i;
+          } else if(dimorder[i]==MIzspace) {
+            dimmap[3]=i;
+          }
         }
       } else {
         if(GetNumberOfComponents()>1 && GetNumberOfComponents()<=3)
         {
           have_vectors=true;
           have_time=false;
+          dimmap[0]=0;
         } else if(GetNumberOfComponents()>3) {
           have_vectors=false;
           have_time=true;
+          dimmap[GetNumberOfDimensions()+1]=GetNumberOfDimensions();
         }
+        dimmap[1]=(have_vectors?1:0)+0;dimmap[2]=(have_vectors?1:0)+1;dimmap[3]=(have_vectors?1:0)+2;
+        //dimorder.resize((GetNumberOfDimensions()+(have_vectors?1:0)+(have_time?1:0));
       }
+      
       int dim_no=GetNumberOfDimensions()+(have_vectors||have_time?1:0);
       info.resize(dim_no);
+      std::cout<<"dimmap:";
+      for(int i=0;i<5;i++)
+      {
+        std::cout<<dimmap[i]<<",";
+      }
+      std::cout<<std::endl;
+      
       for(int i=0;i<GetNumberOfDimensions();i++)
       {
-        int _i=GetNumberOfDimensions()-i-1+(have_vectors?1:0);
+        int _i=dimmap[i+1];//GetNumberOfDimensions()-i-1+(have_vectors?1:0);
+        if(_i<0) 
+        {
+          throw ExceptionObject(__FILE__, __LINE__,"Internal error");
+        }
+         //ERROR!
         info[_i].length=GetDimensions(i);
         info[_i].step=GetSpacing(i);
         info[_i].start=GetOrigin(i);
@@ -549,29 +562,31 @@ namespace itk
         start=_dir_cos.GetInverse()*vorigin; //this is not optimal
         for(int i=0;i<3;i++)
         {
-          int _i=GetNumberOfDimensions()-i-1+(have_vectors?1:0);
+          int _i=dimmap[i+1];
           info[_i].start=start[i];
         }
       }
       //here we assume that we had a grid file
       if(have_vectors)
       {
-        info[0].length=GetNumberOfComponents();
-        info[0].step=1;
-        info[0].start=0;
-        info[0].dim=dim_info::DIM_VEC;
-        info[0].have_dir_cos=false;
+        int _i=dimmap[0];
+        info[_i].length=GetNumberOfComponents();
+        info[_i].step=1;
+        info[_i].start=0;
+        info[_i].dim=dim_info::DIM_VEC;
+        info[_i].have_dir_cos=false;
       } else if(have_time){
-        info[GetNumberOfDimensions()].length=GetNumberOfComponents();
+        int _i=dimmap[4];
+        info[_i].length=GetNumberOfComponents();
         double tstep=1;
         double tstart=0;
         itk::ExposeMetaData(thisDic,"tstep",tstep);
         itk::ExposeMetaData(thisDic,"tstart",tstart);
         
-        info[GetNumberOfDimensions()].step=tstep;
-        info[GetNumberOfDimensions()].start=tstart;
-        info[GetNumberOfDimensions()].dim=dim_info::DIM_TIME;
-        info[GetNumberOfDimensions()].have_dir_cos=false;
+        info[_i].step=tstep;
+        info[_i].start=tstart;
+        info[_i].dim=dim_info::DIM_TIME;
+        info[_i].have_dir_cos=false;
       }
       //TODO:  shuffle info based on the dimnames
       _wrt=new minc_1_writer;
@@ -665,21 +680,13 @@ namespace itk
           save_non_standard_volume<double>(*_wrt,(const double*)buffer);
           break;
         default:
-        {
-          ExceptionObject exception(__FILE__, __LINE__);
-          std::string ErrorMessage="Unsupported data type";
-          exception.SetDescription(ErrorMessage.c_str());
-          throw exception;
-        }
+          throw ExceptionObject(__FILE__,__LINE__,"Unsupported data type");
       }
       //finish writing, cleanup
       delete _wrt;
       _wrt=NULL;
     } catch(const minc::generic_error & err) {
-      ExceptionObject exception(__FILE__, __LINE__);
-      std::string ErrorMessage="Error reading minc file";
-      exception.SetDescription(ErrorMessage.c_str());
-      throw exception;
+      throw ExceptionObject(__FILE__, __LINE__,"Error reading minc file");
     }
     
   }

@@ -256,6 +256,7 @@ namespace minc
   
   void set_minc_storage_type(itk::Object* image,nc_type datatype,bool is_signed);
   void copy_metadata(itk::Object* dst,itk::Object* src);
+  void copy_dimorder(itk::Object* dst,itk::Object* src);
   void append_history(itk::Object* dst,const std::string& history);
    
   // a helper function for minc writing

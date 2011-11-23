@@ -194,6 +194,7 @@ int main (int argc, char **argv)
     //this is for processing using batch system
     filter->SetNumberOfThreads(1);
     
+    minc::image3d::Pointer like=0;
     if(!like_f.empty())
     {
       itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
@@ -206,6 +207,8 @@ int main (int argc, char **argv)
         filter->SetOutputParametersFromImage(reader->GetOutput());
         filter->SetOutputDirection(reader->GetOutput()->GetDirection());
       }
+      like=reader->GetOutput();
+      like->DisconnectPipeline();
     }
     else
     {
@@ -227,6 +230,10 @@ int main (int argc, char **argv)
     minc::copy_metadata(out,in);
     minc::append_history(out,history);
     free(history);
+    
+    //correct dimension order
+    if(like.IsNotNull())
+      minc::copy_dimorder(out,like);
     
     //generic file writer
     itk::ImageFileWriter< minc::image3d >::Pointer writer = itk::ImageFileWriter<minc::image3d >::New();

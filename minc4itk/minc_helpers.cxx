@@ -756,6 +756,15 @@ namespace minc
     dst->SetMetaDataDictionary(src->GetMetaDataDictionary());
   }
   
+  void copy_dimorder(itk::Object* dst,itk::Object* src)
+  {
+    std::vector<std::string> dimorder;
+    if(itk::ExposeMetaData(src->GetMetaDataDictionary(),"dimorder",dimorder))
+    {
+      itk::EncapsulateMetaData(dst->GetMetaDataDictionary(),"dimorder",dimorder);
+    }
+  }
+  
   void append_history(itk::Object* dst,const std::string& history)
   {
     std::string old_history;
