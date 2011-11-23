@@ -513,12 +513,12 @@ namespace itk
       
       int dim_no=GetNumberOfDimensions()+(have_vectors||have_time?1:0);
       info.resize(dim_no);
-      std::cout<<"dimmap:";
+/*      std::cout<<"dimmap:";
       for(int i=0;i<5;i++)
       {
         std::cout<<dimmap[i]<<",";
       }
-      std::cout<<std::endl;
+      std::cout<<std::endl;*/
       
       for(int i=0;i<GetNumberOfDimensions();i++)
       {
