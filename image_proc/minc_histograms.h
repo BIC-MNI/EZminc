@@ -569,6 +569,33 @@ namespace minc
   //! calculate Kolmogorov–Smirnov Difference significance
   double ks_significance(double dist, double n1,double n2);
   
+  //! calculate Kolmogorov–Smirnov Distance , assuming that vectors are sorted
+  //! adopter from "Numerical Recipes is C"
+  template<class T> double kstwo(const std::vector<T>& data1,const std::vector<T>& data2,double &significance)
+  {
+    typename std::vector<T>::const_iterator it1=data1.begin();
+    typename std::vector<T>::const_iterator it2=data2.begin();
+    double dist=0.0;
+    double fn1=0.0,fn2=0.0,dt;
+    
+    size_t en1=data1.size();
+    size_t en2=data1.size();
+    double d1=1.0/en1;
+    double d2=1.0/en2;
+    
+    while (it1 != data2.end() && it2!=data2.end()) 
+    {
+      T v1=*it1;
+      T v2=*it2;
+      
+      if (v1 <= v2) {fn1+=d1;it1++;}
+      if (v2 <= v1) {fn2+=d2;it2++;}
+      
+      if ((dt=fabs(fn2-fn1)) > dist) dist=dt;
+    }
+    significance=ks_significance(dist,en1,en2);
+    return dist;
+  }
   
   template<class T> class simple_commulative_histogram
   {
@@ -653,7 +680,12 @@ namespace minc
           return 100.0;
         }
       }
+      
+      double ks_distance(const simple_commulative_histogram&a,double &significance) const
+      {
+        return kstwo<T>(values,a.values,significance);
+      }
   };
-
+  
 }; //minc
 #endif //__MINC_HISTOGRAMS_H__

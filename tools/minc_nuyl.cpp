@@ -17,12 +17,13 @@ void show_usage(const char *name)
       << "Medical Imaging, IEEE Transactions on , vol.19, no.2, pp.143-150, Feb. 2000 "<<std::endl
       << "http://dx.doi.org/10.1109/42.836373 "<<std::endl
       << std::endl
-      << "Usage: "<<name<<" <source> <target> <output>" << std::endl
+      << "Usage: "<<name<<" <source> <target> [output]" << std::endl
       << "\t--source-mask <mask1.mnc>"<<std::endl
       << "\t--target-mask <mask2.mnc>"<<std::endl
       << "\t--steps <n> number of steps (default 10)"<<std::endl
       << "\t--fix_zero_padding fix mri volumes with lots of zeros in background"<<std::endl
-      << "\t--verbose be verbose" << std::endl;
+      << "\t--verbose be verbose" << std::endl
+      << "\t--ks calculate Kolmogorov–Smirnov difference, no output is produced"<< std::endl;
 }
 
 
@@ -37,6 +38,7 @@ int main(int argc,char **argv)
   int hist_bins=4000;
   int steps=10;
   int clobber=0;
+  int calc_ks=0;
   int fix_zero_padding=0;
   
   double cut_off=0.01;
@@ -58,6 +60,7 @@ int main(int argc,char **argv)
     {"target-mask",   required_argument, 0, 't'},
     //{"bins",          required_argument, 0, 'b'},
     {"steps",         required_argument, 0, 'S'},
+    {"ks", no_argument, &calc_ks,      1},
     {0, 0, 0, 0}
   };
   
@@ -97,16 +100,16 @@ int main(int argc,char **argv)
     }
   }
 
-  if ((argc - optind) < 3)
+  if ((argc - optind) < 3 && !calc_ks || (argc - optind)<2 && calc_ks)
   {
     show_usage(argv[0]);
     return 1;
   }
   std::string input_src_f=argv[optind];
   std::string input_trg_f=argv[optind+1];
-  std::string output_f=argv[optind+2];
+  std::string output_f=(argc - optind)>2?argv[optind+2]:"";
   
-  if (!clobber && !access (output_f.c_str(), F_OK))
+  if (!output_f.empty() && !clobber && !access (output_f.c_str(), F_OK))
   {
     std::cerr << output_f.c_str () << " Exists!" << std::endl;
     return 1;
@@ -186,6 +189,18 @@ int main(int argc,char **argv)
     }
     trg_min=trg_hist_s.min();
     trg_max=trg_hist_s.max();
+
+    if(calc_ks)
+    {
+      if(verbose) std::cout<<"Kolmogorov–Smirnov distance:";
+      double significance=0.0;
+      double dist=src_hist_s.ks_distance(trg_hist_s,significance);
+      std::cout<<dist<<std::endl;
+      //if(verbose) std::cout<<"Significance:";
+      //std::cout<<significance<<std::endl;
+      return 0;
+    }
+    
     
     double step  = (1.0 - 2.0*cut_off/100.0) / steps ;
     
