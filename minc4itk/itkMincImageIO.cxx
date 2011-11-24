@@ -474,45 +474,52 @@ namespace itk
       std::vector<int> dimmap(5,-1);
       minc_info info;
       
+      if(GetNumberOfComponents()>1 && GetNumberOfComponents()<=3 ) 
+      {
+        have_vectors=true;
+        have_time=false;
+      } else if(GetNumberOfComponents()>3||GetNumberOfDimensions()>3) {
+        have_vectors=false;
+        have_time=true;
+      }
+      
       if(itk::ExposeMetaData(thisDic,"dimorder",dimorder))
       {
-        dimmap.resize(dimorder.size());
-        for(int i=0;i<dimorder.size();i++)
+        //dimmap.resize(dimorder.size());
+        for(int i=0,j=0;i<dimorder.size();i++)
         {
-          if(dimorder[i]==MIvector_dimension && GetNumberOfComponents()>1)
+          if(dimorder[i]==MIvector_dimension && have_vectors)
           {
-            have_vectors=true;
-            dimmap[0]=i;
+            dimmap[0]=j++;
           }
-          else if(dimorder[i]==MItime && (GetNumberOfComponents()>1||GetNumberOfDimensions()>3))
+          else if(dimorder[i]==MItime && have_time)
           {
-            have_time=true;
-            dimmap[4]=i;
+            dimmap[4]=j++;
           } else if(dimorder[i]==MIxspace) {
-            dimmap[1]=i;
+            dimmap[1]=j++;
           } else if(dimorder[i]==MIyspace) {
-            dimmap[2]=i;
+            dimmap[2]=j++;
           } else if(dimorder[i]==MIzspace) {
-            dimmap[3]=i;
+            dimmap[3]=j++;
           }
         }
       } else {
-        if(GetNumberOfComponents()>1 && GetNumberOfComponents()<=3)
+        if(have_vectors)
         {
-          have_vectors=true;
-          have_time=false;
           dimmap[0]=0;
-        } else if(GetNumberOfComponents()>3) {
+        } else if(have_time) {
           have_vectors=false;
           have_time=true;
           dimmap[GetNumberOfDimensions()+1]=GetNumberOfDimensions();
         }
-        dimmap[1]=(have_vectors?1:0)+0;dimmap[2]=(have_vectors?1:0)+1;dimmap[3]=(have_vectors?1:0)+2;
-        //dimorder.resize((GetNumberOfDimensions()+(have_vectors?1:0)+(have_time?1:0));
+        dimmap[1]=(have_vectors?1:0)+0;
+        dimmap[2]=(have_vectors?1:0)+1;
+        dimmap[3]=(have_vectors?1:0)+2;
       }
       
       int dim_no=GetNumberOfDimensions()+(have_vectors||have_time?1:0);
       info.resize(dim_no);
+      
 /*      std::cout<<"dimmap:";
       for(int i=0;i<5;i++)
       {
@@ -588,6 +595,26 @@ namespace itk
         info[_i].dim=dim_info::DIM_TIME;
         info[_i].have_dir_cos=false;
       }
+      
+/*      std::cout<<"info:";
+      for(int i=0;i<info.size();i++)
+      {
+        switch(info[i].dim)
+        {
+          case dim_info::DIM_VEC:
+            std::cout<<"vector_dimension,";break;
+          case dim_info::DIM_Z:
+            std::cout<<"zspace,";break;
+          case dim_info::DIM_Y:
+            std::cout<<"yspace,";break;
+          case dim_info::DIM_X:
+            std::cout<<"xspace,";break;
+          default: std::cout<<"Unknown! ";break;
+            
+        }
+      }
+      std::cout<<std::endl;      */
+      
       //TODO:  shuffle info based on the dimnames
       _wrt=new minc_1_writer;
       _wrt->open(this->GetFileName(),
