@@ -307,6 +307,8 @@ minc-full : create_output_dirs bicpl n3 conglomerate glim_image mni_autoreg minc
 
 minc-with-itk : $(output_dirs) minc itk ezminc 
 
+netcdf : $(output_dirs) $(netcdf) 
+hdf5 : $(output_dirs) $(hdf5) 
 minc : $(output_dirs) $(minc) $(hdf5) $(netcdf)
 minc-only : $(output_dirs) $(minc) $(hdf5) $(netcdf)
 
@@ -399,7 +401,7 @@ $(BUILD_DIR)/src/netcdf-$(NETCDF_VER).tar.gz :
  -O $(BUILD_DIR)/src/netcdf-$(NETCDF_VER).tar.gz
 
 $(BUILD_DIR)/src/hdf5-$(HDF5_VER).tar.gz : 
-	$(WGET) http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-$(HDF5_VER).tar.gz \
+	$(WGET) http://www.hdfgroup.org/ftp/HDF5/releases/hdf5-$(HDF5_VER)/src/hdf5-$(HDF5_VER).tar.gz \
  -O $(BUILD_DIR)/src/hdf5-$(HDF5_VER).tar.gz
 
 $(BUILD_DIR)/src/andrewjanke-minc-$(MINC_VER).tar.gz : 
