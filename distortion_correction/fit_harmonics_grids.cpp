@@ -75,6 +75,7 @@ class Tag_fit
     fitting_mask mask;
     bool     verbose;
     bool     limit_linear;
+    bool     cache_basis;
     double   keep;
     double   max_dev;
     double   sd,max_distance;
@@ -97,21 +98,22 @@ class Tag_fit
     
     void calculate_basis(void)
     {
+      if(!cache_basis) return;
       basis_x.resize(ideal.size());
-      basis_y.resize(ideal.size());
-      basis_z.resize(ideal.size());
+      //basis_y.resize(ideal.size());
+      //basis_z.resize(ideal.size());
       //tag_points::const_iterator j=measured.begin();
       tag_points::const_iterator i=ideal.begin();
       
       fittings::iterator mx=basis_x.begin();
-      fittings::iterator my=basis_y.begin();
-      fittings::iterator mz=basis_z.begin();
+      //fittings::iterator my=basis_y.begin();
+      //fittings::iterator mz=basis_z.begin();
       basis_vector bas(order);
-      for(; i!=ideal.end(); i++, mx++,my++,mz++)
+      for(; i!=ideal.end(); i++, mx++/*,my++,mz++*/)
       {
         mx->resize(order);
-        my->resize(order);
-        mz->resize(order);
+        //my->resize(order);
+        //mz->resize(order);
         
         //all basis are the same
         fun_x.generate_basis(bas,order,*i);
@@ -121,8 +123,8 @@ class Tag_fit
           (*my)[k]=fun_y(k,*i);
           (*mz)[k]=fun_z(k,*i);*/
           (*mx)[k]=bas[k];
-          (*my)[k]=bas[k];
-          (*mz)[k]=bas[k];        
+          //(*my)[k]=bas[k];
+          //(*mz)[k]=bas[k];        
         }
         /*
         fun_x.generate_basis(*mx,order,*i);
@@ -141,7 +143,8 @@ class Tag_fit
            max_distance(0), 
            sd(0), 
            coeff(3),
-           limit_linear(ll)
+           limit_linear(ll),
+           cache_basis(max_iter>1)
     {
     }
     
@@ -174,24 +177,40 @@ class Tag_fit
       fittings::const_iterator bx=basis_x.begin();
       fittings::const_iterator by=basis_y.begin();
       fittings::const_iterator bz=basis_z.begin();
+      basis_vector bas_x(order);
+/*      basis_vector bas_y(order);
+      basis_vector bas_z(order);*/
       
-      for(; i!=ideal.end(); i++, j++, m++, bx++, by++, bz++)
+      for(; i!=ideal.end(); i++, j++, m++)
       {
         if(*m) continue;
           //this is a quick hack
         
+        if(cache_basis)
+        {
+          bas_x=*bx;
+/*          bas_y=*by;
+          bas_z=*bz;*/
+        } else {
+          fun_x.generate_basis(bas_x,order,*i);
+        }
+        
         if(limit_linear)
         { 
           //TODO: fix indexing
-          pol_x.accumulate((*bx), (*j)[0]-(*i)[0]);
-          pol_y.accumulate((*by), (*j)[1]-(*i)[1]);
-          pol_z.accumulate((*bz), (*j)[2]-(*i)[2]);
+          pol_x.accumulate(bas_x, (*j)[0]-(*i)[0]);
+          pol_y.accumulate(bas_x, (*j)[1]-(*i)[1]);
+          pol_z.accumulate(bas_x, (*j)[2]-(*i)[2]);
         } else {
-          pol_x.accumulate(*bx, (*j)[0]);
-          pol_y.accumulate(*by, (*j)[1]);
-          pol_z.accumulate(*bz, (*j)[2]);
+          pol_x.accumulate(bas_x, (*j)[0]);
+          pol_y.accumulate(bas_x, (*j)[1]);
+          pol_z.accumulate(bas_x, (*j)[2]);
         }
         
+        if(cache_basis)
+        {
+          bx++; by++; bz++;
+        }
       }
       //if(condition)
       //{
