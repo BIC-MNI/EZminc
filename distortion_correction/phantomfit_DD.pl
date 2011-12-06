@@ -8,40 +8,31 @@ use File::Basename;
 use File::Temp qw/ tempdir /;
 
 # default minctracc parameters
-my @def_minctracc_args = (
+my @def_dd_args = (
 #   '-debug',
-   '-clobber',
-   '-nonlinear', 'corrcoeff',
-   '-sub_lattice', 6
+   '-a',0, # Diffeomorphic Demons update rule
+   '-t',0, # using symmetrized gradient
+   '-l',1, # maximum 1 voxel length per iteration
+   '-s',0, # don't filter final def. field
+   '-g',2, # 2mm filtering of update field
    );
 
 my @conf = (
 
    {'step'         => 4,
-    'blur_fwhm'    => 8,
-    'iterations'   => 6,
+    'prog'         => '20x0x0',
+    'iterations'   => 2,
     },
 
-    {'step'         => 4,
-     'blur_fwhm'    => 4,
-     'iterations'   => 5,
+   {'step'         => 2,
+    'prog'         => '20x0',
+    'iterations'   => 2,
     },
 
-    {'step'         => 3,
-     'blur_fwhm'    => 4,
-     'iterations'   => 3,
+   {'step'         => 1,
+    'prog'         => '20',
+    'iterations'   => 2,
     },
-    
-    {'step'         => 2,
-     'blur_fwhm'    => 2,
-     'iterations'   => 3,
-    },
-    
-    {'step'         => 1,
-     'blur_fwhm'    => 2,
-     'iterations'   => 3,
-    },
-    
    );
 
 my($Help, $Usage, $me);
@@ -61,8 +52,6 @@ $me = &basename($0);
    'min_step'  => 2,
    'limit'     => 0,
    'weight'    => 1,
-   'stiffness' => 0.4,
-   'similarity'=> 0.3,
    'keep'      => 1.0,
    'cyl'       => 0,
    'init'      => undef,
@@ -174,51 +163,16 @@ if($opt{init})
 
 
 # set up filename base
-my($i, $s_base, $t_base, $tmp_xfm, $tmp_source, $tmp_target, $prev_xfm);
-
-#if(defined $opt{init_xfm})
-#{
-# regularize_xfms([$opt{init_xfm}],[$opt{source_mask}],$opt{order},"$tmpdir/regularize.xfm",1);
-#}
+my($i, $s_base, $t_base, $tmp_grid, $tmp_source, $tmp_target, $prev_grid,$prev_xfm);
 
 # a fitting we shall go...
 for ($i=0; $i<=$#conf; $i++) {
   last if $conf[$i]{step}<$opt{min_step};
   
-  for(my $k=0;$k<=$#source;$k++)
-  {
-    $s_base = &basename($source[$k]);
-    $s_base =~ s/\.gz$//;
-    $s_base =~ s/\.mnc$//;
-    $t_base = &basename($target[$k]);
-    $t_base =~ s/\.gz$//;
-    $t_base =~ s/\.mnc$//;
-
-    # set up intermediate files
-    $tmp_source = "$tmpdir/S_$s_base\_$conf[$i]{blur_fwhm}";
-    $tmp_target = "$tmpdir/T_$t_base\_$conf[$i]{blur_fwhm}";
-    $conf[$i]{iterations}=$opt{step_iterations} if $opt{step_iterations};
-    print STDOUT "-+-[$i]\n".
-                  " | step:           $conf[$i]{step}\n".
-                  " | blur_fwhm:      $conf[$i]{blur_fwhm}\n".
-                  " | iterations:     $conf[$i]{iterations}\n".
-                  " | source:         $tmp_source\n".
-                  " | target:         $tmp_target\n".
-                  "\n";
-   
-   # blur the source and target files if required
-     if(!-e "$tmp_source\_blur.mnc"){
-        &do_cmd('mincblur','-no_apodize', '-fwhm', $conf[$i]{blur_fwhm}, $source[$k], $tmp_source);
-        }
-     if(!-e "$tmp_target\_blur.mnc"){
-        &do_cmd('mincblur','-no_apodize', '-fwhm', $conf[$i]{blur_fwhm}, $target[$k], $tmp_target);
-        }
-     my $j;
-   }
-   
+  
   for(my $j=0;$j<$conf[$i]{iterations};$j++)
   {
-     my @xfms;
+    my @grids;
      
     if($opt{measure}) 
     {
@@ -243,54 +197,37 @@ for ($i=0; $i<=$#conf; $i++) {
       $s_base = &basename($source[$k]);
       $s_base =~ s/\.gz$//;
       $s_base =~ s/\.mnc$//;
-      $t_base = &basename($target[$k]);
-      $t_base =~ s/\.gz$//;
-      $t_base =~ s/\.mnc$//;
-      $tmp_source = "$tmpdir/S_$s_base\_$conf[$i]{blur_fwhm}";
-      $tmp_target = "$tmpdir/T_$t_base\_$conf[$i]{blur_fwhm}";
 
-      $tmp_xfm = "$tmpdir/$s_base\_${i}_${j}_${k}.xfm";
-      # set up registration
-      @args = ('minctracc',  @def_minctracc_args,
-               '-iterations', 2, # 10
-               '-step', $conf[$i]{step}, $conf[$i]{step}, $conf[$i]{step},
-               '-lattice_diam', $conf[$i]{step} * 3, 
-                             $conf[$i]{step} * 3, 
-                             $conf[$i]{step} * 3,
-               '-similarity_cost_ratio',$opt{similarity},
-               '-weight',$opt{weight},
-               '-stiffness',$opt{stiffness});
+      $tmp_grid = "$tmpdir/$s_base\_${i}_${j}_${k}_grid_0.mnc";
 
+      @args = ('DemonsRegistration',@def_dd_args,
+               '-i',$conf[$i]{prog},
+               '--fixed-image',$source[$k],
+               '--moving-image',$target[$k],
+               '--fixed-mask',$fit_mask[$k],
+               '--moving-mask',$fit_mask[$k]);
+               
       # transformation
       my $transform;
-      if($i == 0 && $j == 0 ){ # no init xfm for now!
-        if($opt{init})
-        {
-          push(@args, '-transformation',"$tmpdir/init.xfm" );
-        } else {
-          push(@args, '-identity');
-        }
-      } else {
-        push(@args, '-transformation', $prev_xfm );
+
+      if($prev_grid )
+      { 
+        push(@args, '--input-field', $prev_grid );
+        #push(@args, '--input-transform',$prev_xfm );
+      } elsif($opt{init}) {
+        push(@args, '--input-transform',"$tmpdir/init.xfm" );
       }
 
-      push(@args,'-no_super') if $conf[$i]{step}<4;
-
-      # masks
-      push(@args, '-source_mask',$fit_mask[$k]) ;
-      push(@args, '-model_mask', $fit_mask[$k]);
-
-      # add files and run registration
-      push(@args, "$tmp_source\_blur.mnc", "$tmp_target\_blur.mnc", $tmp_xfm);
+      push(@args, '--outputDef-field', $tmp_grid);
       &do_cmd(@args);
-      push @xfms,$tmp_xfm;
+      push @grids,$tmp_grid;
     }
-    regularize_xfms(\@xfms,\@estimate_mask,$opt{order},"$tmpdir/regularize_${i}_${j}.xfm",1);
-    cleanup_xfms(\@xfms) unless $opt{debug};
+    regularize_grids(\@grids,\@estimate_mask,$opt{order},"$tmpdir/regularize_${i}_${j}.xfm",1);
+    cleanup_grids(\@grids) unless $opt{debug};
     $prev_xfm = "$tmpdir/regularize_${i}_${j}.xfm";
+    $prev_grid = "$tmpdir/regularize_${i}_${j}_grid_0.mnc";
   }
 }
-#regularize_xfm($prev_xfm,$opt{source_mask},$opt{order},$outxfm,0,$opt{par});
 do_cmd('cp',"$tmpdir/regularize.par",$opt{par}) if $opt{par};
 do_cmd('xfminvert',$prev_xfm,$outxfm);
 close MEASURE if $opt{measure};
@@ -312,11 +249,20 @@ sub cleanup_xfms {
   }
 }
 
-sub regularize_xfms {
-  my ($_xfm,$_mask,$order,$out,$invert,$out_par)=@_;
-  my @xfms=@{$_xfm};
+sub cleanup_grids {
+  my @grids=@{$_[0]};
+  for(my $i=0;$i<=$#grids;$i++)
+  {
+    do_cmd('rm','-f',$grids[$i]);
+  }
+}
+
+
+sub regularize_grids {
+  my ($_grid,$_mask,$order,$out,$invert,$out_par)=@_;
+  my @grids=@{$_grid};
   my @masks=@{$_mask};
-  die "XFMs and MASKs don't match!" if $#xfms!=$#masks;
+  die "XFMs and MASKs don't match!" if $#grids!=$#masks;
   
   my @args;
   if($opt{pca})
@@ -329,14 +275,12 @@ sub regularize_xfms {
     @args=($opt{cyl}?'c_fit_harmonics_grids':'fit_harmonics_grids','--order',$opt{order});
     push(@args,"--limit") if $opt{limit};
     push(@args,"--keep",$opt{keep}) if $opt{keep};
-    push(@args,'--iter',10);
+    push(@args,'--iter',1) if $opt{keep}>0.99;
   } 
-  for(my $i=0;$i<=$#xfms;$i++)
+  for(my $i=0;$i<=$#grids;$i++)
   {
-    my $grid=$xfms[$i];
-    $grid=~s/.xfm$/_grid_0.mnc/;
-    die "Can't find  grid file: $grid" unless -e $grid;
-    push (@args,$grid,$masks[$i]);
+    die "Can't find  grid file: $grids[$i]" unless -e $grids[$i];
+    push (@args,$grids[$i],$masks[$i]);
   }
   push(@args,"$tmpdir/regularize.par",'--clobber');
   
