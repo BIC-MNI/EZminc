@@ -1,7 +1,9 @@
 #! /bin/sh
 
 #dimensions="-start -50 -50 -50 -nelements 100 100 100  -step 1 1 1"
-dimensions="-start -40 -25 -25 -nelements 320 200 200  -step 0.25 0.25 0.25"
+#dimensions="-start -40 -25 -25 -nelements 320 200 200  -step 0.25 0.25 0.25"
+dimensions="-start -40 -25 -25 -nelements 750 500 500  -step 0.1 0.1 0.1"
+
 calc="-max_buffer_size_in_kb 10000000"
 mkdir -p tmp
 #unset MINC_FORCE_V2
@@ -64,7 +66,7 @@ make_phantom -ellipse -xwidth 7 -ywidth 7 -zwidth 10000 $dimensions tmp/stud_inn
 mincmath -sub tmp/stud.mnc tmp/stud_inner.mnc tmp/stud_walls.mnc $calc
 
 #                                    v stud height
-make_phantom -rectangle -width 10 10 5.5 $dimensions tmp/stud_mask.mnc -center 0 0 -12 -clob
+make_phantom -rectangle -width 10 10 5.0 $dimensions tmp/stud_mask.mnc -center 0 0 -11.5 -clob
 
 minccalc -express 'A[1]>0.5?A[0]:0' tmp/stud_walls.mnc tmp/stud_mask.mnc tmp/stud_c.mnc  $calc
 
@@ -92,6 +94,9 @@ export MINC_COMPRESS=4
 
 minccalc -expression 'clamp(A[0],0,1)' -byte tmp/lego_brick.mnc lego_brick_ideal.mnc      -clob $calc
 minccalc -expression 'clamp(A[0],0,1)' -byte tmp/rect_outer.mnc lego_brick_ideal_mask.mnc -clob $calc
+
+rm -rf tmp
+
 #param2xfm -translation 0 0 18 move_18.xfm 
 #mincresample -transform move_18.xfm -use_input_sampling lego_brick_ideal.mnc lego_brick_ideal_moved.mnc -nearest
 
