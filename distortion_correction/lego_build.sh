@@ -6,55 +6,40 @@ calc="-max_buffer_size_in_kb 10000000"
 mkdir -p tmp
 #unset MINC_FORCE_V2
 #unset MINC_COMPRESS
-make_phantom -rectangle -width 62.75 31  18.5 $dimensions tmp/rect_outer.mnc -center 0 0 0.5 -clob
-make_phantom -rectangle -width 60.5  28.5 17   $dimensions tmp/rect_inner.mnc -center 0 0 1 -clob
+make_phantom -rectangle -width 62.75 31  18.5  $dimensions tmp/rect_outer.mnc -center 0 0 0.5 -clob
+make_phantom -rectangle -width 60.5  28.5 17.5 $dimensions tmp/rect_inner.mnc -center 0 0 1.5 -clob
 mincmath -sub tmp/rect_outer.mnc tmp/rect_inner.mnc tmp/rect_shell.mnc -clob $calc
 
-make_phantom -rectangle -width 2 2 18.5 $dimensions tmp/rect_indent.mnc -center 0 0 0.5
-param2xfm -translation 8 8 0 tmp/move_8_8.xfm
-mincresample tmp/rect_indent.mnc tmp/rect_indent_8_9.mnc -transform tmp/move_8_8.xfm -nearest -use_input_sampling
-rm tmp/rect_indent_8_9.mnc
-param2xfm -translation 14 8 0 tmp/move_15_8.xfm
-mincresample tmp/rect_indent.mnc tmp/rect_indent_15_8.mnc -transform tmp/move_15_8.xfm -nearest -use_input_sampling
-rm tmp/rect_indent_15_8.mnc tmp/move_15_8.xfm
-param2xfm -translation 8 14 0 tmp/move_8_15.xfm
-mincresample tmp/rect_indent.mnc tmp/rect_indent_8_15.mnc -transform tmp/move_8_15.xfm -nearest -use_input_sampling
-param2xfm -translation 24 14 0 tmp/move_24_15.xfm
-param2xfm -translation -8 14 0 tmp/move_-8_15.xfm
-param2xfm -translation -24 14 0 tmp/move_-24_15.xfm
+indent_top_bottom="-rectangle -width 1 2 18.5"
+indent_left_right="-rectangle -width 2 1 18.5"
+#make_phantom $indent $dimensions tmp/rect_indent.mnc        -center 0    0 0.5
+#make_phantom $indent $dimensions tmp/rect_indent_8_8.mnc    -center 8    8 0.5
+#make_phantom $indent $dimensions tmp/rect_indent_14_8.mnc   -center 14   8 0.5
 
-mincresample tmp/rect_indent.mnc tmp/rect_indent_-8_15.mnc -transform tmp/move_-8_15.xfm -nearest -use_input_sampling
-mincresample tmp/rect_indent.mnc tmp/rect_indent_24_15.mnc -transform tmp/move_24_15.xfm -nearest -use_input_sampling
-mincresample tmp/rect_indent.mnc tmp/rect_indent_-24_15.mnc -transform tmp/move_-24_15.xfm -nearest -use_input_sampling
-mincmath -max tmp/rect_indent_* tmp/indents_plus.mnc $calc
-param2xfm -translation 0 -28 0 tmp/move_down.xfm -clobber 
+#top row
+make_phantom $indent_top_bottom $dimensions tmp/rect_indent_8_14.mnc    -center   8  14 0.5
+make_phantom $indent_top_bottom $dimensions tmp/rect_indent_24_14.mnc   -center  24  14 0.5
+make_phantom $indent_top_bottom $dimensions tmp/rect_indent_-8_14.mnc   -center  -8  14 0.5
+make_phantom $indent_top_bottom $dimensions tmp/rect_indent_-24_14.mnc  -center -24  14 0.5
+#bottom row
+make_phantom $indent_top_bottom $dimensions tmp/rect_indent_8_-14.mnc   -center   8 -14 0.5
+make_phantom $indent_top_bottom $dimensions tmp/rect_indent_24_-14.mnc  -center  24 -14 0.5
+make_phantom $indent_top_bottom $dimensions tmp/rect_indent_-8_-14.mnc  -center  -8 -14 0.5
+make_phantom $indent_top_bottom $dimensions tmp/rect_indent_-24_-14.mnc -center -24 -14 0.5
 
-param2xfm -translation 30 8 0 tmp/move_31_8.xfm -clobber
-param2xfm -translation -30 8 0  tmp/move_-31_8.xfm -clobber
-param2xfm -translation -30 -8 0 tmp/move_-31_-8.xfm -clobber
-param2xfm -translation 30 -8 0  tmp/move_31_-8.xfm -clobber
+#right column
+make_phantom $indent_left_right $dimensions tmp/rect_indent_30_8.mnc    -center   30  8 0.5
+make_phantom $indent_left_right $dimensions tmp/rect_indent_30_-8.mnc   -center   30 -8 0.5
+#left column
+make_phantom $indent_left_right $dimensions tmp/rect_indent_-30_8.mnc   -center  -30  8 0.5
+make_phantom $indent_left_right $dimensions tmp/rect_indent_-30_-8.mnc  -center  -30 -8 0.5
+
+mincmath -max tmp/rect_indent_*   tmp/all_indents.mnc -clobber $calc
+mincmath -max tmp/all_indents.mnc tmp/rect_shell.mnc tmp/rect_carcas.mnc $calc
+
+
 param2xfm -translation 16 0 0  tmp/move_16.xfm
 param2xfm -translation -16 0 0 tmp/move_-16.xfm
-
-mincresample tmp/indents_plus.mnc -transform tmp/move_down.xfm -nearest -use_input_sampling tmp/indents_minus.mnc -clobb
-make_phantom -rectangle -xwidth 0.5 -ywidth 0.5 -zwidth 17 $dimensions tmp/rect_indent.mnc -center 0 0 0 -clobber
-mincresample tmp/rect_indent.mnc tmp/rect_indent_-8_15.mnc  -transform tmp/move_-8_15.xfm -nearest -use_input_sampling -clob
-mincresample tmp/rect_indent.mnc tmp/rect_indent_8_15.mnc   -transform tmp/move_8_15.xfm -nearest -use_input_sampling -clob
-mincresample tmp/rect_indent.mnc tmp/rect_indent_24_15.mnc  -transform tmp/move_24_15.xfm -nearest -use_input_sampling -clob
-mincresample tmp/rect_indent.mnc tmp/rect_indent_-24_15.mnc -transform tmp/move_-24_15.xfm -nearest -use_input_sampling -clob
-mincmath -max tmp/rect_indent_* tmp/indents_plus.mnc -clobber $calc
-
-
-mincresample tmp/indents_plus.mnc -transform tmp/move_down.xfm -nearest -use_input_sampling tmp/indents_minus.mnc -clob
-
-mincresample tmp/rect_indent.mnc tmp/rect_indent_31_8.mnc   -transform tmp/move_31_8.xfm -nearest -use_input_sampling -clob
-mincresample tmp/rect_indent.mnc tmp/rect_indent_31_-8.mnc  -transform tmp/move_31_-8.xfm -nearest -use_input_sampling -clob
-mincresample tmp/rect_indent.mnc tmp/rect_indent_-31_-8.mnc -transform tmp/move_-31_-8.xfm -nearest -use_input_sampling -clob
-mincresample tmp/rect_indent.mnc tmp/rect_indent_-31_8.mnc  -transform tmp/move_-31_8.xfm -nearest -use_input_sampling -clob
-
-mincmath -max tmp/rect_indent_* tmp/indents_plus.mnc tmp/indents_minus.mnc tmp/all_indents.mnc -clobber $calc
-
-mincmath -max tmp/all_indents.mnc tmp/rect_shell.mnc tmp/rect_carcas.mnc $calc
 
 make_phantom -ellipse -xwidth 13 -ywidth 13 -zwidth 2000 $dimensions tmp/ellipse.mnc -center 0 0 0 -clobber
 make_phantom -ellipse -xwidth 11 -ywidth 11 -zwidth 2000 $dimensions tmp/ellipse_inner.mnc -center 0 0 0 -clobber
@@ -79,13 +64,16 @@ make_phantom -ellipse -xwidth 7 -ywidth 7 -zwidth 10000 $dimensions tmp/stud_inn
 mincmath -sub tmp/stud.mnc tmp/stud_inner.mnc tmp/stud_walls.mnc $calc
 
 #                                    v stud height
-make_phantom -rectangle -width 10 10 5 $dimensions tmp/stud_mask.mnc -center 0 0 -11.5 -clob
+make_phantom -rectangle -width 10 10 5.5 $dimensions tmp/stud_mask.mnc -center 0 0 -12 -clob
 
 minccalc -express 'A[1]>0.5?A[0]:0' tmp/stud_walls.mnc tmp/stud_mask.mnc tmp/stud_c.mnc  $calc
 
+
+param2xfm -translation 8 8 0  tmp/move_8_8.xfm
 param2xfm -translation -8 8 0  tmp/move_-8_8.xfm
 param2xfm -translation -8 -8 0 tmp/move_-8_-8.xfm
 param2xfm -translation 8 -8 0  tmp/move_8_-8.xfm
+
 mincresample -nearest -use_input_sampling tmp/stud_c.mnc -transform tmp/move_8_8.xfm   tmp/stud_8_8.mnc
 mincresample -nearest -use_input_sampling tmp/stud_c.mnc -transform tmp/move_-8_8.xfm  tmp/stud_-8_8.mnc
 mincresample -nearest -use_input_sampling tmp/stud_c.mnc -transform tmp/move_-8_-8.xfm tmp/stud_-8_-8.mnc
