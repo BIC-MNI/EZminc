@@ -175,8 +175,8 @@ class Tag_fit
       fitting_mask::const_iterator m=mask.begin();
       
       fittings::const_iterator bx=basis_x.begin();
-      fittings::const_iterator by=basis_y.begin();
-      fittings::const_iterator bz=basis_z.begin();
+/*      fittings::const_iterator by=basis_y.begin();
+      fittings::const_iterator bz=basis_z.begin();*/
       basis_vector bas_x(order);
 /*      basis_vector bas_y(order);
       basis_vector bas_z(order);*/
@@ -209,7 +209,7 @@ class Tag_fit
         
         if(cache_basis)
         {
-          bx++; by++; bz++;
+          bx++; //by++; bz++;
         }
       }
       //if(condition)
@@ -275,9 +275,6 @@ class Tag_fit
     
     bool remove_outliers(void)
     {
-/*      minc::MNK_Gauss < tag_point, basis_functions_x> pol_x(order);
-      minc::MNK_Gauss < tag_point, basis_functions_y> pol_y(order);
-      minc::MNK_Gauss < tag_point, basis_functions_z> pol_z(order);*/
       minc::MNK_Gauss_Polinomial pol_x(order);
       minc::MNK_Gauss_Polinomial pol_y(order);
       minc::MNK_Gauss_Polinomial pol_z(order);
@@ -287,26 +284,42 @@ class Tag_fit
       tag_points::const_iterator i=ideal.begin();
       
       fittings::const_iterator bx=basis_x.begin();
-      fittings::const_iterator by=basis_y.begin();
-      fittings::const_iterator bz=basis_z.begin();
+/*      fittings::const_iterator by=basis_y.begin();
+      fittings::const_iterator bz=basis_z.begin();*/
       int k=0;
       int max_k=-1;
       int cnt=0;
       max_distance=0.0;
       sd=0.0;
-      for(;i!=ideal.end();i++, j++, k++, bx++, by++, bz++)
+      basis_vector bas_x(order);
+
+      for(;i!=ideal.end();i++, j++, k++)
       {
         //if(mask[k]) continue;
+        if(cache_basis)
+        {
+          bas_x=*bx;
+/*          bas_y=*by;
+          bas_z=*bz;*/
+        } else {
+          fun_x.generate_basis(bas_x,order,*i);
+        }
+        
         cnt++;
         tag_point moved;
-        moved[0]=pol_x.fit(*bx, coeff[0]);
-        moved[1]=pol_y.fit(*by, coeff[1]);
-        moved[2]=pol_z.fit(*bz, coeff[2]);
+        moved[0]=pol_x.fit(bas_x, coeff[0]);
+        moved[1]=pol_y.fit(bas_x, coeff[1]);
+        moved[2]=pol_z.fit(bas_x, coeff[2]);
         
         double d=(*j).SquaredEuclideanDistanceTo(moved);
         distances[k]=d;
         //sd+=d;
         if(!mask[k]&&d>max_distance) { max_distance=d; max_k=k;}
+        
+        if(cache_basis)
+        {
+          bx++; //by++; bz++;
+        }        
       }
       max_distance=sqrt(max_distance);
       build_index();
@@ -325,11 +338,12 @@ class Tag_fit
       mask.resize(ideal.size(),false);
       calculate_basis();
       int i=0;
+      sd=0;
       do {
         fit_coeff(condition);
         i++;
         //std::cout<<"\t"<<i;
-      } while(remove_outliers() && i<_max_iterations);
+      } while(i<_max_iterations && remove_outliers());
       return sd<max_dev;
     }
     
