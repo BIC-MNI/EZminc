@@ -15,6 +15,7 @@ my $mask;
 my $cont=0;
 my $tag;
 my $tmpdir;
+
 GetOptions (    
 	        "verbose"   => \$verbose,
           "clobber"   => \$clobber,
@@ -23,11 +24,10 @@ GetOptions (
           "like=s"    => \$like,
           "mask=s"    => \$mask,
           "cont"      => \$cont,
-          "tags=s"       => \$tag,
           "tmp=s"     => \$tmpdir
           );
           
-die "Usage: $me <bricks.tag> <output_model.mnc> --verbose --clobber --brick <brick> --out <out> --mask <brick_mask> --like <sample> --cont  \n I need a collection of XFM files or a tag file (--tag)\n"  if $#ARGV<0 && !$tag;
+die "Usage: $me <bricks.tag> <output_model.mnc> --verbose --clobber --brick <brick> --out <out> --mask <brick_mask> --like <sample> --cont \n"  if $#ARGV<0;
 
 my ($tag,$out)=@ARGV;
 
