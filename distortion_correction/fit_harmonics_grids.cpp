@@ -13,10 +13,8 @@
               express or implied warranty.
 ---------------------------------------------------------------------------- */
 #include "minc_wrappers.h"
-//#include "minc_io.h"
 #include <iostream>
 #include <fstream>
-//#include "data_proc.h"
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
 #include <itkBSplineInterpolateImageFunction.h>
@@ -55,7 +53,6 @@ void save_coeff (std::ostream & out, const std::vector < double >&coeff2)
 			REPORT_ERROR("Can't write to file");
 		
 	}
-	//out << std::endl;
 }
 
 class Tag_fit
@@ -73,21 +70,20 @@ class Tag_fit
     
     tag_points ideal, measured;
     fitting_mask mask;
-    bool     verbose;
-    bool     limit_linear;
-    bool     cache_basis;
-    double   keep;
-    double   max_dev;
-    double   sd,max_distance;
-    int      order;
-    fittings coeff;
-    fittings basis_x,basis_y,basis_z;
-    Index    index;
+    bool      verbose;
+    bool      limit_linear;
+    double    keep;
+    double    max_dev;
+    double    sd,max_distance;
+    int       order;
+    fittings  coeff;
+    fittings  basis_x,basis_y,basis_z;
+    Index     index;
     Distances distances;
+    bool      cache_basis;
+    int       skip_voxels;
 
-		basis_functions_x fun_x;
-//		basis_functions_y fun_y;
-//		basis_functions_z fun_z;
+		basis_functions_x fun_x; // here we have the same basis for X,Y,Z
 	
     void reset_index(void)
     {
@@ -102,7 +98,6 @@ class Tag_fit
       basis_x.resize(ideal.size());
       //basis_y.resize(ideal.size());
       //basis_z.resize(ideal.size());
-      //tag_points::const_iterator j=measured.begin();
       tag_points::const_iterator i=ideal.begin();
       
       fittings::iterator mx=basis_x.begin();
@@ -119,22 +114,13 @@ class Tag_fit
         fun_x.generate_basis(bas,order,*i);
         for(int k=0;k<order;k++)
         {
-          /*(*mx)[k]=fun_x(k,*i);
-          (*my)[k]=fun_y(k,*i);
-          (*mz)[k]=fun_z(k,*i);*/
           (*mx)[k]=bas[k];
-          //(*my)[k]=bas[k];
-          //(*mz)[k]=bas[k];        
         }
-        /*
-        fun_x.generate_basis(*mx,order,*i);
-        fun_y.generate_basis(*my,order,*i);
-        fun_z.generate_basis(*mz,order,*i);*/
       }
       
     }
     
-    Tag_fit(int order_, double keep_, double max_dev_=5.0, int max_iter=100,bool verbose_=false,bool ll=false):
+    Tag_fit(int order_, double keep_, double max_dev_=5.0, int max_iter=100,bool verbose_=false,bool ll=false,int skip_voxels_=0):
            order(order_), 
            keep(keep_), 
            verbose(verbose_), 
@@ -144,7 +130,8 @@ class Tag_fit
            sd(0), 
            coeff(3),
            limit_linear(ll),
-           cache_basis(max_iter>1)
+           cache_basis(max_iter>1),
+           skip_voxels(skip_voxels_)
     {
     }
     
@@ -162,10 +149,6 @@ class Tag_fit
       coeff[1].resize(order);
       coeff[2].resize(order);
       
-/*      minc::MNK_Gauss_opt<tag_point> pol_x(limit_linear?order-3:order);
-      minc::MNK_Gauss_opt<tag_point> pol_y(limit_linear?order-3:order);
-      minc::MNK_Gauss_opt<tag_point> pol_z(limit_linear?order-3:order);*/
-      
       minc::MNK_Gauss_Polinomial pol_x(limit_linear?order-3:order);
       minc::MNK_Gauss_Polinomial pol_y(limit_linear?order-3:order);
       minc::MNK_Gauss_Polinomial pol_z(limit_linear?order-3:order);
@@ -175,11 +158,7 @@ class Tag_fit
       fitting_mask::const_iterator m=mask.begin();
       
       fittings::const_iterator bx=basis_x.begin();
-/*      fittings::const_iterator by=basis_y.begin();
-      fittings::const_iterator bz=basis_z.begin();*/
       basis_vector bas_x(order);
-/*      basis_vector bas_y(order);
-      basis_vector bas_z(order);*/
       
       for(; i!=ideal.end(); i++, j++, m++)
       {
@@ -189,8 +168,6 @@ class Tag_fit
         if(cache_basis)
         {
           bas_x=*bx;
-/*          bas_y=*by;
-          bas_z=*bz;*/
         } else {
           fun_x.generate_basis(bas_x,order,*i);
         }
@@ -209,11 +186,10 @@ class Tag_fit
         
         if(cache_basis)
         {
-          bx++; //by++; bz++;
+          bx++; 
         }
       }
-      //if(condition)
-      //{
+      
       double cond_x,cond_y,cond_z;
       if(limit_linear)
       {
@@ -284,8 +260,6 @@ class Tag_fit
       tag_points::const_iterator i=ideal.begin();
       
       fittings::const_iterator bx=basis_x.begin();
-/*      fittings::const_iterator by=basis_y.begin();
-      fittings::const_iterator bz=basis_z.begin();*/
       int k=0;
       int max_k=-1;
       int cnt=0;
@@ -295,12 +269,9 @@ class Tag_fit
 
       for(;i!=ideal.end();i++, j++, k++)
       {
-        //if(mask[k]) continue;
         if(cache_basis)
         {
           bas_x=*bx;
-/*          bas_y=*by;
-          bas_z=*bz;*/
         } else {
           fun_x.generate_basis(bas_x,order,*i);
         }
@@ -313,12 +284,12 @@ class Tag_fit
         
         double d=(*j).SquaredEuclideanDistanceTo(moved);
         distances[k]=d;
-        //sd+=d;
+        
         if(!mask[k]&&d>max_distance) { max_distance=d; max_k=k;}
         
         if(cache_basis)
         {
-          bx++; //by++; bz++;
+          bx++;
         }        
       }
       max_distance=sqrt(max_distance);
@@ -343,7 +314,7 @@ class Tag_fit
         fit_coeff(condition);
         i++;
         //std::cout<<"\t"<<i;
-      } while(i<_max_iterations && remove_outliers());
+      } while(i<_max_iterations && keep<1.0&&remove_outliers());
       return sd<max_dev;
     }
     
@@ -351,6 +322,7 @@ class Tag_fit
     {
       if(verbose)
         std::cout<<"Loading grid:"<<grid_f<<" and mask:"<<mask_f<<" ... ";
+      
       minc::def3d::Pointer grid (minc::def3d::New());
       minc::mask3d::Pointer mask(minc::mask3d::New());
       
@@ -366,8 +338,14 @@ class Tag_fit
         minc::def3d::IndexType idx=it.GetIndex();
         grid->TransformIndexToPhysicalPoint(idx,p);
         minc::mask3d::IndexType idx_m;
-        if(!mask->TransformPhysicalPointToIndex(p,idx_m) || !mask->GetPixel(idx_m)) continue;
-
+        
+        if(skip_voxels>1 && ( idx[0]%skip_voxels || idx[1]%skip_voxels || idx[2]%skip_voxels )) continue;
+        
+        if(!mask->TransformPhysicalPointToIndex(p,idx_m) || !mask->GetPixel(idx_m)) 
+          continue;
+        
+        
+        
         ideal.push_back(p);
         p[0]+=it.Value()[0];
         p[1]+=it.Value()[1];
@@ -392,22 +370,21 @@ void show_usage (const char * prog)
     << "--iter <n> maximum number of iterations (200)"<<endl
     << "--remove <pct> 0-1 (0) randomly remove voxels"<<endl
     << "--cond calculate condition number"<<endl
-    << "--limit limit linear component to identity"<<endl;
-    //<< "--scale <d>"<<endl;
+    << "--limit limit linear component to identity"<<endl
+    << "--skip <n> subsample deformation field by factor n"<<endl;
 }
 
 int main (int argc, char **argv)
 {
   int verbose=0, clobber=0,skip_grid=0,cond=0;
   double max=5.0;
-  double keep=0.8;
+  double keep=1.0;
   double remove=0;
-  double scale=100;
-  int iter=200;
+  int iter=1;
   int order=3;
+  int skip_voxels=0;
   std::string grid_f,mask_f,output,dump_f;
   std::string residuals_f;
-  //TODO: fix this to a proper default
   int lsq=12;
   int limit_linear=0;
   static struct option long_options[] = {
@@ -417,10 +394,10 @@ int main (int argc, char **argv)
     {"order",   required_argument,   0, 'o'},
     {"keep",    required_argument,   0, 'k'},
     {"iter",    required_argument,   0, 'i'},
+    {"skip",    required_argument,   0, 's'},
 		{"version", no_argument,         0, 'v'},
     {"cond", no_argument,       &cond, 1},
     {"limit", no_argument,       &limit_linear, 1},
-    //{"scale", required_argument,      0, 's'},
     //{"remove",  required_argument,  0, 'e'},
 		{0, 0, 0, 0}
 		};
@@ -445,10 +422,10 @@ int main (int argc, char **argv)
         order=atoi(optarg);break;
       case 'k':
         keep=atof(optarg);break;
-      case 's':
-        scale=atof(optarg);break;
       case 'i':
         iter=atoi(optarg);break;
+      case 's':
+        skip_voxels=atoi(optarg);break;
 			case '?':
 				/* getopt_long already printed an error message. */
 			default:
@@ -466,11 +443,8 @@ int main (int argc, char **argv)
     gsl_rng_env_setup();
     
     float max_dev=10;
-		Tag_fit fit(basis_functions_x::parameters_no(order),keep,max_dev,iter,verbose,limit_linear);
+    Tag_fit fit(basis_functions_x::parameters_no(order),keep,max_dev,iter,verbose,limit_linear,skip_voxels);
   
-		minc::def3d::Pointer grid(minc::def3d::New());
-		minc::mask3d::Pointer mask(minc::mask3d::New());
-    
     while((argc - optind)>1)
     {
       fit.load_grid(argv[optind],argv[optind+1]);

@@ -88,6 +88,7 @@ class Tag_fit
     Index    index;
     Distances distances;
     double legendre_coeff;
+    int skip_voxels;
 
 		basis_functions_x    fun_x;
     CylindricalFunctions fun_c;
@@ -150,14 +151,19 @@ class Tag_fit
             double legendre,
             double max_dev_=10.0, 
             bool verbose_=false,
-            bool cylindric_=false):
+            bool cylindric_=false,
+            int skip_voxels_=0
+           ):
            order(order_),
            order_c(order_c_), 
            verbose(verbose_), 
            max_dev(max_dev_),
            max_distance(0), 
            sd(0), 
-          legendre_coeff(legendre),pcs(-1),cylindric(cylindric_)
+          legendre_coeff(legendre),
+          pcs(-1),
+          cylindric(cylindric_),
+          skip_voxels(skip_voxels_)
     {
     }
     
@@ -361,7 +367,6 @@ class Tag_fit
           for(; i!=ideal.end(); i++, j++, m++, bx++/*, by++, bz++*/)
           {
             if(*m) continue;
-              //this is a quick hack
             
             for(int k=0;k<3;k++)
             {
@@ -514,6 +519,7 @@ class Tag_fit
         
         minc::mask3d::IndexType idx_m;
         
+        if(skip_voxels>1 && ( idx[0]%skip_voxels || idx[1]%skip_voxels || idx[2]%skip_voxels )) continue;
         if(!mask->TransformPhysicalPointToIndex(p,idx_m) || !mask->GetPixel(idx_m)) continue;
 
         ideal.push_back(p);
@@ -585,8 +591,8 @@ void show_usage (const char * prog)
       << "--error <errr.mnc> output error map"<<std::endl
       << "--pca <matrix.csv> use rotation matrix"<<std::endl
       << "--pcs <N> use this number of PCs"<<std::endl
-      << "--cylindrical use cylindrical assumption"<<std::endl;
-    //<< "--scale <d>"<<endl;
+      << "--cylindrical use cylindrical assumption"<<std::endl
+      << "--skip <n> subsample deformation field by factor n"<<endl;
 }
 
 int main (int argc, char **argv)
@@ -595,9 +601,9 @@ int main (int argc, char **argv)
   double max=10.0;
   double keep=1.0;
   double remove=0;
-  double scale=100;
   int iter=1;
   int order=3;
+  int skip_voxels=0;
   std::string grid_f,mask_f,output,dump_f;
   std::string residuals_f,error_f,pca_f;
   double legendre=0.0;
@@ -605,18 +611,19 @@ int main (int argc, char **argv)
   int cylindrical=0;
   
   static struct option long_options[] = {
-		{"verbose", no_argument,       &verbose, 1},
-		{"quiet",   no_argument,       &verbose, 0},
-		{"clobber", no_argument,       &clobber, 1},
+    {"verbose", no_argument,       &verbose, 1},
+    {"quiet",   no_argument,       &verbose, 0},
+    {"clobber", no_argument,       &clobber, 1},
     {"cylindrical", no_argument,   &cylindrical, 1},
     {"order",   required_argument,   0, 'o'},
-		{"version", no_argument,         0, 'v'},
+    {"version", no_argument,         0, 'v'},
     {"legendre",required_argument,   0, 'l'},
     {"error",   required_argument,   0, 'e'},
     {"pca",     required_argument,   0, 'p'},
     {"pcs",     required_argument,   0, 'n'},
+    {"skip",    required_argument,   0, 's'},
     {0, 0, 0, 0}
-		};
+  };
   
   for (;;) {
       /* getopt_long stores the option index here. */
@@ -636,8 +643,6 @@ int main (int argc, char **argv)
 				return 0;
       case 'o':
         order=atoi(optarg);break;
-      case 's':
-        scale=atof(optarg);break;
       case 'l':
         legendre=atof(optarg);break;
       case 'e':
@@ -646,6 +651,8 @@ int main (int argc, char **argv)
         pca_f=optarg;break;
       case 'n':
         pcs=atoi(optarg);break;
+      case 's':
+        skip_voxels=atoi(optarg);break;
 			case '?':
 				/* getopt_long already printed an error message. */
 			default:
@@ -665,7 +672,7 @@ int main (int argc, char **argv)
     float max_dev=10;
     Tag_fit fit(basis_functions_x::parameters_no(order),
                 CylindricalFunctions::parameters_no(order),
-                legendre,max_dev,verbose,cylindrical);
+                legendre,max_dev,verbose,cylindrical,skip_voxels);
     
     if(verbose && legendre>0.0)
       std::cout<<"Using legendre coeffecient:"<<legendre<<std::endl;
@@ -675,9 +682,6 @@ int main (int argc, char **argv)
     
     if(!pca_f.empty())
       fit.load_pca_matrix(pca_f.c_str(),pcs);
-    
-		minc::def3d::Pointer  grid(minc::def3d::New());
-		minc::mask3d::Pointer mask(minc::mask3d::New());
     
     output=argv[argc-1];
     

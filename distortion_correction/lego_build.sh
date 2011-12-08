@@ -1,8 +1,8 @@
 #! /bin/sh
 
 #dimensions="-start -50 -50 -50 -nelements 100 100 100  -step 1 1 1"
-#dimensions="-start -40 -25 -25 -nelements 320 200 200  -step 0.25 0.25 0.25"
-dimensions="-start -40 -25 -25 -nelements 750 500 500  -step 0.1 0.1 0.1"
+dimensions="-start -40 -25 -25 -nelements 320 200 200  -step 0.25 0.25 0.25"
+#dimensions="-start -40 -25 -25 -nelements 750 500 500  -step 0.1 0.1 0.1"
 
 calc="-max_buffer_size_in_kb 10000000"
 mkdir -p tmp

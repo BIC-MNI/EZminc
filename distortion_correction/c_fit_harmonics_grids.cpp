@@ -13,10 +13,8 @@
               express or implied warranty.
 ---------------------------------------------------------------------------- */
 #include "minc_wrappers.h"
-//#include "minc_io.h"
 #include <iostream>
 #include <fstream>
-//#include "data_proc.h"
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
 
@@ -85,6 +83,8 @@ class Tag_fit
     fittings basis_x;//,basis_z;
     Index    index;
     Distances distances;
+    bool      cache_basis;
+    int       skip_voxels;
 
 		CylindricalFunctions fun_x;
 	
@@ -97,6 +97,7 @@ class Tag_fit
     
     void calculate_basis(void)
     {
+      if(!cache_basis) return;
       basis_x.resize(ideal.size());
       tag_points::const_iterator i=ideal.begin();
       
@@ -116,9 +117,18 @@ class Tag_fit
       
     }
     
-    Tag_fit(int order_, double keep_, double max_dev_=5.0, int max_iter=100,bool verbose_=false,bool ll=false):
-      order(order_), keep(keep_), verbose(verbose_), max_dev(max_dev_),_max_iterations(max_iter),
-      max_distance(0), sd(0), coeff(3),limit_linear(ll)
+    Tag_fit(int order_, double keep_, double max_dev_=5.0, int max_iter=100,bool verbose_=false,bool ll=false,int skip_voxels_=0):
+      order(order_),
+      keep(keep_), 
+      verbose(verbose_), 
+      max_dev(max_dev_),
+      _max_iterations(max_iter),
+      max_distance(0), 
+      sd(0), 
+      coeff(3),
+      limit_linear(ll),
+      cache_basis(max_iter>1),
+      skip_voxels(skip_voxels_)
     {
     }
     
@@ -135,8 +145,6 @@ class Tag_fit
       coeff[0].resize(order);
       coeff[1].resize(order);
       
-      //minc::MNK_Gauss_opt<tag_point> pol_x(limit_linear?order-2:order);
-      //minc::MNK_Gauss_opt<tag_point> pol_z(limit_linear?order-2:order);
       minc::MNK_Gauss_Polinomial pol_x(limit_linear?order-2:order);
       minc::MNK_Gauss_Polinomial pol_z(limit_linear?order-2:order);
       
@@ -146,20 +154,34 @@ class Tag_fit
       fitting_mask::const_iterator m=mask.begin();
       
       fittings::const_iterator bx=basis_x.begin();
-      for(; i!=ideal.end(); i++, j++, m++, bx++)
+      basis_vector bas_x(order);
+      
+      for(; i!=ideal.end(); i++, j++, m++)
       {
         if(*m) continue;
-          //this is a quick hack
+        
+        if(cache_basis)
+        {
+          bas_x=*bx;
+        } else {
+          fun_x.generate_basis(bas_x,order,*i);
+        }
+        
+        
         if(limit_linear)
         {
           double dx=(*j)[0]-(*i)[0];
           double dy=(*j)[1]-(*i)[1];
           
-          pol_x.accumulate((*bx), sqrt(dx*dx+dy*dy)); //TODO: fix the index issue (bx should be shifted by 2
-          pol_z.accumulate((*bx), (*j)[2]-(*i)[2]);
+          pol_x.accumulate(bas_x, sqrt(dx*dx+dy*dy)); //TODO: fix the index issue (bx should be shifted by 2
+          pol_z.accumulate(bas_x, (*j)[2]-(*i)[2]);
         } else {
-          pol_x.accumulate(*bx, sqrt((*j)[0]*(*j)[0]+(*j)[1]*(*j)[1]));
-          pol_z.accumulate(*bx, (*j)[2]);
+          pol_x.accumulate(bas_x, sqrt((*j)[0]*(*j)[0]+(*j)[1]*(*j)[1]));
+          pol_z.accumulate(bas_x, (*j)[2]);
+        }
+        if(cache_basis)
+        {
+          bx++; 
         }
       }
       //if(condition)
@@ -221,8 +243,6 @@ class Tag_fit
     
     bool remove_outliers(void)
     {
-      /*minc::MNK_Gauss < tag_point, basis_functions_x> pol_x(order);
-      minc::MNK_Gauss < tag_point, basis_functions_z> pol_z(order);*/
       minc::MNK_Gauss_Polinomial pol_x(order);
       minc::MNK_Gauss_Polinomial pol_z(order);
       
@@ -237,12 +257,20 @@ class Tag_fit
       max_distance=0.0;
       double dx=0.0,dy=0.0,dz=0.0;
       sd=0.0;
-      for(;i!=ideal.end();i++, j++, k++, bx++/*, bz++*/)
+      basis_vector bas_x(order);
+      
+      for(;i!=ideal.end();i++, j++, k++)
       {
-        //if(mask[k]) continue;
+        if(cache_basis)
+        {
+          bas_x=*bx;
+        } else {
+          fun_x.generate_basis(bas_x,order,*i);
+        }
+        
         cnt++;
         tag_point moved;
-        double r=pol_x.fit(*bx, coeff[0]);
+        double r=pol_x.fit(bas_x, coeff[0]);
         double ir=sqrt((*i)[0]*(*i)[0]+(*i)[1]*(*i)[1]);
         if(ir>1e-6)
         {
@@ -252,14 +280,15 @@ class Tag_fit
           moved[0]=(*i)[0];
           moved[1]=(*i)[1];
         }
-        moved[2]=pol_z.fit(*bx, coeff[1]);
+        moved[2]=pol_z.fit(bas_x, coeff[1]);
+        
         double sx=(*j)[0]-moved[0];
         double sy=(*j)[1]-moved[1];
         double sz=(*j)[2]-moved[2];
         dx+=sx*sx;
         dy+=sy*sy;
         dz+=sz*sz;
-        double d=sx*sx+sy*sy+sz*sz;//
+        double d=sx*sx+sy*sy+sz*sz;
         distances[k]=d;
         //sd+=d;
         if(!mask[k]&&d>max_distance) { max_distance=d; max_k=k;}
@@ -287,11 +316,11 @@ class Tag_fit
       mask.resize(ideal.size(),false);
       calculate_basis();
       int i=0;
+      sd=0;
       do {
         fit_coeff(condition);
         i++;
-        //std::cout<<"\t"<<i;
-      } while(remove_outliers() && i<_max_iterations && keep<1.0);
+      } while(i<_max_iterations && keep<1.0&&remove_outliers());
       return sd<max_dev;
     }
     
@@ -311,6 +340,8 @@ class Tag_fit
         minc::def3d::IndexType idx=it.GetIndex();
         grid->TransformIndexToPhysicalPoint(idx,p);
         minc::mask3d::IndexType idx_m;
+        
+        if(skip_voxels>1 && ( idx[0]%skip_voxels || idx[1]%skip_voxels || idx[2]%skip_voxels )) continue;
         
         if(!mask->TransformPhysicalPointToIndex(p,idx_m) || !mask->GetPixel(idx_m)) continue;
 
@@ -338,19 +369,21 @@ void show_usage (const char * prog)
     << "--iter <n> maximum number of iterations (200)"<<endl
     << "--remove <pct> 0-1 (0) randomly remove voxels"<<endl
     << "--cond calculate condition number"<<endl
-    << "--limit limit linear component to identity"<<endl;
-    //<< "--scale <d>"<<endl;
+    << "--limit limit linear component to identity"<<endl
+    << "--skip <n> subsample deformation field by factor n"<<endl;
 }
 
 int main (int argc, char **argv)
 {
-  int verbose=0, clobber=0,skip_grid=0,cond=0;
+  int verbose=0, clobber=0,cond=0;
   double max=5.0;
-  double keep=0.8;
+  double keep=1.0;
   double remove=0;
   double scale=100;
-  int iter=200;
+  int iter=1;
   int order=3;
+  int skip_voxels=0;
+  
   std::string grid_f,mask_f,output,dump_f;
   std::string residuals_f;
   //TODO: fix this to a proper default
@@ -366,8 +399,7 @@ int main (int argc, char **argv)
 		{"version", no_argument,         0, 'v'},
     {"cond", no_argument,       &cond, 1},
     {"limit", no_argument,       &limit_linear, 1},
-    //{"scale", required_argument,      0, 's'},
-    //{"remove",  required_argument,  0, 'e'},
+    {"skip",    required_argument,   0, 's'},
 		{0, 0, 0, 0}
 		};
   
@@ -392,7 +424,7 @@ int main (int argc, char **argv)
       case 'k':
         keep=atof(optarg);break;
       case 's':
-        scale=atof(optarg);break;
+        skip_voxels=atoi(optarg);break;
       case 'i':
         iter=atoi(optarg);break;
 			case '?':
@@ -412,7 +444,7 @@ int main (int argc, char **argv)
     gsl_rng_env_setup();
 
     float max_dev=10;
-		Tag_fit fit(CylindricalFunctions::parameters_no(order),keep,max_dev,iter,verbose,limit_linear);
+		Tag_fit fit(CylindricalFunctions::parameters_no(order),keep,max_dev,iter,verbose,limit_linear,skip_voxels);
   
 		minc::def3d::Pointer grid(minc::def3d::New());
 		minc::mask3d::Pointer mask(minc::mask3d::New());

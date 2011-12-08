@@ -33,6 +33,7 @@ my $only_roi;
 my $dilate_roi=0;
 my $pca;
 my $pcs;
+my $use_dd=0;
 
 #additional parameters
 GetOptions( 
@@ -57,9 +58,10 @@ GetOptions(
           "adni"      =>       \$adni,
           "out-roi=s" =>       \$out_roi,
           "only-roi"  =>       \$only_roi,
+          "dd"        =>       \$use_dd,
           "dilate-roi=n" =>    \$dilate_roi,
-          "pca=s" =>    \$pca,
-          "pcs=n" =>    \$pcs,
+          "pca=s"     =>       \$pca,
+          "pcs=n"     =>       \$pcs,
           );
 
 die <<END 
@@ -82,8 +84,9 @@ die <<END
   --adni                - treat the phantom as adni 
   --out-roi <output>    - create ROI describing volume where distortions may be applied
   --only-roi            - a HACK to skip actual distortion correction field calculations 
-  --pca <rotation.csv>
-  --pcs <n>
+  --pca <rotation.csv>  - Principal Components rotation matrix
+  --pcs <n>             - Number of Principal components to use
+  --dd                  - Use Diffeomorphic Demons registration instead of minctracc 
 ] 
 END
   if $#ARGV<2; #number of arguments -1 
@@ -147,7 +150,10 @@ if(!$acr && !$adni)
   {
     if($mask)
     {
-      do_cmd('cp',$mask,"$tmpdir/fit.mnc");
+      #do_cmd('cp',$mask,"$tmpdir/fit.mnc");
+      do_cmd('itk_morph','--threshold',1,'--exp','D[2] D[2] D[2] E[2]',$model,"$tmpdir/fit_1.mnc");
+      do_cmd('minccalc','-express','A[0]>0.5?A[1]:0',$mask,"$tmpdir/fit_1.mnc","$tmpdir/fit.mnc");
+      do_cmd('rm','-f',"$tmpdir/fit_1.mnc");
     } else {
       do_cmd('itk_morph','--threshold',1,'--exp','D[2] D[2] D[2] E[2]',$model,"$tmpdir/fit.mnc");
     }
@@ -173,12 +179,12 @@ foreach $scan(@scans) {
   {
     if($no_core_extract) # core was already extracted
     {
-      if($scan =~ /\.gz$/)
-      { 
-        do_cmd("gunzip -c $scan > $work_dir/core_${name}");
-      } else { # TODO: replace cp with ln -s ?
-        do_cmd('cp',$scan,"$work_dir/core_${name}");
-      }
+#       if($scan =~ /\.gz$/)
+#       { 
+#         do_cmd("gunzip -c $scan > $work_dir/core_${name}");
+#       } else { 
+        do_cmd('minccalc','-express','A[0]>20?A[0]:0',$scan,"$work_dir/core_${name}");
+#       }
     } else {
       if($acr)
       {
@@ -213,7 +219,9 @@ foreach $scan(@scans) {
           
       } else {
         # launch external programm for extracting 'core'
-        do_cmd('lego_core_extract.pl',$scan,"$work_dir/core_${name}",'--grayscale','--denoise','--nuc');
+        do_cmd('lego_core_extract.pl',$scan,"$tmpdir/core_${name}",'--grayscale','--denoise','--nuc');
+        do_cmd('minccalc','-express','A[0]>20?A[0]:0',"$tmpdir/core_${name}","$work_dir/core_${name}");
+        do_cmd('rm','-f',"$tmpdir/core_${name}");
       }
     }
   }
@@ -257,9 +265,14 @@ foreach $scan(@scans) {
 
   $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
 
-  do_cmd('mincresample',$model,"$work_dir/ideal_${name}",'-like',
+  unless( -e "$work_dir/ideal_${name}") 
+  { 
+    do_cmd('mincresample',$model,"$tmpdir/ideal_${name}",'-like',
          "$work_dir/core_${name}",
-         '-transform',"$work_dir/align_${name}.xfm") unless -e "$work_dir/ideal_${name}";
+         '-transform',"$work_dir/align_${name}.xfm") ;
+
+    do_cmd('minccalc','-express','A[0]>20?A[0]:0',"$tmpdir/ideal_${name}","$work_dir/ideal_${name}");
+  }
 
   # create mask
   unless(-e "$work_dir/fit_${name}")
@@ -299,7 +312,15 @@ foreach $scan(@scans) {
 unless( $only_roi )
 {
   # calculate parameters
-  @args=('phantomfit.pl',@args,'-order',$order,'-clobber');
+  if($use_dd)
+  {
+    @args=('phantomfit_DD.pl',@args,'-order',$order,'-clobber');
+  } else {
+    @args=('phantomfit.pl',@args,'-order',$order,'-clobber');
+
+    push @args,'-weight',1;
+    push @args,'-stiffness',0.4;
+  }
   push @args,'-cylindric'        if $cylindric;
   push @args,'-keep',$keep       if $keep;
   push @args,"-measure",$measure if $measure;
@@ -309,14 +330,9 @@ unless( $only_roi )
   push @args,'-measure',$measure if $measure;
   push @args,'-step_iterations',$step_iterations if $step_iterations;
 
-#  push @args,'-work_dir',"$work_dir/pf" if $work_dir;
   push @args,'-debug' if $debug;
   push @args,'-pca',$pca if $pca;
   push @args,'-pcs',$pcs if $pcs;
-  
-#  test
-  push @args,'-weight',1;
-  push @args,'-stiffness',0.4;
   
   do_cmd(@args);
 }

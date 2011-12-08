@@ -58,7 +58,7 @@ $me = &basename($0);
    'par'       => undef,
    'measure'   => undef,
    'step_iterations'=> undef,
-   'min_step'  => 2,
+   'min_step'  => 1,
    'limit'     => 0,
    'weight'    => 1,
    'stiffness' => 0.4,
@@ -78,7 +78,7 @@ $Help = <<HELP;
 | Problems or comments should be sent to: vladimir.fonov\@gmail.com
 HELP
 
-$Usage = "Usage: $me [options] source.mnc target.mnc fit_mask.mnc estimate_mask.mnc [source.mnc target.mnc source_mask.mnc target_mask.mnc...] output.xfm\n$me -help to list options\n\n";
+$Usage = "Usage: $me [options] source.mnc target.mnc fit_mask.mnc estimate_mask.mnc [source.mnc target.mnc fit_mask.mnc estimate_mask.mnc ...] output.xfm\n$me -help to list options\n\n";
 
 @opt_table = (
    ["-verbose", "boolean", 0, \$opt{verbose},
@@ -103,12 +103,6 @@ $Usage = "Usage: $me [options] source.mnc target.mnc fit_mask.mnc estimate_mask.
       "Minimal step size for nonlinear registration (min 1.0)" ], 
    ["-limit", "boolean", 0, \$opt{limit},
       "Limit linear component to identity" ],
-   ["-weight", "float", 1, \$opt{weight},
-      "Wight parameter of minctracc" ],
-   ["-stiffness", "float", 1, \$opt{stiffness},
-      "stiffness parameter of minctracc" ],
-   ["-similarity", "float", 1, \$opt{similarity},
-      "similarity parameter of minctracc" ],
    ["-keep", "float", 1, \$opt{keep},
       "Fraction of points to keep for LTSQ algorithm (0-1]" ],
    ["-cylindric", "boolean", 0, \$opt{cyl},

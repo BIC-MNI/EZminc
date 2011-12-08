@@ -267,12 +267,12 @@ sub regularize_grids {
   my @args;
   if($opt{pca})
   {
-    @args=('fit_harmonics_grids_regularize','--order',$opt{order});
+    @args=('fit_harmonics_grids_regularize','--order',$opt{order},'--skip',2);
     push @args,'--cylindrical' if $opt{cyl};
     push @args,'--pca',$opt{pca};
     push @args,'--pcs',$opt{pcs} if $opt{pcs};
   } else {
-    @args=($opt{cyl}?'c_fit_harmonics_grids':'fit_harmonics_grids','--order',$opt{order});
+    @args=($opt{cyl}?'c_fit_harmonics_grids':'fit_harmonics_grids','--order',$opt{order},'--skip',2);
     push(@args,"--limit") if $opt{limit};
     push(@args,"--keep",$opt{keep}) if $opt{keep};
     push(@args,'--iter',1) if $opt{keep}>0.99;
