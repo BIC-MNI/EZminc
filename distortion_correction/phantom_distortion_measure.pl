@@ -247,12 +247,14 @@ foreach $scan(@scans) {
              "$work_dir/align_${name}.xfm",'-lsq6') unless -e "$work_dir/align_${name}.xfm";
 
     } else {
+     print "Manual xfm:$work_dir/mv_${name}.xfm\n";
      if(-e "$work_dir/mv_${name}.xfm") # allow specifiying initial transformation
      {
-       do_cmd('bestlinreg.pl',
+       print "Using manual xfm\n";
+       do_cmd('bestlinreg_s',
               $model,"$work_dir/core_${name}",
               "$work_dir/align_${name}.xfm",'-lsq6',
-              '-init_xfm',"$work_dir/mv_${name}.xfm",'-noresample') 
+              '-init_xfm',"$work_dir/mv_${name}.xfm") 
 				unless -e "$work_dir/align_${name}.xfm";
      } else {
         do_cmd('bestlinreg.pl',$model,"$work_dir/core_${name}",
