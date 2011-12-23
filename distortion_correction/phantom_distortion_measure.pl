@@ -34,6 +34,7 @@ my $dilate_roi=0;
 my $pca;
 my $pcs;
 my $use_dd=0;
+my $keep_tmp=0;
 
 #additional parameters
 GetOptions( 
@@ -62,6 +63,7 @@ GetOptions(
           "dilate-roi=n" =>    \$dilate_roi,
           "pca=s"     =>       \$pca,
           "pcs=n"     =>       \$pcs,
+          "keep-tmp"  =>       \$keep_tmp,
           );
 
 die <<END 
@@ -106,7 +108,7 @@ check_file($out_roi) if !$clobber && $out_roi;
 
 
 #makes a temporary directory
-my $tmpdir=&tempdir( "$me-XXXXXXXX", TMPDIR => 1, CLEANUP => 1 );
+my $tmpdir=&tempdir( "$me-XXXXXXXX", TMPDIR => 1, CLEANUP => !$keep_tmp );
 my $minc_compress=$ENV{MINC_COMPRESS};
 delete $ENV{MINC_COMPRESS} if $minc_compress;
 
@@ -138,10 +140,11 @@ if(!$acr && !$adni)
 
   unless( -e "$tmpdir/skeleton.mnc") #creating a mask for ROI where fitting will happen
   {
-    do_cmd('itk_morph','--threshold',1,$model,"$tmpdir/skeleton.mnc") ;
+    do_cmd('minccalc','-expres','A[0]>1?1:0',$model,"$tmpdir/skeleton.mnc") ;
 
     if($mask) {
-      do_cmd('minccalc','-expression','A[0]>0&&A[1]>0?1:0',"$tmpdir/skeleton.mnc",$mask,"$tmpdir/skeleton_.mnc");
+      do_cmd('mincresample','-nearest','-like',"$tmpdir/skeleton.mnc",$mask,"$tmpdir/mask.mnc",'-q');
+      do_cmd('minccalc','-expression','A[0]>0&&A[1]>0?1:0',"$tmpdir/skeleton.mnc","$tmpdir/mask.mnc","$tmpdir/skeleton_.mnc");
       do_cmd('mv',"$tmpdir/skeleton_.mnc","$tmpdir/skeleton.mnc");
     }
   }
@@ -152,7 +155,8 @@ if(!$acr && !$adni)
     {
       #do_cmd('cp',$mask,"$tmpdir/fit.mnc");
       do_cmd('itk_morph','--threshold',1,'--exp','D[2] D[2] D[2] E[2]',$model,"$tmpdir/fit_1.mnc");
-      do_cmd('minccalc','-express','A[0]>0.5?A[1]:0',$mask,"$tmpdir/fit_1.mnc","$tmpdir/fit.mnc");
+      do_cmd('mincresample','-nearest','-like',"$tmpdir/fit_1.mnc",$mask,"$tmpdir/mask.mnc",'-q','-clob');
+      do_cmd('minccalc','-express','A[0]>0.5?A[1]:0',"$tmpdir/mask.mnc","$tmpdir/fit_1.mnc","$tmpdir/fit.mnc");
       do_cmd('rm','-f',"$tmpdir/fit_1.mnc");
     } else {
       do_cmd('itk_morph','--threshold',1,'--exp','D[2] D[2] D[2] E[2]',$model,"$tmpdir/fit.mnc");

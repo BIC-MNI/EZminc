@@ -135,7 +135,9 @@ sub nu_correct {
   push @args,'-distance',50 if $mri_3t;
   if($iter>0)
   {
-    do_cmd('itk_morph','--bimodal','--exp','E[1]',$input,"$tmpdir/mask_$iter.mnc");
+    do_cmd('itk_morph','--bimodal','--exp','E[1]',$input,"$tmpdir/mask_tmp_$iter.mnc");
+    do_cmd('mincresample','-nearest','-like',$input,"$tmpdir/mask_tmp_$iter.mnc","$tmpdir/mask_$iter.mnc",'-q');
+    do_cmd('rm','-f',"$tmpdir/mask_tmp_$iter.mnc");
     push(@args,'-mask',"$tmpdir/mask_$iter.mnc");
   }
   do_cmd(@args);

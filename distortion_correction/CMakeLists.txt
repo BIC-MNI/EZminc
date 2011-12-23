@@ -69,6 +69,7 @@ TARGET_LINK_LIBRARIES(c_param2grid
 INSTALL(TARGETS 
     fit_harmonics_grids
     c_fit_harmonics_grids
+    fit_harmonics_grids_regularize
     param2grid
     c_param2grid
     RUNTIME DESTINATION bin )
