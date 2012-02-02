@@ -122,6 +122,10 @@ namespace minc
     typedef itk::Transform< double, 3, 3 > Superclass;
     typedef itk::SmartPointer< Self >   Pointer;
     typedef itk::SmartPointer< const Self >  ConstPointer;
+
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    typedef typename Superclass::NumberOfParametersType  NumberOfParametersType;
+#endif // ( ITK_VERSION_MAJOR > 3 ) 
     
     
     /** New method for creating an object using a factory. */
@@ -199,7 +203,13 @@ namespace minc
     virtual void SetIdentity( void );
     void SetOrder(int order);
     
+    
+    
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    virtual NumberOfParametersType GetNumberOfParameters(void) const
+#else
     virtual unsigned int GetNumberOfParameters(void) const
+#endif    
     {
       return _par_count*3;
     }
@@ -211,24 +221,45 @@ namespace minc
     
     void ImportParameters(const ParametersType & param,bool all=false);
     
-    virtual const JacobianType & GetJacobian(const InputPointType  & point) const
-    { 
-      //this->m_Jacobian.Fill(0.0);
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    virtual void SetFixedParameters(const ParametersType &)
+    {
+      itkExceptionMacro( << "Not Implemented" );
+      //TODO: finish this
+    }
+    
+    virtual void ComputeJacobianWithRespectToParameters(
+                const InputPointType & point,
+                JacobianType &jacobian) const
+    {
       minc::image3d::IndexType idx;
       _basis_cache->TransformPhysicalPointToIndex(point,idx);
       const basis_vector& bas=_basis_cache->GetPixel(idx);
-      //if(bas.empty()) 
-      //  {itkExceptionMacro( << "Basis not cached!" );}
-      for(int i=0;i<_param_no;i++)
+      for(int i=0;i<_param_no;i++) //TODO: check this
       {
         double bs=bas[i];
+        jacobian(0,i)=bs;
+        jacobian(1,i)=bs;
+        jacobian(2,i)=bs;
+      }
+    }
+    
+#else
+    virtual const JacobianType & GetJacobian(const InputPointType  & point) const
+    { 
+      minc::image3d::IndexType idx;
+      _basis_cache->TransformPhysicalPointToIndex(point,idx);
+      const basis_vector& bas=_basis_cache->GetPixel(idx);
+      for(int i=0;i<_param_no;i++)
+      {
+        double bs=bas[i];//TODO: check this
         this->m_Jacobian(0,i)=bs;
         this->m_Jacobian(1,i)=bs;
         this->m_Jacobian(2,i)=bs;
       }
       return this->m_Jacobian;
     }
-    
+#endif
   
     void calculate_basis(mask3d::Pointer &sample);
     void calculate_basis(image3d::Pointer &sample);
@@ -243,8 +274,13 @@ namespace minc
     
     
   protected:
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    SphericalHarmonicsTransform(): itk::Transform< double,3,3 >(),
+        _basis_cache(Basis_cache_vector::New()),_cache_on(false)
+#else  
     SphericalHarmonicsTransform(): itk::Transform< double,3,3 >(3,3),
-      _basis_cache(Basis_cache_vector::New()),_cache_on(false)
+        _basis_cache(Basis_cache_vector::New()),_cache_on(false)
+#endif      
     { 
       _extent=100.0;
       _par_base=0;
@@ -357,6 +393,9 @@ namespace minc
     typedef itk::SmartPointer< Self >   Pointer;
     typedef itk::SmartPointer< const Self >  ConstPointer;
     
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    typedef typename Superclass::NumberOfParametersType  NumberOfParametersType;
+#endif // ( ITK_VERSION_MAJOR > 3 ) 
     
     /** New method for creating an object using a factory. */
     itkNewMacro(Self);
@@ -428,7 +467,11 @@ namespace minc
     virtual void SetIdentity( void );
     void SetOrder(int order);
     
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    virtual NumberOfParametersType GetNumberOfParameters(void) const
+#else
     virtual unsigned int GetNumberOfParameters(void) const
+#endif    
     {
       return _par_count*3;
     }
@@ -440,13 +483,29 @@ namespace minc
     
     void ImportParameters(const ParametersType & param,bool all=false);
     
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    virtual void SetFixedParameters(const ParametersType &)
+    {
+      itkExceptionMacro( << "Not Implemented" );
+      //TODO: finish this
+    }
+    
+    virtual void ComputeJacobianWithRespectToParameters(
+                const InputPointType & point,
+                JacobianType &jacobian) const
+    {
+      itkExceptionMacro( << "Not Implemented" );
+      //TODO: finish this
+    }
+    
+#else
     virtual const JacobianType & GetJacobian(const InputPointType  & point) const
     { 
-      this->m_Jacobian.Fill(0.0);
-      //TODO:finish this
-      
+      itkExceptionMacro( << "Not Implemented" );
+      //TODO: finish this
       return this->m_Jacobian;
     }
+#endif    
     
   
     void calculate_basis(mask3d::Pointer &sample);
@@ -461,8 +520,12 @@ namespace minc
     
     
   protected:
-    CylindricalHarmonicsTransform(): itk::Transform< double,3,3 >(3,3),
-      _basis_cache(Basis_cache_vector::New()),_cache_on(false)
+#if ( ITK_VERSION_MAJOR > 3 ) 
+  CylindricalHarmonicsTransform(): itk::Transform< double,3,3 >(),
+#else 
+  CylindricalHarmonicsTransform(): itk::Transform< double,3,3 >(3,3),
+#endif      
+    _basis_cache(Basis_cache_vector::New()),_cache_on(false)
     { 
       _extent=100.0;
       _par_base=0;

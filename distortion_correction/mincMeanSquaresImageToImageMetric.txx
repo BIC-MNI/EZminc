@@ -150,7 +150,7 @@ namespace minc
 	
 		typedef itk::ImageRegionConstIteratorWithIndex<FixedTemplateType> TemplateIteratorType;
 	
-		typedef  itk::ImageRegionConstIteratorWithIndex<ITK_TYPENAME Superclass::GradientImageType> GradientIteratorType;
+		typedef itk::ImageRegionConstIteratorWithIndex<typename Superclass::GradientImageType> GradientIteratorType;
 	
 	
 		TemplateIteratorType ti( _template, this->GetFixedImageRegion() );
@@ -163,7 +163,7 @@ namespace minc
 	
 		const unsigned int ParametersDimension = this->GetNumberOfParameters();
 		derivative = DerivativeType( ParametersDimension );
-		derivative.Fill( itk::NumericTraits<ITK_TYPENAME DerivativeType::ValueType>::Zero );
+		derivative.Fill( itk::NumericTraits<typename DerivativeType::ValueType>::Zero );
 	
 		ti.GoToBegin();
 	
@@ -263,7 +263,7 @@ namespace minc
 			FixedTemplateType> TemplateIteratorType;
 	
 		typedef  itk::ImageRegionConstIteratorWithIndex<
-			ITK_TYPENAME Superclass::GradientImageType> GradientIteratorType;
+			typename Superclass::GradientImageType> GradientIteratorType;
 	
 	
 		TemplateIteratorType ti( _template, this->GetFixedImageRegion() );
@@ -278,7 +278,7 @@ namespace minc
 	
 		const unsigned int ParametersDimension = this->GetNumberOfParameters();
 		derivative = DerivativeType( ParametersDimension );
-		derivative.Fill( itk::NumericTraits<ITK_TYPENAME DerivativeType::ValueType>::Zero );
+		derivative.Fill( itk::NumericTraits<typename DerivativeType::ValueType>::Zero );
 	
 
 		for(ti.GoToBegin();!ti.IsAtEnd();++ti)

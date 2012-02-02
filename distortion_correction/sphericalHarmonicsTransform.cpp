@@ -289,7 +289,12 @@ namespace minc
     _par_count=_param_no;
     _parameters.SetSize( _param_no*3 );
     SetIdentity();
+#if ( ITK_VERSION_MAJOR > 3 ) 
+//TODO?
+#else    
     this->m_Jacobian = JacobianType(3,_param_no);
+#endif
+    
     _tmp.resize( _param_no );
     //_scales.resize(_param_no);
     GetScales( _scales );
@@ -404,7 +409,11 @@ namespace minc
     _par_count=_param_no;
     _parameters.SetSize( _param_no*2 );
     SetIdentity();
+#if ( ITK_VERSION_MAJOR > 3 ) 
+    //TODO
+#else    
     this->m_Jacobian = JacobianType(3,_param_no);
+#endif    
     _tmp.resize( _param_no );
     //_scales.resize(_param_no);
     GetScales( _scales );

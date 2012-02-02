@@ -1,5 +1,8 @@
 INCLUDE(${ITK_USE_FILE})
 
+LINK_DIRECTORIES(${ITK_LIBRARY_DIRS})
+INCLUDE_DIRECTORIES(${ITK_INCLUDE_DIRS})  
+
 ADD_LIBRARY(spherical_harmonics
   mincMeanSquaresImageToImageMetric.h
   data_proc.h
@@ -14,9 +17,8 @@ ADD_EXECUTABLE( fit_harmonics_grids
                 fit_harmonics_grids.cpp )
                 
 TARGET_LINK_LIBRARIES(fit_harmonics_grids 
-  minc4itk
-  minc_io 
-  spherical_harmonics gsl gslcblas)
+  ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES}
+  spherical_harmonics )
   
 ADD_EXECUTABLE( fit_harmonics_grids_regularize
                 fit_harmonics_grids_regularize.cpp )
