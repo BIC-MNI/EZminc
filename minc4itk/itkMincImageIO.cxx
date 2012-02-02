@@ -491,9 +491,7 @@ namespace itk
           if(dimorder[i]==MIvector_dimension && have_vectors)
           {
             dimmap[0]=j++;
-          }
-          else if(dimorder[i]==MItime && have_time)
-          {
+          } else if(dimorder[i]==MItime && have_time) {
             dimmap[4]=j++;
           } else if(dimorder[i]==MIxspace) {
             dimmap[1]=j++;

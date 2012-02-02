@@ -1,12 +1,13 @@
+INCLUDE(${ITK_USE_FILE})
+
 ADD_LIBRARY(spherical_harmonics
   mincMeanSquaresImageToImageMetric.h
   data_proc.h
   sphericalHarmonicsTransform.cpp 
   sphericalHarmonicsTransform.h)
 
-LINK_LIBRARIES(
-    gsl
-    gslcblas
+TARGET_LINK_LIBRARIES( spherical_harmonics
+    ${GSL_LIBRARIES}
     )
 
 ADD_EXECUTABLE( fit_harmonics_grids
@@ -21,17 +22,15 @@ ADD_EXECUTABLE( fit_harmonics_grids_regularize
                 fit_harmonics_grids_regularize.cpp )
                 
 TARGET_LINK_LIBRARIES(fit_harmonics_grids_regularize 
-  minc4itk
-  minc_io 
-  spherical_harmonics gsl gslcblas)
+  ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES}
+  spherical_harmonics )
   
   
 ADD_EXECUTABLE( c_fit_harmonics_grids
                 c_fit_harmonics_grids.cpp )
                 
 TARGET_LINK_LIBRARIES(c_fit_harmonics_grids 
-  minc4itk
-  minc_io 
+  ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES}
   spherical_harmonics 
   gsl 
   gslcblas)
@@ -41,18 +40,16 @@ ADD_EXECUTABLE( param2grid
                 
                 
 TARGET_LINK_LIBRARIES( param2grid 
-  minc4itk
-  minc_io 
-  spherical_harmonics gsl gslcblas)   
+  ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES}
+  spherical_harmonics )   
 
 ADD_EXECUTABLE( sph_par2grid
                 sph_par2grid.cpp )
                 
                 
 TARGET_LINK_LIBRARIES( sph_par2grid 
-  minc4itk
-  minc_io 
-  spherical_harmonics gsl gslcblas)   
+  ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES}
+  spherical_harmonics)   
 
 
 
@@ -60,9 +57,8 @@ ADD_EXECUTABLE( c_param2grid
                 c_param2grid.cpp )
                 
 TARGET_LINK_LIBRARIES(c_param2grid 
-  minc4itk
-  minc_io 
-  spherical_harmonics gsl gslcblas)
+  ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES}
+  spherical_harmonics)   
   
                 
 

@@ -7,7 +7,7 @@ ADD_EXECUTABLE( mincnlm
                 nl_means_block.h
                 nl_means_utils.h )
 
-TARGET_LINK_LIBRARIES( mincnlm minc_image_proc minc_io pthread  )
+TARGET_LINK_LIBRARIES( mincnlm minc_image_proc ${EZMINC_LIBRARIES} pthread  )
 
 INSTALL(TARGETS 
         mincnlm
