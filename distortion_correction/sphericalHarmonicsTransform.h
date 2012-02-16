@@ -274,13 +274,13 @@ namespace minc
     
     
   protected:
+  SphericalHarmonicsTransform():  
 #if ( ITK_VERSION_MAJOR > 3 ) 
-    SphericalHarmonicsTransform(): itk::Transform< double,3,3 >(),
-        _basis_cache(Basis_cache_vector::New()),_cache_on(false)
+     itk::Transform< double,3,3 >(),
 #else  
-    SphericalHarmonicsTransform(): itk::Transform< double,3,3 >(3,3),
-        _basis_cache(Basis_cache_vector::New()),_cache_on(false)
+    itk::Transform< double,3,3 >(3,3),
 #endif      
+    _basis_cache(Basis_cache_vector::New()),_cache_on(false)
     { 
       _extent=100.0;
       _par_base=0;
