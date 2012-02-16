@@ -23,7 +23,6 @@
 
 #include <time_stamp.h>    // for creating minc style history entry
 #include "itkMincImageIOFactory.h"
-#include "itkMincImageIO.h"
 
 typedef itk::Image<unsigned char, 3>  LabelImageType;
 typedef itk::Image<float, 3>  RealImageType;
@@ -44,11 +43,13 @@ using namespace minc;
 void show_usage (const char * prog)
 {
   std::cout<<"Program calculates multiple volume similarity metrics for discrete labels "<<std::endl
-          <<"based on :  William R. Crum, Oscar Camara, and Derek L. G. Hill"
-          <<"\"Generalized Overlap Measures for Evaluation and Validation in Medical Image Analysis \""
-          <<" IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 25, NO. 11, NOVEMBER 2006"<<std::endl
-          <<"http://dx.doi.org/10.1109/TMI.2006.880587"<<std::endl<<std::endl
-          <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> ... <inputN.mnc>  [--verbose --mask <mask.mnc> --classes <n> --list <file.list> --majority <output> --overlap <output>]"<<std::endl;
+           <<"or Generalized Tanimoto coefficient (GTC)" <<std::endl
+           <<"based on :  William R. Crum, Oscar Camara, and Derek L. G. Hill"
+           <<"\"Generalized Overlap Measures for Evaluation and Validation in Medical Image Analysis \""
+           <<" IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 25, NO. 11, NOVEMBER 2006"<<std::endl
+           <<"http://dx.doi.org/10.1109/TMI.2006.880587"<<std::endl<<std::endl
+           <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> ... <inputN.mnc>  "<<std::endl
+           <<"[--verbose --mask <mask.mnc> --classes <n> --list <file.list> --majority <output> --overlap <output>]"<<std::endl;
 }
 
 int main(int argc,char **argv)
@@ -122,7 +123,7 @@ int main(int argc,char **argv)
   
   try
   {
-		itk::ObjectFactoryBase::RegisterFactory(itk::MincImageIOFactory::New());
+    itk::RegisterMincIO();
 		int nfiles=argc-optind;
 		
 		if(verbose)
