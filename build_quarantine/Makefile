@@ -28,7 +28,12 @@
 #        since these programs are trickier to build ... i.e. more 
 #        dependencies, therefore more to go wrong.
 #
-#
+# (e) make minc-niak
+#     -> all the tools necessary to use the Neuroimaging Analysis Kit 
+#        http://www.nitrc.org/projects/niak
+#     includes: create_output_dirs bicpl n3 conglomerate mni_autoreg 
+#     mincblob mni_perllib ray_trace classify mincmorph inormalize ebtks 
+#     arguments getopt_tabular 
 #
 #
 # EXAMPLES:
@@ -304,6 +309,8 @@ mni_autoreg_model           := $(INSTALL_DIR)/share/mni_autoreg/average_305.mnc.
 # *****************************************************************************
 #
 minc-full : create_output_dirs bicpl n3 conglomerate glim_image mni_autoreg mincblob mni_perllib ray_trace ezminc mincbet classify mincmorph inormalize oobicpl
+
+minc-niak : create_output_dirs bicpl n3 conglomerate mni_autoreg mincblob mni_perllib ray_trace classify mincmorph inormalize ebtks arguments getopt_tabular
 
 minc-with-itk : $(output_dirs) minc itk ezminc 
 
@@ -692,12 +699,18 @@ $(mni_perllib) : $(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER)
 	                   INSTALLDIRS=site \
 	                   INSTALLSITELIB=$(INSTALL_DIR)/perl \
 	                   INSTALLSITEBIN=$(INSTALL_DIR)/bin \
+                           INSTALLSITEARCH=$(INSTALL_DIR)/perl \
+                           INSTALLSITESCRIPT=$(INSTALL_DIR)/bin \
+                           INSTALLARCHLIB=$(INSTALL_DIR)/perl \
 	                   INSTALLSITEMAN1DIR=$(INSTALL_DIR)/share/man/man1 \
 	                   INSTALLSITEMAN3DIR=$(INSTALL_DIR)/share/man/man3 < dummy_response_file  && \
 	perl ./Makefile.PL SITEPREFIX=$(INSTALL_DIR) \
 	                   INSTALLDIRS=site \
 	                   INSTALLSITELIB=$(INSTALL_DIR)/perl \
 	                   INSTALLSITEBIN=$(INSTALL_DIR)/bin \
+                           INSTALLSITEARCH=$(INSTALL_DIR)/perl \
+                           INSTALLSITESCRIPT=$(INSTALL_DIR)/bin \
+                           INSTALLARCHLIB=$(INSTALL_DIR)/perl \
 	                   INSTALLSITEMAN1DIR=$(INSTALL_DIR)/share/man/man1 \
 	                   INSTALLSITEMAN3DIR=$(INSTALL_DIR)/share/man/man3 < dummy_response_file  && \
 	make && \
@@ -707,7 +720,7 @@ $(mni_perllib) : $(BUILD_DIR)/src/mni_perllib-$(MNI_PERLLIB_VER)
 $(getopt_tabular) : $(BUILD_DIR)/src/Getopt-Tabular-$(GETOPT_TABULAR_VER)
 	cd $(BUILD_DIR)/src/Getopt-Tabular-$(GETOPT_TABULAR_VER) && \
 	perl ./Makefile.PL SITEPREFIX=$(INSTALL_DIR) INSTALLDIRS=site INSTALLSITELIB=$(INSTALL_DIR)/perl INSTALLSITEBIN=$(INSTALL_DIR)/bin \
-		INSTALLSITEMAN1DIR=$(INSTALL_DIR) INSTALLSITEMAN3DIR=$(INSTALL_DIR) && \
+		INSTALLSITEMAN1DIR=$(INSTALL_DIR) INSTALLSITEMAN3DIR=$(INSTALL_DIR) INSTALLSITEARCH=$(INSTALL_DIR)/perl INSTALLARCHLIB=$(INSTALL_DIR)/perl && \
 	make && \
 	make install
 	touch $(getopt_tabular)
