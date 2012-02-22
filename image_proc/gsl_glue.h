@@ -49,7 +49,7 @@ namespace minc
       if(!a.empty())
       {
         resize(a.size());
-        for(int i=0;i<a.size();i++)
+        for(size_t i=0;i<a.size();i++)
           gsl_vector_set(_vec,i,a[i]);
       }
     }
@@ -75,7 +75,7 @@ namespace minc
     gsl_double_vector():_vec(NULL)
     {}
     
-    gsl_double_vector(gsl_vector* v):_vec(v),_own(false)
+    gsl_double_vector(gsl_vector* v):_own(false),_vec(v)
     {
     }
     
@@ -86,23 +86,23 @@ namespace minc
       _own=false;
     }
 
-    explicit gsl_double_vector(int n):_vec(NULL)
+    explicit gsl_double_vector(int n):_own(false),_vec(NULL)
     {
       resize(n);
     }
     
-    gsl_double_vector(int n,double v):_vec(NULL)
+    gsl_double_vector(int n,double v):_own(false),_vec(NULL)
     {
       resize(n);
       set_all(v);
     }
 
-    gsl_double_vector(const gsl_double_vector& a):_vec(NULL)
+    gsl_double_vector(const gsl_double_vector& a):_own(false),_vec(NULL)
     {
       copy(a);
     }
     
-    gsl_double_vector(const std::vector<double>& a):_vec(NULL)
+    gsl_double_vector(const std::vector<double>& a):_own(false),_vec(NULL)
     {
       copy(a);
     }
@@ -167,7 +167,7 @@ namespace minc
     void copy_to(std::vector<double> &out) const
     {
       out.resize(size());
-      for(int i=0;i<out.size();i++)
+      for(size_t i=0;i<out.size();i++)
         out[i]=gsl_vector_get(_vec,i);
     }
     
@@ -231,7 +231,7 @@ namespace minc
     }
     
     //! use another gsl matrix
-    explicit gsl_double_matrix(gsl_matrix* m):_mtx(m),_own(false)
+    explicit gsl_double_matrix(gsl_matrix* m):_own(false),_mtx(m)
     {
     }
     

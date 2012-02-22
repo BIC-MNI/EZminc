@@ -84,8 +84,8 @@ namespace minc
 							):_basis_order (n), 
                 _basis(basis), 
                 _alpha (_basis_order, _basis_order),
-                _beta (_basis_order),_V(_basis_order,_basis_order),
-                _S(_basis_order),_work(_basis_order),_x(_basis_order)
+                _beta (_basis_order),_x(_basis_order),_V(_basis_order,_basis_order),
+                _S(_basis_order),_work(_basis_order)
 		{
       clear();
 		};
@@ -94,16 +94,17 @@ namespace minc
 		MNK_Gauss (int n		//!< order of aproximation
               ):_basis_order (n), 
                 _alpha (_basis_order, _basis_order),
-                _beta (_basis_order),_V(_basis_order,_basis_order),
-                _S(_basis_order),_work(_basis_order),_x(_basis_order)
+                _beta (_basis_order),_x(_basis_order),_V(_basis_order,_basis_order),
+                _S(_basis_order),_work(_basis_order)
 		{
       clear();
 		};
     
     MNK_Gauss(const MNK_Gauss& a): _basis_order(a._basis_order), 
                                     _alpha (_basis_order, _basis_order),
-                                    _beta (_basis_order),_V(_basis_order,_basis_order),
-                                    _S(_basis_order),_work(_basis_order),_x(_basis_order)
+                                    _beta (_basis_order),_x(_basis_order),
+                                    _V(_basis_order,_basis_order),
+                                    _S(_basis_order),_work(_basis_order)
     {
       clear();
     }

@@ -60,35 +60,52 @@ class Tag_fit
 	protected:
     double _last_distance;
     static const double _distance_epsilon;
-    public:
-    int _max_iterations;
+  public:
     typedef std::vector <bool> fitting_mask;
     typedef std::vector <double> fitting_coeff;
     typedef std::vector <fitting_coeff> fittings;
     typedef std::vector <int> Index;
     typedef std::vector <double> Distances;
     
+    int       order;
+    double    keep;
+    bool      verbose;
+    double    max_dev;
+    int       _max_iterations;
+    double    sd,max_distance;
+    fittings  coeff;
+    bool      limit_linear;
+    bool      cache_basis;
+    int       skip_voxels;
     tag_points ideal, measured;
     fitting_mask mask;
-    bool      verbose;
-    bool      limit_linear;
-    double    keep;
-    double    max_dev;
-    double    sd,max_distance;
-    int       order;
-    fittings  coeff;
     fittings  basis_x,basis_y,basis_z;
     Index     index;
     Distances distances;
-    bool      cache_basis;
-    int       skip_voxels;
 
 		basis_functions_x fun_x; // here we have the same basis for X,Y,Z
-	
+
+
+    Tag_fit(int order_, double keep_, double max_dev_=5.0, int max_iter=100,bool verbose_=false,bool ll=false,int skip_voxels_=0):
+           order(order_), 
+           keep(keep_), 
+           verbose(verbose_), 
+           max_dev(max_dev_),
+           _max_iterations(max_iter),
+           sd(0), 
+           max_distance(0), 
+           coeff(3),
+           limit_linear(ll),
+           cache_basis(max_iter>1),
+           skip_voxels(skip_voxels_)
+    {
+    }
+
+
     void reset_index(void)
     {
       index.resize(ideal.size());
-      for(int i=0;i<ideal.size();i++)
+      for(size_t i=0;i<ideal.size();i++)
         index[i]=i;
     }
     
@@ -120,20 +137,6 @@ class Tag_fit
       
     }
     
-    Tag_fit(int order_, double keep_, double max_dev_=5.0, int max_iter=100,bool verbose_=false,bool ll=false,int skip_voxels_=0):
-           order(order_), 
-           keep(keep_), 
-           verbose(verbose_), 
-           max_dev(max_dev_),
-           _max_iterations(max_iter),
-           max_distance(0), 
-           sd(0), 
-           coeff(3),
-           limit_linear(ll),
-           cache_basis(max_iter>1),
-           skip_voxels(skip_voxels_)
-    {
-    }
     
     
     void fit_coeff(bool condition=false)

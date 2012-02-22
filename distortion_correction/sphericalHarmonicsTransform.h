@@ -250,7 +250,7 @@ namespace minc
       minc::image3d::IndexType idx;
       _basis_cache->TransformPhysicalPointToIndex(point,idx);
       const basis_vector& bas=_basis_cache->GetPixel(idx);
-      for(int i=0;i<_param_no;i++)
+      for(size_t i=0;i<_param_no;i++)
       {
         double bs=bas[i];//TODO: check this
         this->m_Jacobian(0,i)=bs;
@@ -342,7 +342,7 @@ namespace minc
     {
       SphericalFunctions sph;
       sph.generate_basis(_tmp,_param_no,point);
-      for(int i=0;i<_param_no;i++)
+      for(size_t i=0;i<_param_no;i++)
       {
         double bs=_tmp[i];
         pnt[0]+=bs*_parameters[i];
@@ -353,7 +353,7 @@ namespace minc
       basis_vector &bas= _basis_cache->GetPixel(idx);
       if(bas.empty())
         itkExceptionMacro( << "Trying to use unallocated cache element" );
-      for(int i=0;i<_param_no;i++)
+      for(size_t i=0;i<_param_no;i++)
       {
 
         double bs=bas[i];
@@ -372,7 +372,7 @@ namespace minc
 //    float tmp[200];
     SphericalFunctions sph;
     sph.generate_basis(_tmp,_param_no,point);
-    for(int i=0;i<_param_no;i++)
+    for(size_t i=0;i<_param_no;i++)
     {
       double bs=_tmp[i];      
       pnt[0]+=bs*_parameters[i];
@@ -590,7 +590,7 @@ namespace minc
       CylindricalFunctions sph;
       sph.generate_basis(_tmp,_param_no,point);
       double r=0;
-      for(int i=0;i<_param_no;i++)
+      for(size_t i=0;i<_param_no;i++)
       {
         double bs=_tmp[i];
         r+=bs*_parameters[i];
@@ -609,7 +609,7 @@ namespace minc
       if(bas.empty())
         itkExceptionMacro( << "Trying to use unallocated cache element" );
       double r=0;
-      for(int i=0;i<_param_no;i++)
+      for(size_t i=0;i<_param_no;i++)
       {
         double bs=bas[i];
         r+=bs*_parameters[i];
@@ -637,7 +637,7 @@ namespace minc
     sph.generate_basis(_tmp,_param_no,point);
     double r=0;
     double rp=sqrt(point[0]*point[0]+point[1]*point[1]);
-    for(int i=0;i<_param_no;i++)
+    for(size_t i=0;i<_param_no;i++)
     {
       double bs=_tmp[i];
       r+=bs*_parameters[i];

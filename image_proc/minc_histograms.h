@@ -449,6 +449,7 @@ namespace minc
 		{
 			_set_value op(v);
 			std::for_each(_joint.begin(),_joint.end(),op);
+      return *this;
 		}
 	
 	};

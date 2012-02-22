@@ -8,8 +8,6 @@ FIND_PACKAGE( MINC2 REQUIRED )
 INCLUDE( ${MINC2_USE_FILE} )
 
 
-#OPTION(BUILD_TESTS    "Build tests" OFF)
-#OPTION(BUILD_EXAMPLES "Build Examples" OFF)
 OPTION(BUILD_MINCNLM  "Build Non-local means denoising programm,requires GSL (protected by a license IDDN.FR.001.070033.000.S.P.2007.000.21000)" OFF)
 OPTION(BUILD_DISTORTION_CORRECTION "Build distortion correction tools, requires GSL" OFF)
 
@@ -24,7 +22,7 @@ ELSE(USE_ITK_HDF5)
 ENDIF(USE_ITK_HDF5)
 
 IF(ITK_FOUND)
-  OPTION(BUILD_TOOLS "Build additional tools (defacing) requires GSL" OFF)
+  OPTION(BUILD_TOOLS "Build additional tools , requires GSL" OFF)
 ENDIF(ITK_FOUND)
 
 
@@ -50,18 +48,8 @@ IF(FFTW3F_FOUND)
 ENDIF(FFTW3F_FOUND)
 
 
-#ADD_SUBDIRECTORY( minc_io )
 ADD_SUBDIRECTORY( image_proc )
 
-
-
-# IF(BUILD_EXAMPLES)
-#   ADD_SUBDIRECTORY(examples)
-# ENDIF(BUILD_EXAMPLES)
-# 
-# IF(BUILD_TESTS)
-#   ADD_SUBDIRECTORY(tests)
-# ENDIF(BUILD_TESTS)
 
 IF(BUILD_TOOLS )
   ADD_SUBDIRECTORY(tools)

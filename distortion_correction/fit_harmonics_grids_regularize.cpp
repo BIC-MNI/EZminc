@@ -65,7 +65,6 @@ class Tag_fit
     static const double _distance_epsilon;
     
   public:
-    int _max_iterations;
     typedef std::vector <bool> fitting_mask;
     typedef std::vector <double> fitting_coeff;
     typedef std::vector <fitting_coeff> fittings;
@@ -73,22 +72,23 @@ class Tag_fit
     typedef std::vector <double> Distances;
     std::vector< std::vector<double> > pca_matrix;
     
-    tag_points ideal, measured;
-    fitting_mask mask;
+    int      order,order_c;
+    int _max_iterations;
     bool     verbose;
     bool     cylindric;
     double   max_dev;
     double   sd,max_distance;
-    int      order,order_c;
     int      pcs;
+    double legendre_coeff;
+    int skip_voxels;
     fitting_coeff coeff;
     fittings basis_x;
+    tag_points ideal, measured;
+    fitting_mask mask;
     basis_vector regularize;
     basis_vector regularize_c;
     Index    index;
     Distances distances;
-    double legendre_coeff;
-    int skip_voxels;
 
 		basis_functions_x    fun_x;
     CylindricalFunctions fun_c;
