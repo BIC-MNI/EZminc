@@ -42,7 +42,7 @@ IF(FFTW3F_FOUND AND GSL_FOUND)
   
   
   INSTALL(TARGETS 
-        noise_estimate
+        noise_estimate sharpness_estimate
         RUNTIME DESTINATION bin )
 
   INSTALL(PROGRAMS 
