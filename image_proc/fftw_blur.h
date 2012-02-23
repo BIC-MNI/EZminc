@@ -27,10 +27,10 @@ namespace minc
   void calculate_gaussian(std::vector<complex_f>& res,double sigma,bool dx);
   
   //! coordinate wise blurring
-  void blur_volume(simple_volume<float> &in,simple_volume<float> &out, bool dx,bool dy, bool dz, double fx,double fy,double fz);
+  void blur_volume(const simple_volume<float> &in,simple_volume<float> &out, bool dx,bool dy, bool dz, double fx,double fy,double fz);
   
-  void calc_gradient(simple_volume<float> &in,minc_grid_volume &out, double fx,double fy,double fz);
-  void calc_gradient_mag(simple_volume<float> &in,simple_volume<float> &out, double fx,double fy,double fz);
+  void calc_gradient(const simple_volume<float> &in,minc_grid_volume &out, double fx,double fy,double fz);
+  void calc_gradient_mag(const simple_volume<float> &in,simple_volume<float> &out, double fx,double fy,double fz);
 
 };
 

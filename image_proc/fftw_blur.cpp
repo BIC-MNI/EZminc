@@ -57,7 +57,7 @@ namespace minc
   }
   
 
-  void blur_volume(simple_volume<float> &in,simple_volume<float> &out, bool dx,bool dy, bool dz, double fx,double fy,double fz)
+  void blur_volume(const simple_volume<float> &in,simple_volume<float> &out, bool dx,bool dy, bool dz, double fx,double fy,double fz)
   {
     double sx=fabs(fx/(2.0*sqrt(2*log(2.0))));
     double sy=fabs(fy/(2.0*sqrt(2*log(2.0))));
@@ -182,7 +182,7 @@ namespace minc
     fftwf_destroy_plan(pz);fftwf_destroy_plan(ipz);
   }
   
-  void calc_gradient(simple_volume<float> &in,minc_grid_volume &out, double fx,double fy,double fz)
+  void calc_gradient(const simple_volume<float> &in,minc_grid_volume &out, double fx,double fy,double fz)
   {
     simple_volume<float> vdx(in); 
     simple_volume<float> vdy(in); 
@@ -199,7 +199,7 @@ namespace minc
     
   }
   
-  void calc_gradient_mag(simple_volume<float> &in,simple_volume<float> &out, double fx,double fy,double fz)
+  void calc_gradient_mag(const simple_volume<float> &in,simple_volume<float> &out, double fx,double fy,double fz)
   {
     
     minc_grid_volume tmp(in.size());

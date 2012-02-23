@@ -36,6 +36,11 @@ IF(FFTW3F_FOUND AND GSL_FOUND)
 
   TARGET_LINK_LIBRARIES(noise_estimate minc_image_proc ${EZMINC_LIBRARIES})
 
+  ADD_EXECUTABLE( sharpness_estimate sharpness_estimate.cpp)
+
+  TARGET_LINK_LIBRARIES(sharpness_estimate minc_image_proc ${EZMINC_LIBRARIES})
+  
+  
   INSTALL(TARGETS 
         noise_estimate
         RUNTIME DESTINATION bin )
