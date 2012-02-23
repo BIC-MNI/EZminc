@@ -20,6 +20,7 @@
 #include <itkImageIOFactory.h>
 #include <minc_helpers.h>
 #include <getopt.h>
+#include <map>
 
 #include <time_stamp.h>    // for creating minc style history entry
 #include "itkMincImageIOFactory.h"
@@ -49,7 +50,7 @@ void show_usage (const char * prog)
            <<" IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 25, NO. 11, NOVEMBER 2006"<<std::endl
            <<"http://dx.doi.org/10.1109/TMI.2006.880587"<<std::endl<<std::endl
            <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> ... <inputN.mnc>  "<<std::endl
-           <<"[--verbose --mask <mask.mnc> --classes <n> --list <file.list> --majority <output> --overlap <output>]"<<std::endl;
+           <<"[--verbose --mask <mask.mnc> --classes <n> --list <file.list> --majority <output> --overlap <output> --relabel map.txt]"<<std::endl;
 }
 
 int main(int argc,char **argv)
@@ -62,6 +63,7 @@ int main(int argc,char **argv)
   int verbose=0;
   std::string mask_f,list_f,majority_f,overlap_f;
 	int classes=3;
+  std::string map_f;
 	
   static struct option long_options[] = {
     {"verbose", no_argument,             &verbose, 1},
@@ -71,6 +73,7 @@ int main(int argc,char **argv)
 		{"list",    required_argument,       0,'l'},
 		{"majority", required_argument,      0,'a'},
 		{"overlap", required_argument,      0,'o'},
+    {"relabel", required_argument,      0,'r'},
     {0, 0, 0, 0}
   };
   
@@ -78,7 +81,7 @@ int main(int argc,char **argv)
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    int c = getopt_long (argc, argv, "vqm:c:l:a:", long_options, &option_index);
+    int c = getopt_long (argc, argv, "vqm:c:l:a:r:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1) break;
@@ -90,6 +93,9 @@ int main(int argc,char **argv)
       case 'v':
         std::cout << "Version: 0.1" << std::endl;
         return 0;
+      case 'r':
+        map_f=optarg;
+        break;
       case 'm':
         mask_f=optarg;
         break;
@@ -123,6 +129,29 @@ int main(int argc,char **argv)
   
   try
   {
+    std::map<int,int> label_map;
+    if(!map_f.empty())
+    {
+      if(verbose)
+        std::cout<<"Going to relabel input according to:"<<map_f.c_str()<<std::endl;
+      std::ifstream in_map(map_f.c_str());
+      
+      while(!in_map.eof() && in_map.good())
+      {
+        int l1,l2;
+        in_map>>l1>>l2;
+        std::map<int,int>::iterator pos=label_map.find(l1);
+        if(pos==label_map.end())
+          label_map[l1]=l2;
+        else if(label_map[l1]!=l2)
+        {
+          std::cerr<<"Warning: label "<<l1<<" mapped more then once!"<<std::endl;
+          std::cerr<<"Previous map:"<<(*pos).second<<" New map:"<<l2<<std::endl;
+          return 1;
+        }
+      }
+    }
+    
     itk::RegisterMincIO();
 		int nfiles=argc-optind;
 		
@@ -200,14 +229,26 @@ int main(int argc,char **argv)
 				}
 				if(mask) ++(*itm);
 				unsigned char label=it1.Get();
-				if(!label) { //ignore zero label
-					continue; 
-				}
-				label--;
+        
+				
+				if(!label_map.empty())
+        {
+          std::map<int,int>::const_iterator f=label_map.find(label);
+          if(f!=label_map.end())
+            label=(*f).second;
+          //TODO: if not found unchanged?
+        }
+        if(!label) { //ignore zero label
+          continue; 
+        }
+        label--;
+        
+        
 				if(label>=classes) { //ignore label  with value that is too high
 					continue; 
 				}
 				itk::VariableLengthVector<float> val=it2.Get();
+        
 				val[label]+=1;
 				it2.Set(val);
 			}
