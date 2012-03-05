@@ -10,6 +10,9 @@ INCLUDE( ${MINC2_USE_FILE} )
 
 OPTION(BUILD_MINCNLM  "Build Non-local means denoising programm,requires GSL (protected by a license IDDN.FR.001.070033.000.S.P.2007.000.21000)" OFF)
 OPTION(BUILD_DISTORTION_CORRECTION "Build distortion correction tools, requires GSL" OFF)
+OPTION(BUILD_MRFSEG   "Build mrfseg - tissue classification program from Jussi Tohka" OFF)
+OPTION(BUILD_DD       "Build Diffeomorphic Demons (requires ITK)" OFF)
+
 
 FIND_PACKAGE(GSL)
 FIND_PACKAGE(FFTW3F)
@@ -21,9 +24,6 @@ ELSE(USE_ITK_HDF5)
   FIND_PACKAGE(ITK)
 ENDIF(USE_ITK_HDF5)
 
-IF(ITK_FOUND)
-  OPTION(BUILD_TOOLS "Build additional tools , requires GSL" OFF)
-ENDIF(ITK_FOUND)
 
 
 INCLUDE_DIRECTORIES( image_proc )
@@ -59,3 +59,15 @@ IF(GSL_FOUND AND BUILD_DISTORTION_CORRECTION)
   ADD_SUBDIRECTORY( distortion_correction )
 ENDIF(GSL_FOUND AND BUILD_DISTORTION_CORRECTION)
 
+IF(BUILD_MRFSEG)
+  add_subdirectory(mrfseg)
+ENDIF(BUILD_MRFSEG)
+
+IF(ITK_FOUND)
+  OPTION(BUILD_TOOLS "Build additional tools , requires GSL" OFF)
+
+  IF(BUILD_DD)
+    add_subdirectory(diff_demons)
+  ENDIF(BUILD_DD)
+
+ENDIF(ITK_FOUND)
