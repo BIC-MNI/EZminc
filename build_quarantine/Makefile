@@ -169,7 +169,8 @@ output_dirs := $(BUILD_DIR)/src \
 #
 NETCDF_VER       := 4.0.1
 HDF5_VER         := 1.8.7
-MINC_VER         := 9e69692
+MINC_VER         := 2-1-11
+MINC_SIG         := 94ec32b
 BICPL_VER        := 1.4.6
 EBTKS_VER        := 1.6.4
 OOBICPL_VER      := 0.4.4
@@ -182,12 +183,13 @@ MINCBLOB_VER     := 1.2.1
 MINCMORPH_VER    := 1.4
 RAYTRACE_VER     := 1.0.3
 GLIMIMAGE_VER    := 1.2
-ITK_VER          := 3.20.0
+ITK_VER          := 3.20.1
 FFTW_VER         := 3.2.2
-CMAKE_VER        := 2.8.6
+CMAKE_VER        := 2.8.7
 GSL_VER          := 1.15
 GETOPT_TABULAR_VER := 0.3
-EZMINC_VER       := 24ce294
+EZMINC_VER       := 2.1.12
+EZMINC_SIG       := 4bd85a1
 NETPBM_VER       := 10.35.74
 VTK_VER          := 5.6.1
 FLTK_VER         := 1.3.0
@@ -214,7 +216,7 @@ MNI_AUTOREG_MODEL_VER          := 1.1
 archives := \
 $(BUILD_DIR)/src/netcdf-$(NETCDF_VER).tar.gz \
 $(BUILD_DIR)/src/hdf5-$(HDF5_VER).tar.gz \
-$(BUILD_DIR)/src/andrewjanke-minc-$(MINC_VER).tar.gz \
+$(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz \
 $(BUILD_DIR)/src/bicpl-$(BICPL_VER).tar.gz \
 $(BUILD_DIR)/src/ebtks-$(EBTKS_VER).tar.gz \
 $(BUILD_DIR)/src/oobicpl-$(OOBICPL_VER).tar.gz \
@@ -232,7 +234,7 @@ $(BUILD_DIR)/src/fftw-$(FFTW_VER).tar.gz \
 $(BUILD_DIR)/src/cmake-$(CMAKE_VER).tar.gz \
 $(BUILD_DIR)/src/gsl-$(GSL_VER).tar.gz \
 $(BUILD_DIR)/src/Getopt-Tabular-$(GETOPT_TABULAR_VER).tar.gz \
-$(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER).tar.gz  \
+$(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz  \
 $(BUILD_DIR)/src/netpbm-$(NETPBM_VER).tar.gz \
 $(BUILD_DIR)/src/Register-$(REGISTER_VER).tar.gz \
 $(BUILD_DIR)/src/Display-$(DISPLAY_VER).tar.gz \
@@ -240,7 +242,7 @@ $(BUILD_DIR)/src/postf-$(POSTF_VER).tar.gz \
 $(BUILD_DIR)/src/inormalize-${INORMALIZE_VER}.tar.gz \
 $(BUILD_DIR)/src/arguments-$(ARGUMENTS_VER).tar.gz \
 $(BUILD_DIR)/src/pcre-$(PCRE_VER).tar.gz \
-$(BUILD_DIR)/src//pcre++-$(PCREPP_VER).tar.gz \
+$(BUILD_DIR)/src/pcre++-$(PCREPP_VER).tar.gz \
 $(BUILD_DIR)/src/mni-models_average305-lin-$(MNI_MODELS_AVERAGE305_LIN_VER).tar.gz  \
 $(BUILD_DIR)/src/mni-models_colin27-lin-$(MNI_MODELS_COLIN27_LIN_VER).tar.gz     \
 $(BUILD_DIR)/src/mni-models_icbm152-lin-$(MNI_MODELS_ICBM_LIN_VER).tar.gz     \
@@ -261,7 +263,7 @@ $(BUILD_DIR)/src/mni_autoreg_model-$(MNI_AUTOREG_MODEL_VER).tar.gz \
 #
 netcdf         := $(INSTALL_DIR)/lib/libnetcdf.a $(INSTALL_DIR)/include/netcdf.h
 hdf5           := $(INSTALL_DIR)/lib/libhdf5.a $(INSTALL_DIR)/include/hdf5.h
-minc           := $(INSTALL_DIR)/lib/libminc2.a $(INSTALL_DIR)/include/minc2.h
+minc           := $(INSTALL_DIR)/lib/libminc2.a $(INSTALL_DIR)/include/minc2.h 
 fftw           := $(INSTALL_DIR)/lib/libfftw3f.a $(INSTALL_DIR)/include/fftw3.h
 gsl            := $(INSTALL_DIR)/lib/libgsl.a $(INSTALL_DIR)/include/gsl/gsl_math.h
 bicpl          := $(INSTALL_DIR)/lib/libbicpl.a $(INSTALL_DIR)/include/bicpl.h
@@ -316,8 +318,8 @@ minc-with-itk : $(output_dirs) minc itk ezminc
 
 netcdf : $(output_dirs) $(netcdf) 
 hdf5 : $(output_dirs) $(hdf5) 
-minc : $(output_dirs) $(minc) $(hdf5) $(netcdf)
-minc-only : $(output_dirs) $(minc) $(hdf5) $(netcdf)
+minc : $(output_dirs) $(cmake) $(minc) $(hdf5) $(netcdf)
+minc-only : $(output_dirs) $(cmake) $(minc) $(hdf5) $(netcdf)
 
 models : $(output_dirs) mni-models_average305-lin \
                         mni-models_colin27-lin \
@@ -371,10 +373,6 @@ mni_autoreg_model : $(mni_autoreg_model)
 #
 # *****************************************************************************
 #
-$(BUILD_DIR)/src/ezminc :  $(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz  
-	cd $(BUILD_DIR)/src && tar zxf  $<
-	touch $@
-
 $(BUILD_DIR)/src/VTK : $(BUILD_DIR)/src/vtk-$(VTK_VER).tar.gz
 	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
@@ -382,6 +380,15 @@ $(BUILD_DIR)/src/VTK : $(BUILD_DIR)/src/vtk-$(VTK_VER).tar.gz
 $(BUILD_DIR)/src/fltk-$(FLTK_VER) :  $(BUILD_DIR)/src/fltk-$(FLTK_VER)-source.tar.gz
 	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
+
+$(BUILD_DIR)/src/andrewjanke-minc-$(MINC_SIG) : $(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz
+	cd $(BUILD_DIR)/src && tar zxf  $<
+	touch $@
+
+$(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_SIG) : $(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz
+	cd $(BUILD_DIR)/src && tar zxf  $<
+	touch $@
+
 
 # strip the .tar.gz suffix from the tarball to create the source directory name 
 source_dirs := $(archives:.tar.gz=)
@@ -411,9 +418,9 @@ $(BUILD_DIR)/src/hdf5-$(HDF5_VER).tar.gz :
 	$(WGET) http://www.hdfgroup.org/ftp/HDF5/releases/hdf5-$(HDF5_VER)/src/hdf5-$(HDF5_VER).tar.gz \
  -O $(BUILD_DIR)/src/hdf5-$(HDF5_VER).tar.gz
 
-$(BUILD_DIR)/src/andrewjanke-minc-$(MINC_VER).tar.gz : 
-	$(WGET) --no-check-certificate https://github.com/andrewjanke/minc/tarball/9e69692c15a1644457144d18c37d55c31f2fe107 \
-	-O $(BUILD_DIR)/src/andrewjanke-minc-$(MINC_VER).tar.gz
+$(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz : 
+	$(WGET) --no-check-certificate https://github.com/andrewjanke/minc/tarball/minc-$(MINC_VER) \
+	-O $(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz
 
 $(BUILD_DIR)/src/bicpl-$(BICPL_VER).tar.gz : 
 	$(WGET)  http://packages.bic.mni.mcgill.ca/tgz/bicpl-$(BICPL_VER).tar.gz  \
@@ -468,7 +475,7 @@ $(BUILD_DIR)/src/glim_image-$(GLIMIMAGE_VER).tar.gz :
  -O $(BUILD_DIR)/src/glim_image-$(GLIMIMAGE_VER).tar.gz
 
 $(BUILD_DIR)/src/InsightToolkit-$(ITK_VER).tar.gz : 
-	$(WGET) http://downloads.sourceforge.net/project/itk/itk/$(ITK_VER:.0=)/InsightToolkit-$(ITK_VER).tar.gz \
+	$(WGET) http://downloads.sourceforge.net/project/itk/itk/$(ITK_VER:.1=)/InsightToolkit-$(ITK_VER).tar.gz \
  -O $(BUILD_DIR)/src/InsightToolkit-$(ITK_VER).tar.gz
 
 $(BUILD_DIR)/src/vtk-$(VTK_VER).tar.gz : 
@@ -507,9 +514,9 @@ $(BUILD_DIR)/src//pcre++-$(PCREPP_VER).tar.gz :
 	$(WGET) http://www.daemon.de/idisk/Apps/pcre++/pcre++-$(PCREPP_VER).tar.gz \
  -O $(BUILD_DIR)/src//pcre++-$(PCREPP_VER).tar.gz
 
-$(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER).tar.gz : 
-	$(WGET) --no-check-certificate https://github.com/vfonov/EZminc/tarball/$(EZMINC_VER) \
- -O $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER).tar.gz
+$(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz : 
+	$(WGET) --no-check-certificate https://github.com/vfonov/EZminc/tarball/ezminc-$(EZMINC_VER) \
+ -O $(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz
 
 $(BUILD_DIR)/src/netpbm-$(NETPBM_VER).tar.gz : 
 	$(WGET) 'http://downloads.sourceforge.net/project/netpbm/super_stable/$(NETPBM_VER)/netpbm-$(NETPBM_VER).tgz?use_mirror=cdnetworks-us-1' \
@@ -554,9 +561,6 @@ $(BUILD_DIR)/src/mni-models_icbm152-nl-2009-$(MNI_MODELS_ICBM_NL_40GEN_VER).tar.
 $(BUILD_DIR)/src/mni_autoreg_model-$(MNI_AUTOREG_MODEL_VER).tar.gz :
 	$(WGET) http://packages.bic.mni.mcgill.ca/tgz/mni_autoreg_model-$(MNI_AUTOREG_MODEL_VER).tar.gz \
  -O $(BUILD_DIR)/src/mni_autoreg_model-$(MNI_AUTOREG_MODEL_VER).tar.gz
-
-
-
 
 
 
@@ -622,15 +626,26 @@ $(gsl) : $(BUILD_DIR)/src/gsl-$(GSL_VER)
 	make $(PARALLEL_BUILD) && \
 	make install
 
-$(minc) : $(BUILD_DIR)/src/andrewjanke-minc-$(MINC_VER) $(netcdf) $(hdf5)
-	cd $(BUILD_DIR)/src/andrewjanke-minc-$(MINC_VER) && \
-	./autogen.sh && \
-	./configure --prefix=$(INSTALL_DIR) \
-	            --with-build-path=$(INSTALL_DIR)  \
-	            --disable-shared \
-	            --with-pic   && make clean  && \
+$(minc) : $(BUILD_DIR)/src/andrewjanke-minc-$(MINC_SIG) $(netcdf) $(hdf5) $(cmake) $(itk)  
+	cd $(BUILD_DIR)/src && \
+	rm -rf   build_minc && \
+	mkdir -p build_minc && \
+	cd build_minc && \
+	$(CMAKE)  \
+      -D USE_SYSTEM_HDF5:BOOL=ON \
+      -D HDF5_INCLUDE_DIR:PATH=$(INSTALL_DIR)/include \
+      -D HDF5_LIBRARY:FILEPATH=$(INSTALL_DIR)/lib/libhdf5.a \
+      -D USE_SYSTEM_NETCDF:BOOL=ON \
+      -D NETCDF_INCLUDE_DIR:PATH=$(INSTALL_DIR)/include \
+      -D NETCDF_LIBRARY:FILEPATH=$(INSTALL_DIR)/lib/libnetcdf.a \
+      -D CMAKE_BUILD_TYPE:STRING=Release \
+      -D CMAKE_INSTALL_PREFIX:PATH=$(INSTALL_DIR) \
+      -D ITK_DIR:PATH=$(INSTALL_DIR)/lib/InsightToolkit \
+      -D BUILD_TOOLS:BOOL=ON \
+      $(BUILD_DIR)/src/andrewjanke-minc-$(MINC_SIG) && \
 	make $(PARALLEL_BUILD) && \
-	make install 
+	make install && \
+	touch $(minc)	
 
 $(ebtks) : $(BUILD_DIR)/src/ebtks-$(EBTKS_VER) $(BUILD_DIR)/src/ebtks-1.6.4-VF.patch.gz $(minc)
 	cd $(BUILD_DIR)/src/ebtks-$(EBTKS_VER) && \
@@ -877,7 +892,7 @@ $(itk) : $(BUILD_DIR)/src/InsightToolkit-$(ITK_VER) $(cmake)
 			-D CMAKE_BUILD_TYPE:STRING=Release \
 			-D CMAKE_INSTALL_PREFIX:PATH=$(INSTALL_DIR) \
 			-D ITK_USE_REVIEW:BOOL=ON \
-				$(BUILD_DIR)/src/InsightToolkit-3.20.0  && \
+			$(BUILD_DIR)/src/InsightToolkit-$(ITK_VER)  && \
 	make $(PARALLEL_BUILD) && \
 	make install && \
 	touch $(INSTALL_DIR)/lib/InsightToolkit/UseITK.cmake
@@ -917,7 +932,7 @@ $(vtk) : $(BUILD_DIR)/src/VTK
 	make $(PARALLEL_BUILD) && make install && \
 	touch $(vtk)
 
-$(ezminc) : $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER) $(minc) $(itk) $(cmake) $(fftw) $(gsl)
+$(ezminc) : $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_SIG) $(minc) $(itk) $(cmake) $(fftw) $(gsl)
 	cd $(BUILD_DIR)/src && \
 	rm -rf   build_ezminc && \
 	mkdir -p build_ezminc && \
@@ -928,16 +943,18 @@ $(ezminc) : $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER) $(minc) $(itk) $(cmake)
       -D CMAKE_BUILD_TYPE:STRING=Release \
       -D CMAKE_INSTALL_PREFIX:PATH=$(INSTALL_DIR) \
       -D ITK_DIR:PATH=$(INSTALL_DIR)/lib/InsightToolkit \
-      -D MINC_ROOT:PATH=$(INSTALL_DIR) \
+      -D MINC2_DIR:PATH=$(INSTALL_DIR)/lib \
       -D USE_MINC2:BOOL=ON \
       -D FFTW3_ROOT:PATH=$(INSTALL_DIR) \
       -D HAVE_GSL:BOOL=ON \
+      -D BUILD_DD:BOOL=ON \
+      -D BUILD_MRFSEG:BOOL=ON \
       -D HAVE_FFTW3:BOOL=ON \
       -D GSL_ROOT:PATH=$(INSTALL_DIR) \
       -D BUILD_DISTORTION_CORRECTION:BOOL=ON \
       -D BUILD_MINCNLM:BOOL=ON \
       -D BUILD_TOOLS:BOOL=ON \
-      $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_VER) && \
+      $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_SIG) && \
 	make $(PARALLEL_BUILD) && \
 	make install && \
 	touch $(ezminc)
