@@ -169,8 +169,8 @@ output_dirs := $(BUILD_DIR)/src \
 #
 NETCDF_VER       := 4.0.1
 HDF5_VER         := 1.8.7
-MINC_VER         := 2-1-11
-MINC_SIG         := 94ec32b
+MINC_VER         := 2-1-12
+MINC_SIG         := 7644531
 BICPL_VER        := 1.4.6
 EBTKS_VER        := 1.6.4
 OOBICPL_VER      := 0.4.4
@@ -188,8 +188,8 @@ FFTW_VER         := 3.2.2
 CMAKE_VER        := 2.8.7
 GSL_VER          := 1.15
 GETOPT_TABULAR_VER := 0.3
-EZMINC_VER       := 2.1.12
-EZMINC_SIG       := 4bd85a1
+EZMINC_VER       := 2.1.13
+EZMINC_SIG       := 4362656
 NETPBM_VER       := 10.35.74
 VTK_VER          := 5.6.1
 FLTK_VER         := 1.3.0
@@ -381,7 +381,7 @@ $(BUILD_DIR)/src/fltk-$(FLTK_VER) :  $(BUILD_DIR)/src/fltk-$(FLTK_VER)-source.ta
 	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
 
-$(BUILD_DIR)/src/andrewjanke-minc-$(MINC_SIG) : $(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz
+$(BUILD_DIR)/src/vfonov-minc-$(MINC_SIG) : $(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz
 	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
 
@@ -419,7 +419,7 @@ $(BUILD_DIR)/src/hdf5-$(HDF5_VER).tar.gz :
  -O $(BUILD_DIR)/src/hdf5-$(HDF5_VER).tar.gz
 
 $(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz : 
-	$(WGET) --no-check-certificate https://github.com/andrewjanke/minc/tarball/minc-$(MINC_VER) \
+	$(WGET) --no-check-certificate https://github.com/vfonov/minc/tarball/minc-$(MINC_VER) \
 	-O $(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz
 
 $(BUILD_DIR)/src/bicpl-$(BICPL_VER).tar.gz : 
@@ -626,7 +626,7 @@ $(gsl) : $(BUILD_DIR)/src/gsl-$(GSL_VER)
 	make $(PARALLEL_BUILD) && \
 	make install
 
-$(minc) : $(BUILD_DIR)/src/andrewjanke-minc-$(MINC_SIG) $(netcdf) $(hdf5) $(cmake) $(itk)  
+$(minc) : $(BUILD_DIR)/src/vfonov-minc-$(MINC_SIG) $(netcdf) $(hdf5) $(cmake) $(itk)  
 	cd $(BUILD_DIR)/src && \
 	rm -rf   build_minc && \
 	mkdir -p build_minc && \
@@ -642,7 +642,7 @@ $(minc) : $(BUILD_DIR)/src/andrewjanke-minc-$(MINC_SIG) $(netcdf) $(hdf5) $(cmak
       -D CMAKE_INSTALL_PREFIX:PATH=$(INSTALL_DIR) \
       -D ITK_DIR:PATH=$(INSTALL_DIR)/lib/InsightToolkit \
       -D BUILD_TOOLS:BOOL=ON \
-      $(BUILD_DIR)/src/andrewjanke-minc-$(MINC_SIG) && \
+      $(BUILD_DIR)/src/vfonov-minc-$(MINC_SIG) && \
 	make $(PARALLEL_BUILD) && \
 	make install && \
 	touch $(minc)	
@@ -945,8 +945,11 @@ $(ezminc) : $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_SIG) $(minc) $(itk) $(cmake)
       -D ITK_DIR:PATH=$(INSTALL_DIR)/lib/InsightToolkit \
       -D MINC2_DIR:PATH=$(INSTALL_DIR)/lib \
       -D USE_MINC2:BOOL=ON \
-      -D FFTW3_ROOT:PATH=$(INSTALL_DIR) \
-      -D HAVE_GSL:BOOL=ON \
+      -D FFTW3F_INCLUDE_DIR:PATH=$(INSTALL_DIR)/include \
+      -D FFTW3F_LIBRARY:FILEPATH=$(INSTALL_DIR)/lib/libfftw3f.a \
+      -D GSL_CBLAS_LIBRARY:FILEPATH=$(INSTALL_DIR)/lib/libgslcblas.a \
+      -D GSL_INCLUDE_DIR:PATH=$(INSTALL_DIR)/includes \
+      -D GSL_LIBRARY:FILEPATH=$(INSTALL_DIR)/lib/libgsl.a \
       -D BUILD_DD:BOOL=ON \
       -D BUILD_MRFSEG:BOOL=ON \
       -D HAVE_FFTW3:BOOL=ON \
