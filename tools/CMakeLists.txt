@@ -3,13 +3,13 @@ IF(GSL_FOUND)
 			volume_pol.cpp )
 
 	TARGET_LINK_LIBRARIES( volume_pol 
-		minc_image_proc ${EZMINC_LIBRARIES}  gsl gslcblas)
+		minc_image_proc ${EZMINC_LIBRARIES}  ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY})
 		
 	
   ADD_EXECUTABLE( random_volume
 									random_volume.cpp )
 
-	TARGET_LINK_LIBRARIES(random_volume ${EZMINC_LIBRARIES}  gsl gslcblas)
+	TARGET_LINK_LIBRARIES(random_volume ${EZMINC_LIBRARIES}  ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY})
 
 	INSTALL(TARGETS 
         random_volume

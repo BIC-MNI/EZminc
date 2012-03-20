@@ -34,8 +34,7 @@ ADD_EXECUTABLE( c_fit_harmonics_grids
 TARGET_LINK_LIBRARIES(c_fit_harmonics_grids 
   ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES}
   spherical_harmonics 
-  gsl 
-  gslcblas)
+  ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY} )
   
 ADD_EXECUTABLE( param2grid
                 param2grid.cpp )
@@ -61,8 +60,7 @@ ADD_EXECUTABLE( c_param2grid
 TARGET_LINK_LIBRARIES(c_param2grid 
   ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES}
   spherical_harmonics)   
-  
-                
+                  
 
 INSTALL(TARGETS 
     fit_harmonics_grids
