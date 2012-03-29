@@ -1,7 +1,5 @@
 #include "mincUtils.h"
 
-
-
 std::string minc_history;
 
 void mincify ( itk::Object* image, nc_type datatype  )

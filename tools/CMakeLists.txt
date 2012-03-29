@@ -60,17 +60,19 @@ IF(ITK_FOUND AND HAVE_MINC4ITK)
   ADD_EXECUTABLE( resample_grid
                 resample_grid.cpp )
 
-	TARGET_LINK_LIBRARIES(resample_grid ${ITK_LIBRARIES} ${VOLUME_IO_LIBRARIES} ${MINC4ITK_LIBRARIES})
+  TARGET_LINK_LIBRARIES(resample_grid ${ITK_LIBRARIES} ${VOLUME_IO_LIBRARIES} ${MINC4ITK_LIBRARIES})
 	
-	ADD_EXECUTABLE( multiple_volume_similarity multiple_volume_similarity.cpp)
-	TARGET_LINK_LIBRARIES( multiple_volume_similarity ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES} )
+  ADD_EXECUTABLE( multiple_volume_similarity multiple_volume_similarity.cpp)
+  TARGET_LINK_LIBRARIES( multiple_volume_similarity ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES} )
         
   ADD_EXECUTABLE( tag2csv  tag2csv.cpp)
   TARGET_LINK_LIBRARIES(tag2csv ${ITK_LIBRARIES} ${MINC4ITK_LIBRARIES})
+
+  ADD_EXECUTABLE( itk_distance itk_distance.cpp)
 	
-	INSTALL(TARGETS 
-        resample_grid multiple_volume_similarity 
-        RUNTIME DESTINATION bin )
+  INSTALL(TARGETS 
+   resample_grid multiple_volume_similarity itk_distance
+   RUNTIME DESTINATION bin )
 
 ENDIF(ITK_FOUND AND HAVE_MINC4ITK)
 
