@@ -24,6 +24,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <cmath>
 
 namespace minc
 {
@@ -467,7 +468,7 @@ namespace minc
     int cnt=0;
 		//2. populate histogram
     for (int i=0; i<count; i++) {
-			if(isnan(img.c_buf()[i]) || isinf(img.c_buf()[i])) 
+      if(!std::isfinite(img.c_buf()[i])) 
 				continue;
 
       hist.seed(img.c_buf()[i]);
@@ -494,7 +495,7 @@ namespace minc
 		{
       if (mask.c_buf()[i])
       {
-				if(isnan(img.c_buf()[i]) || isinf(img.c_buf()[i])) 
+	if(!std::isfinite(img.c_buf()[i])) 
 					continue;
 
 				hist.seed(img.c_buf()[i]);
