@@ -2,14 +2,13 @@
 #
 # Vladimir S. FONOV - vladimir.fonov@gmail.com
 
+PROJECT(ezminc)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules")
-
 IF(NOT MINC_TOOLKIT_BUILD)
-  PROJECT (ezminc)
-  FIND_PACKAGE( MINC2 REQUIRED )
+  SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules")
   
+  FIND_PACKAGE( MINC2 REQUIRED )
   FIND_PACKAGE(GSL)
   FIND_PACKAGE(FFTW3F)
 
@@ -20,24 +19,23 @@ IF(NOT MINC_TOOLKIT_BUILD)
     FIND_PACKAGE(ITK)
   ENDIF(USE_ITK_HDF5)
   
+  INCLUDE( ${MINC2_USE_FILE} )
+  
 ENDIF(NOT MINC_TOOLKIT_BUILD)
-
-INCLUDE( ${MINC2_USE_FILE} )
 
 OPTION(BUILD_MINCNLM  "Build Non-local means denoising programm,requires GSL (protected by a license IDDN.FR.001.070033.000.S.P.2007.000.21000)" OFF)
 OPTION(BUILD_DISTORTION_CORRECTION "Build distortion correction tools, requires GSL" OFF)
 OPTION(BUILD_MRFSEG   "Build mrfseg - tissue classification program from Jussi Tohka" OFF)
 OPTION(BUILD_DD       "Build Diffeomorphic Demons (requires ITK)" OFF)
 
-
-INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/image_proc )
+INCLUDE_DIRECTORIES( image_proc )
 ADD_SUBDIRECTORY( image_proc )
 
 IF(GSL_FOUND)
 
   INCLUDE_DIRECTORIES( 
     ${GSL_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/tools
+    tools
   )
 
   IF(BUILD_MINCNLM)
@@ -58,7 +56,7 @@ IF(GSL_FOUND AND BUILD_DISTORTION_CORRECTION)
 ENDIF(GSL_FOUND AND BUILD_DISTORTION_CORRECTION)
 
 IF(BUILD_MRFSEG)
-  add_subdirectory(mrfseg)
+  ADD_SUBDIRECTORY(mrfseg)
 ENDIF(BUILD_MRFSEG)
 
 IF(ITK_FOUND)
@@ -66,7 +64,7 @@ IF(ITK_FOUND)
   OPTION(BUILD_EZMINC_TOOLS "Build additional tools , requires GSL" OFF)
 
   IF(BUILD_DD)
-    add_subdirectory(diff_demons)
+    ADD_SUBDIRECTORY(diff_demons)
   ENDIF(BUILD_DD)
 
 ENDIF(ITK_FOUND)
