@@ -68,6 +68,7 @@ IF(ITK_FOUND)
   TARGET_LINK_LIBRARIES(tag2csv ITKIOMINC ${ITK_LIBRARIES})
 
   ADD_EXECUTABLE( itk_distance itk_distance.cpp)
+  TARGET_LINK_LIBRARIES(itk_distance ITKIOMINC ${ITK_LIBRARIES})
 	
   INSTALL(TARGETS 
    resample_grid multiple_volume_similarity itk_distance
