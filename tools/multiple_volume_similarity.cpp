@@ -18,12 +18,12 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
-#include <minc_helpers.h>
+#include <itkMincHelpers.h>
 #include <getopt.h>
 #include <map>
 
 #include <time_stamp.h>    // for creating minc style history entry
-#include "itkMincImageIOFactory.h"
+#include <itkMincImageIOFactory.h>
 
 typedef itk::Image<unsigned char, 3>  LabelImageType;
 typedef itk::Image<float, 3>  RealImageType;

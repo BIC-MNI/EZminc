@@ -9,6 +9,6 @@
 
 #include <minc_io_exceptions.h>
 #include <minc_io_fixed_vector.h>
-#include <minc_helpers.h>
+#include <itkMincHelpers.h>
 
 #endif //_MINC_WRAPPERS_H_

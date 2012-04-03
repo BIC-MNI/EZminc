@@ -1,4 +1,4 @@
-#include <minc_helpers.h>
+#include <itkMincHelpers.h>
 
 #include <unistd.h>
 #include <getopt.h>
