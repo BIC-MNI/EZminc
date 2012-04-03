@@ -4,8 +4,8 @@
 //MINC support
 #include <itkMincImageIOFactory.h>
 #include <itkMincImageIO.h>
-#include <minc_helpers.h>
-#include <minc_general_transform.h>
+#include <itkMincHelpers.h>
+#include <itkMincGeneralTransform.h>
 
 #include <time_stamp.h>    // for creating minc style history entry
 
