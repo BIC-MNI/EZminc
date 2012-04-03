@@ -26,11 +26,16 @@ IF(NOT MINC_TOOLKIT_BUILD)
   OPTION(EZMINC_BUILD_MRFSEG   "Build mrfseg - tissue classification program from Jussi Tohka" OFF)
   OPTION(EZMINC_BUILD_DD       "Build Diffeomorphic Demons (requires ITK)" OFF)
   OPTION(EZMINC_BUILD_TOOLS "Build additional tools , requires GSL" OFF)
-ELSE(NOT MINC_TOOLKIT_BUILD)
-  
-  #INCLUDE(${ITK_DIR}/ITKConfig.cmake)
-
 ENDIF(NOT MINC_TOOLKIT_BUILD)
+
+
+INCLUDE(CheckIncludeFiles)
+CHECK_INCLUDE_FILES(values.h    HAVE_VALUES_H)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h @ONLY)
+INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR} )
+
+ADD_DEFINITIONS(-DHAVE_CONFIG_H)
+
 
 
 INCLUDE_DIRECTORIES( image_proc )
