@@ -12,7 +12,6 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
-#include "minc_wrappers.h"
 #include <iostream>
 #include <fstream>
 #include "gsl_glue.h"
@@ -24,6 +23,7 @@
 #include <gsl/gsl_rng.h>
 #include <time.h>
 #include <sys/time.h>
+#include <itkMincHelpers.h>
 
 using namespace std;
 using namespace minc;

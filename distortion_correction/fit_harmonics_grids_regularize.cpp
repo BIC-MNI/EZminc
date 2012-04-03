@@ -20,7 +20,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include "minc_helpers.h"
+#include "itkMincHelpers.h"
 
 #include "sphericalHarmonicsTransform.h"
 

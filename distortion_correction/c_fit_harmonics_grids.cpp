@@ -12,11 +12,12 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
-#include "minc_wrappers.h"
+
 #include <iostream>
 #include <fstream>
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
+#include <itkMincHelpers.h>
 
 #include <itkBSplineInterpolateImageFunction.h>
 #include <unistd.h>
