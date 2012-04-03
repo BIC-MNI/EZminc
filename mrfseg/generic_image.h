@@ -47,7 +47,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#if HAVE_VALUES_H
+#ifdef HAVE_VALUES_H
 #include <values.h>
 #else
 #include <limits.h>
@@ -64,7 +64,6 @@
 
 #endif 
 
-#include <values.h>
 #include <math.h>
 
 
