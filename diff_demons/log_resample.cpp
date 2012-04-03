@@ -25,7 +25,7 @@
 //#include <itkAffineTransform.h>
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkBSplineInterpolateImageFunction.h>
-#include <minc_general_transform.h>
+#include <itkMincGeneralTransform.h>
 #include <itkWarpImageFilter.h>
 #include <itkExponentialDeformationFieldImageFilter.h>
 
@@ -39,9 +39,9 @@
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
 
-#include "itkMincImageIOFactory.h"
-#include "itkMincImageIO.h"
-#include "minc_helpers.h"
+#include <itkMincImageIOFactory.h>
+#include <itkMincImageIO.h>
+#include <itkMincHelpers.h>
 
 //typedef itk::MincImageIO ImageIOType;
 typedef itk::Vector< double, 3 >    VectorType;
