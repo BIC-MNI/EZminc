@@ -1,5 +1,9 @@
-IF(ITK_FOUND AND HAVE_MINC4ITK)
-  INCLUDE(${ITK_USE_FILE})
+IF(ITK_FOUND )
+# Add include directories needed to use ITK.
+  INCLUDE_DIRECTORIES(BEFORE ${ITK_INCLUDE_DIRS})
+
+# Add link directories needed to use ITK.
+  LINK_DIRECTORIES(${ITK_LIBRARY_DIRS})
 
   INCLUDE_DIRECTORIES( itk )
 
@@ -20,4 +24,4 @@ IF(ITK_FOUND AND HAVE_MINC4ITK)
 
   INSTALL(TARGETS DemonsRegistration LogDomainDemonsRegistration grid_2_log  log_resample grid_statistics RUNTIME DESTINATION bin )
 
-ENDIF(ITK_FOUND AND HAVE_MINC4ITK)
+ENDIF(ITK_FOUND)
