@@ -1,6 +1,6 @@
 /* ----------------------------- MNI Header -----------------------------------
 @NAME       : 
-@DESCRIPTION: 
+@DESCRIPTION: Mean Square difference metric, based on ITK class
 @COPYRIGHT  :
               Copyright 2006 Vladimir Fonov, McConnell Brain Imaging Centre, 
               Montreal Neurological Institute, McGill University.

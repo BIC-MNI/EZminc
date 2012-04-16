@@ -1,4 +1,21 @@
 #! /usr/bin/env perl
+
+############################# MNI Header #####################################
+#@NAME       :  volume_denoise.pl
+#@DESCRIPTION:  apply denoising to a volume
+#@COPYRIGHT  :
+#              Vladimir S. Fonov  2010
+#              Montreal Neurological Institute, McGill University.
+#              Permission to use, copy, modify, and distribute this
+#              software and its documentation for any purpose and without
+#              fee is hereby granted, provided that the above copyright
+#              notice appear in all copies.  The author and McGill University
+#              make no representations about the suitability of this
+#              software for any purpose.  It is provided "as is" without
+#              express or implied warranty.
+###############################################################################
+
+
 use strict;
 use File::Basename;
 use File::Temp qw/ tempfile tempdir /;

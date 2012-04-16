@@ -1,4 +1,20 @@
 #!/usr/bin/env perl
+
+############################# MNI Header #####################################
+#@NAME       :  assemble_bricks.pl
+#@DESCRIPTION:  create lego phantom image based on location of bricks
+#@COPYRIGHT  :
+#              Vladimir S. Fonov  April 2012
+#              Montreal Neurological Institute, McGill University.
+#              Permission to use, copy, modify, and distribute this
+#              software and its documentation for any purpose and without
+#              fee is hereby granted, provided that the above copyright
+#              notice appear in all copies.  The author and McGill University
+#              make no representations about the suitability of this
+#              software for any purpose.  It is provided "as is" without
+#              express or implied warranty.
+###############################################################################
+
 use strict;
 use File::Basename;
 use File::Temp qw/tempdir/;

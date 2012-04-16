@@ -1,19 +1,17 @@
-/*=========================================================================
-
-  Program:   Insight Segmentation & Registration Toolkit
-  Module:    $RCSfile: itkMeanSquaresImageToImageMetric.h,v $
-  Language:  C++
-  Date:      $Date: 2003/09/10 14:28:35 $
-  Version:   $Revision: 1.27 $
-
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+/* ----------------------------- MNI Header -----------------------------------
+@NAME       : 
+@DESCRIPTION: Mean Square difference metric, based on ITK class
+@COPYRIGHT  :
+              Copyright 2006 Vladimir Fonov, McConnell Brain Imaging Centre, 
+              Montreal Neurological Institute, McGill University.
+              Permission to use, copy, modify, and distribute this
+              software and its documentation for any purpose and without
+              fee is hereby granted, provided that the above copyright
+              notice appear in all copies.  The author and McGill University
+              make no representations about the suitability of this
+              software for any purpose.  It is provided "as is" without
+              express or implied warranty.
+---------------------------------------------------------------------------- */
 #ifndef __itkMeanSquaresImageToImageMetric_h
 #define __itkMeanSquaresImageToImageMetric_h
 

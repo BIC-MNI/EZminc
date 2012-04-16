@@ -1,5 +1,21 @@
 #! /usr/bin/env perl
 
+############################# MNI Header #####################################
+#@NAME       :  phantom_distortion_measure.pl
+#@DESCRIPTION:  script to calculate distortions based on the phantom scans
+#@COPYRIGHT  :
+#              Vladimir S. Fonov  February, 2009
+#              Montreal Neurological Institute, McGill University.
+#              Permission to use, copy, modify, and distribute this
+#              software and its documentation for any purpose and without
+#              fee is hereby granted, provided that the above copyright
+#              notice appear in all copies.  The author and McGill University
+#              make no representations about the suitability of this
+#              software for any purpose.  It is provided "as is" without
+#              express or implied warranty.
+###############################################################################
+
+
 use strict; #become stricter
 
 use File::Basename;            # for function basename
