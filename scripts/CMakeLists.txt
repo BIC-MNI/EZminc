@@ -1,6 +1,7 @@
 
 INSTALL(PROGRAMS 
         make_face.pl
+        volume_denoise.pl
         deface_minipipe.pl
         make_random_grid.pl
         deface_volume.pl

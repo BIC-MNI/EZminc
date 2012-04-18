@@ -44,10 +44,6 @@ IF(FFTW3F_FOUND AND GSL_FOUND)
   INSTALL(TARGETS 
         noise_estimate sharpness_estimate
         RUNTIME DESTINATION bin )
-
-  INSTALL(PROGRAMS 
-        volume_denoise.pl
-        DESTINATION bin )
 ENDIF(FFTW3F_FOUND AND GSL_FOUND)
 
 
