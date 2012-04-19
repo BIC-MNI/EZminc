@@ -1,0 +1,316 @@
+#! /usr/bin/env perl
+#
+# Take a stab at averaging a number of xfms using
+# Matrix logs and exponents (currently forks Octave)
+#
+# Andrew Janke - rotor@cmr.uq.edu.au
+# Center for Magnetic Resonance
+# The University of Queensland
+# http://www.cmr.uq.edu.au/~rotor
+#
+# Copyright Andrew Janke, The University of Queensland.
+# Permission to use, copy, modify, and distribute this software and its
+# documentation for any purpose and without fee is hereby granted,
+# provided that the above copyright notice appear in all copies.  The
+# author and the University of Queensland make no representations about the
+# suitability of this software for any purpose.  It is provided "as is"
+# without express or implied warranty.
+# 
+# Fri Mar 29 20:37:10 EST 2002 - initial version
+# Thu Apr 17 09:56:29 EST 2003 - cleaned up for addition to CVS
+
+# this bit works I just have to add some code to check for equal linear components
+# Or get _REAL_ clever and resample the nonlinear grids by the average transform
+# minus their original transform....  both are possible but I can bet which one
+# I'll do...... :)
+
+$| = 0;
+
+use strict;
+use warnings "all";
+use Getopt::Tabular;
+use File::Basename;
+use File::Temp qw/ tempdir /;
+
+# constant for max diff allowed
+sub max_xfm_diff{return 0.00005;}
+
+# identity matrix
+my(@ident) = (1, 0, 0, 0, 
+              0, 1, 0, 0,
+              0, 0, 1, 0);
+
+my($Help, $Usage, $me, @opt_table, $tmpdir, $history, %opt);
+my(@args, $args, @in_xfms, $out_xfm);
+
+# Argument variables and table
+$me = &basename($0);
+%opt = (
+   'verbose' => 0,
+   'clobber' => 0,
+   'fake' => 0,
+   'avg_linear' => 1,
+   'avg_nonlinear' => 1,
+    );
+
+$Help = <<HELP;
+| $me is designed to average a number of MINC .xfm files.
+| This is done via Matrix logs and exponents (currently forks octave)
+|
+|    As affine transformations are in the 
+|    Lie group of matrices, the premise is:
+|       average(t1,..,tn) = mexp[ [mlog(t1) + .. + mlog(tn)] / n ]
+|
+|    In MATLAB/Octave speak this translates to:
+|       AVG = expm((logm(t1) + ... + logm(tn)) / n)
+|
+| Input xfm files may be either linear or a series of non-linear
+| grid transforms, but not a mix of the two.  In addition, if a series
+| of grid transformations are input, their linear components MUST 
+| be identical.
+|
+| I am indebted to Dr Paul Thompson of UCLA for his 
+| help in the maths of this. MINC is a file format
+| from the MNI: http://www.bic.mni.mcgill.ca/software
+|
+| Problems or comments should be sent to: rotor\@cmr.uq.edu.au
+HELP
+
+$Usage = "Usage: $me [options] <in1.xfm> [<in2.xfm> [...]] <out.xfm>\n".
+         "       $me -help to list options\n\n";
+
+@opt_table = (
+   ["-verbose", "boolean", 0, \$opt{'verbose'},
+      "be verbose"],
+   ["-clobber", "boolean", 0, \$opt{'clobber'},
+      "clobber existing files"],
+   ["-fake", "boolean", 0, \$opt{fake},
+      "do a dry run, (echo cmds only)" ],
+   ["-avg_linear|-ignore_linear", "boolean", 0, \$opt{avg_linear},
+      "average the linear part" ],
+   ["-avg_nonlinear|-ignore_nonlinear", "boolean", 0, \$opt{avg_nonlinear},
+      "average the non-linear part" ],
+   );
+
+# get history string
+chomp($history = `date`);
+$history .= '>>>> ' . join(' ', $me, @ARGV);
+
+# check arguments
+&Getopt::Tabular::SetHelp($Help, $Usage);
+&GetOptions (\@opt_table, \@ARGV) || exit 1;
+die $Usage if ($#ARGV < 1);
+$out_xfm = pop(@ARGV);
+@in_xfms = @ARGV;
+
+# make tmpdir
+$tmpdir = &tempdir( "$me-XXXXXXXX", TMPDIR => 1, CLEANUP => 1 );
+
+# check for the output xfm
+if(-e $out_xfm && !$opt{'clobber'}){ 
+   die "$me: $out_xfm exists! use -clobber to overwrite\n\n"; 
+   }
+
+# parse the input transforms
+open(SCRIPT, ">$tmpdir/script.m");
+my(@first_xfm, $filec, $xfm_file, @varnames, @nl_xfms, 
+   @arr, $d, @dump, $c, $i, $prefix);
+
+$filec = 0;
+foreach $xfm_file (@in_xfms){
+   
+   # check for the xfm
+   if(!-e $xfm_file){ 
+      die "$me: Couldn't find $xfm_file\n"; 
+      }
+   
+   if($opt{'verbose'}){
+      print STDOUT "Parsing $xfm_file\n";
+      }
+   
+   $c = 0;
+   @dump={};
+   open XFM,"<$xfm_file" or die;
+   while(<XFM>)
+   {
+     push @dump,$_;
+     die "XFM file is probably bad\n" if $#dump>100;
+   }
+   close XFM;
+   #@dump = `cat $xfm_file`;
+   $varnames[$filec] = sprintf("A%03d", $filec);
+   
+   # find and read in the linear tranformation
+   while($dump[$c] !~ /Linear\_Transform\ \=/){
+      $c++;
+      }
+   $c++;
+
+   # get the transformation matrix
+   for($i = 0; $i<3; $i++, $c++){
+      chomp($dump[$c]);
+      $dump[$c] =~ s/\;$//;
+      ($arr[($i*4)+0],
+       $arr[($i*4)+1],
+       $arr[($i*4)+2],
+       $arr[($i*4)+3]) = split(' ', $dump[$c], 4);
+      }
+   
+   # set to identity if not averaging the linear part
+   if(!$opt{avg_linear}){
+      @arr = @ident;
+      }
+   
+   # set up the first_xfm for later comparisons
+   @first_xfm = @arr if ($filec == 0);
+   
+   # Get the nonlinear part if required
+   if(defined($dump[$c]) && $opt{avg_nonlinear}){
+      print STDOUT "Getting non-linear part\n" if $opt{verbose};
+      
+      # find and read in non-linear transform
+      while($dump[$c] !~ s/Displacement\_Volume\ \=\ //){
+         $c++;
+         }
+      chomp($nl_xfms[$filec] = $dump[$c]);
+      $nl_xfms[$filec] =~ s/\;$//;
+      
+      # add the xfm prefix
+      chomp($prefix = `dirname $xfm_file`);
+      $nl_xfms[$filec] = "$prefix/$nl_xfms[$filec]"; 
+
+      # check that the matricies are co-linear for non-linear averaging
+      if($opt{'verbose'}){
+         print STDOUT "Grid transform found: $nl_xfms[$filec]\n" . 
+                      " Checking linear component.\n";
+         }
+      for($i = 0; $i<12; $i++){
+         if(abs($arr[$i] - $first_xfm[$i]) > &max_xfm_diff){
+            die "$me: Linear part of $xfm_file differs from $in_xfms[0]\n";
+            }
+         }
+      }
+   else{
+      $nl_xfms[$filec] = undef;
+      }
+   
+   # output the xfm to the octave script
+   print SCRIPT "$varnames[$filec] = [\n" .
+            "$arr[0]  $arr[1]  $arr[2]   $arr[3]\n" .
+            "$arr[4]  $arr[5]  $arr[6]   $arr[7]\n" .
+            "$arr[8]  $arr[9]  $arr[10]  $arr[11]\n" .
+            "0 0 0 1\n" .
+            "]\n";
+   
+   $filec++;
+   }
+
+# put in the formula and output function
+print SCRIPT 'AVG = expm((' . 
+         'logm(' . join(') + logm(', @varnames) . ')' .
+         ') / ' . ($#varnames+1) . ")\n" .
+         
+         # DODGY DODGY! - This should have no effect...
+         # but removes the imaginary part
+         "AVG = real(AVG)\n" .
+         
+         "save -ascii $tmpdir/dat AVG\n" .
+         
+         "quit\n";
+close(SCRIPT);
+
+# check for all linear or all non-linear xfms
+for($c=1; $c<=$#in_xfms; $c++){
+   # assume all are non-linear
+   if(defined($nl_xfms[0])){
+      if(!defined($nl_xfms[$c])){
+         die "$me: Input xfms must be all linear or all non-linear\n" .
+             "     $in_xfms[0] (non linear)  $in_xfms[$c] (linear)\n";
+         }
+      }
+   # assume all are linear
+   else{
+      if(defined($nl_xfms[$c])){
+         die "$me: Input xfms must be all linear or all non-linear\n" .
+             "     $in_xfms[0] (linear)  $in_xfms[$c] (non linear)\n";
+         }
+      }
+   }  
+
+# Do the averaging (linear or non-linear)
+if(!defined($nl_xfms[0])){
+   
+   # execute the octave script
+   if($opt{'verbose'}){
+      print STDOUT "Calling octave\n";
+      }
+   $args = "octave < $tmpdir/script.m";
+   
+   if($opt{'verbose'}){
+      $args .= "\n";
+      }
+   else{
+      $args .= " 1> /dev/null 2>&1\n";
+      }
+   &do_cmd($args);
+   
+   # get the result
+   @dump = ();
+   foreach (`grep -v \# $tmpdir/dat`){
+      chomp;
+      push(@dump, $_);
+      }
+   
+   # write the output xfm
+   open(XFM, ">$out_xfm");
+   print XFM "MNI Transform File\n" .
+             "%\n" .
+             "% Created by $me with a bit of help from octave\n" .
+             "%    http://www.octave.org/\n" .
+             "%\n" .
+             "% $history \n" .
+             "\n" .
+             "Transform_Type = Linear;\n" .
+             "Linear_Transform =\n" .
+             join("\n", @dump[0..2]) . ";\n";
+   close(XFM);
+   }
+
+# else we are doing a non-linear average
+else{
+   my($outfile, $outfile_base);
+   
+   # write the output xfm
+   $outfile = $out_xfm;
+   $outfile =~ s/\.(nlxfm|xfm)$/\_grid\_0\.mnc/;
+   chomp($outfile_base = `basename $outfile`);
+   
+   open(XFM, ">$out_xfm");
+   print XFM "MNI Transform File\n" .
+             "%\n" .
+             "% Created by $me\n" .
+             "%\n" .
+             "% $history \n" .
+             "\n" .
+             "Transform_Type = Linear;\n" .
+             "Linear_Transform =\n" .
+             "$arr[0]  $arr[1]  $arr[2]   $arr[3]\n" .
+             "$arr[4]  $arr[5]  $arr[6]   $arr[7]\n" .
+             "$arr[8]  $arr[9]  $arr[10]  $arr[11];\n" .
+             "\n" .
+             "Transform_Type = Grid_Transform;\n".
+             "Displacement_Volume = $outfile_base;\n";
+   close(XFM);
+   
+   # create the output grid_transform
+   &do_cmd('mincaverage', '-clobber', '-float', @nl_xfms, $outfile);
+   }
+
+
+
+sub do_cmd { 
+   print STDOUT "@_\n" if $opt{verbose};
+   if(!$opt{fake}){
+      system(@_) == 0 or die;
+      }
+   }

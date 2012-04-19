@@ -10,4 +10,9 @@ INSTALL(PROGRAMS
         bestlinreg_s 
         bestlinreg_s2 
         icc_mask.pl
+        uniformize_minc.pl
+        xfm_normalize.pl
+        xfmavg
+        lobe_segment.pl
+        lobes_to_volumes.pl
         DESTINATION bin )

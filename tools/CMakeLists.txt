@@ -90,8 +90,11 @@ ADD_EXECUTABLE( minc_rank
                 minc_rank.cpp )
 TARGET_LINK_LIBRARIES(minc_rank minc_image_proc ${EZMINC_LIBRARIES})
 
+ADD_EXECUTABLE( xfm2def xfm2def.c)
+TARGET_LINK_LIBRARIES(xfm2def ${VOLUME_IO_LIBRARIES} )
 
 INSTALL(TARGETS 
-        volume_dwt minc_downsample minc_nuyl minc_rank
+        volume_dwt minc_downsample minc_nuyl minc_rank xfm2def
         RUNTIME DESTINATION bin )
+
 
