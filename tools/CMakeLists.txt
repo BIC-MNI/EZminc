@@ -65,9 +65,13 @@ IF(ITK_FOUND)
 
   ADD_EXECUTABLE( itk_distance itk_distance.cpp)
   TARGET_LINK_LIBRARIES(itk_distance ITKIOMINC ${ITK_LIBRARIES})
-	
+
+  ADD_EXECUTABLE( itk_similarity itk_similarity.cpp )
+  TARGET_LINK_LIBRARIES(itk_similarity ITKIOMINC ${ITK_LIBRARIES})
+  
+  
   INSTALL(TARGETS 
-   resample_grid multiple_volume_similarity itk_distance
+   resample_grid multiple_volume_similarity itk_distance itk_similarity
    RUNTIME DESTINATION bin )
 
 ENDIF(ITK_FOUND)
