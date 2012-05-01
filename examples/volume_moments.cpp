@@ -14,7 +14,7 @@
 ---------------------------------------------------------------------------- */
 #include "itkMincImageIOFactory.h"
 #include "itkMincImageIO.h"
-#include "minc_helpers.h"
+#include "itkMincHelpers.h"
 #include <iostream>
 #include <getopt.h>
 #include <math.h>
