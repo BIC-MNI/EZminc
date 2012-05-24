@@ -67,7 +67,7 @@ void show_usage (const char * prog)
     << "--labels - assume that input data is discrete labels, will use Nearest-Neighbour interpolator"<<std::endl
     << "--byte  - store image in byte  voxels minc file"<<std::endl
     << "--short - store image in short voxels minc file"<<std::endl
-    << "--float - store image in float voxels minc file"<<std::endl
+    << "--float - store image in float voxels minc file"<<std::endl;
 }
 
 template<class T> void generate_uniform_sampling(T* flt, const Image3DBase* img,double step)
