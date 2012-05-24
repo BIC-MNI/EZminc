@@ -13,14 +13,6 @@ IF(ITK_FOUND)
                   itk_dti.cpp )
   TARGET_LINK_LIBRARIES( itk_dti ITKIOMINC ${ITK_LIBRARIES})
   
-  ADD_EXECUTABLE( itk_test
-                  itk_test.cpp )
-  TARGET_LINK_LIBRARIES( itk_test ITKIOMINC ${ITK_LIBRARIES})
-
-  INSTALL(TARGETS 
-          volume_moments
-          RUNTIME DESTINATION bin )
-  
   IF(BICPL_FOUND)
     INCLUDE_DIRECTORIES(${BICPL_INCLUDE_DIRS})  
     ADD_EXECUTABLE( object_intersect object_intersect.cpp )
