@@ -12,6 +12,10 @@ IF(ITK_FOUND)
   ADD_EXECUTABLE( itk_dti 
                   itk_dti.cpp )
   TARGET_LINK_LIBRARIES( itk_dti ITKIOMINC ${ITK_LIBRARIES})
+  
+  ADD_EXECUTABLE( itk_test
+                  itk_test.cpp )
+  TARGET_LINK_LIBRARIES( itk_test ITKIOMINC ${ITK_LIBRARIES})
 
   INSTALL(TARGETS 
           volume_moments

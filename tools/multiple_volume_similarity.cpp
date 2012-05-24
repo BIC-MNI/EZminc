@@ -49,6 +49,7 @@ void show_usage (const char * prog)
            <<"\"Generalized Overlap Measures for Evaluation and Validation in Medical Image Analysis \""
            <<" IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 25, NO. 11, NOVEMBER 2006"<<std::endl
            <<"http://dx.doi.org/10.1109/TMI.2006.880587"<<std::endl<<std::endl
+           <<"WARNING: Program will use a lot of memory , proportional to the number of classes"<<std::endl
            <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> ... <inputN.mnc>  "<<std::endl
            <<"[--verbose --mask <mask.mnc> --classes <n> --list <file.list> --majority <output> --overlap <output> --relabel map.txt]"<<std::endl;
 }

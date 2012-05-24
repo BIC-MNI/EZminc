@@ -171,9 +171,6 @@ int main(int argc,char **argv)
     
     if( verbose && !csv)
     {
-      //std::cout<<buffer1.size() << std::endl;
-      //std::cout<<buffer1.begin()<<" "<<buffer1.end()<<std::endl;
-
       std::cout<<"Volume 1 min="<<(int)f1.min()<<" max="<<(int)f1.max()<<" count="<<f1.count()<<std::endl;
       std::cout<<"Volume 2 min="<<(int)f2.min()<<" max="<<(int)f2.max()<<" count="<<f2.count()<<std::endl;
     }
@@ -182,7 +179,6 @@ int main(int argc,char **argv)
     unsigned char hi = std::max<unsigned char>(f1.max(), f2.max());
 
     if(low==0) low=1; //assume 0 is background
-
 
     for(unsigned char label=low; label<=hi; label++)
     {
