@@ -302,16 +302,12 @@ public:
     }
     // now let's force time to be fastes varying dimension to simplify using xdisp
     std::vector<std::string> dimorder;
-/*    for(int i=0;i<_rdr->dim_no();i++)
-    {
-      dimorder.push_back(_rdr->info()[i].name);
-    }*/
 
     dimorder.push_back(MItime); //fastest varying
     
-    dimorder.push_back(MIxspace);
-    dimorder.push_back(MIyspace);
     dimorder.push_back(MIzspace);
+    dimorder.push_back(MIyspace);
+    dimorder.push_back(MIxspace);
     
     itk::EncapsulateMetaData(dict,"dimorder", dimorder);
 

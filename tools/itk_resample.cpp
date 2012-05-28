@@ -135,8 +135,8 @@ int main (int argc, char **argv)
     {"short",   no_argument, &store_short, 1},
     {"byte",    no_argument, &store_byte,  1},
     
-		{0, 0, 0, 0}
-		};
+    {0, 0, 0, 0}
+    };
   
   for (;;) {
       /* getopt_long stores the option index here. */
