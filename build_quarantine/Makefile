@@ -170,7 +170,7 @@ output_dirs := $(BUILD_DIR)/src \
 NETCDF_VER       := 4.0.1
 HDF5_VER         := 1.8.7
 MINC_VER         := 2-1-12
-MINC_SIG         := 7644531
+MINC_SIG         := 825e91c
 BICPL_VER        := 1.4.6
 EBTKS_VER        := 1.6.4
 OOBICPL_VER      := 0.4.4
@@ -381,11 +381,11 @@ $(BUILD_DIR)/src/fltk-$(FLTK_VER) :  $(BUILD_DIR)/src/fltk-$(FLTK_VER)-source.ta
 	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
 
-$(BUILD_DIR)/src/vfonov-minc-$(MINC_SIG) : $(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz
+$(BUILD_DIR)/src/BIC-MNI-minc-$(MINC_SIG) : $(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz
 	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
 
-$(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_SIG) : $(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz
+$(BUILD_DIR)/src/BIC-MNI-EZminc-$(EZMINC_SIG) : $(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz
 	cd $(BUILD_DIR)/src && tar zxf  $<
 	touch $@
 
@@ -419,7 +419,7 @@ $(BUILD_DIR)/src/hdf5-$(HDF5_VER).tar.gz :
  -O $(BUILD_DIR)/src/hdf5-$(HDF5_VER).tar.gz
 
 $(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz : 
-	$(WGET) --no-check-certificate https://github.com/vfonov/minc/tarball/minc-$(MINC_VER) \
+	$(WGET) --no-check-certificate https://github.com/BIC-MNI/minc/tarball/minc-$(MINC_VER) \
 	-O $(BUILD_DIR)/src/minc-$(MINC_VER).tar.gz
 
 $(BUILD_DIR)/src/bicpl-$(BICPL_VER).tar.gz : 
@@ -515,7 +515,7 @@ $(BUILD_DIR)/src//pcre++-$(PCREPP_VER).tar.gz :
  -O $(BUILD_DIR)/src//pcre++-$(PCREPP_VER).tar.gz
 
 $(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz : 
-	$(WGET) --no-check-certificate https://github.com/vfonov/EZminc/tarball/ezminc-$(EZMINC_VER) \
+	$(WGET) --no-check-certificate https://github.com/BIC-MNI/EZminc/tarball/ezminc-$(EZMINC_VER) \
  -O $(BUILD_DIR)/src/ezminc-$(EZMINC_VER).tar.gz
 
 $(BUILD_DIR)/src/netpbm-$(NETPBM_VER).tar.gz : 
@@ -626,7 +626,7 @@ $(gsl) : $(BUILD_DIR)/src/gsl-$(GSL_VER)
 	make $(PARALLEL_BUILD) && \
 	make install
 
-$(minc) : $(BUILD_DIR)/src/vfonov-minc-$(MINC_SIG) $(netcdf) $(hdf5) $(cmake) $(itk)  
+$(minc) : $(BUILD_DIR)/src/BIC-MNI-minc-$(MINC_SIG) $(netcdf) $(hdf5) $(cmake) $(itk)  
 	cd $(BUILD_DIR)/src && \
 	rm -rf   build_minc && \
 	mkdir -p build_minc && \
@@ -642,7 +642,7 @@ $(minc) : $(BUILD_DIR)/src/vfonov-minc-$(MINC_SIG) $(netcdf) $(hdf5) $(cmake) $(
       -D CMAKE_INSTALL_PREFIX:PATH=$(INSTALL_DIR) \
       -D ITK_DIR:PATH=$(INSTALL_DIR)/lib/InsightToolkit \
       -D BUILD_TOOLS:BOOL=ON \
-      $(BUILD_DIR)/src/vfonov-minc-$(MINC_SIG) && \
+      $(BUILD_DIR)/src/BIC-MNI-minc-$(MINC_SIG) && \
 	make $(PARALLEL_BUILD) && \
 	make install && \
 	touch $(minc)	
@@ -932,7 +932,7 @@ $(vtk) : $(BUILD_DIR)/src/VTK
 	make $(PARALLEL_BUILD) && make install && \
 	touch $(vtk)
 
-$(ezminc) : $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_SIG) $(minc) $(itk) $(cmake) $(fftw) $(gsl)
+$(ezminc) : $(BUILD_DIR)/src/BIC-MNI-EZminc-$(EZMINC_SIG) $(minc) $(itk) $(cmake) $(fftw) $(gsl)
 	cd $(BUILD_DIR)/src && \
 	rm -rf   build_ezminc && \
 	mkdir -p build_ezminc && \
@@ -957,7 +957,7 @@ $(ezminc) : $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_SIG) $(minc) $(itk) $(cmake)
       -D BUILD_DISTORTION_CORRECTION:BOOL=ON \
       -D BUILD_MINCNLM:BOOL=ON \
       -D BUILD_TOOLS:BOOL=ON \
-      $(BUILD_DIR)/src/vfonov-EZminc-$(EZMINC_SIG) && \
+      $(BUILD_DIR)/src/BIC-MNI-EZminc-$(EZMINC_SIG) && \
 	make $(PARALLEL_BUILD) && \
 	make install && \
 	touch $(ezminc)
