@@ -35,6 +35,7 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
+#include <itkImageIOBase.h>
 
 #include "itkMincImageIOFactory.h"
 #include "itkMincImageIO.h"
@@ -46,6 +47,8 @@ typedef itk::Image<int,3>   Int3DImage;
 typedef itk::Image<short,3> Short3DImage;
 typedef itk::Image<unsigned char,3> Byte3DImage;
 
+typedef itk::ImageIOBase          IOBase;
+typedef itk::SmartPointer<IOBase> IOBasePointer;
 
 typedef itk::BSplineInterpolateImageFunction< Float3DImage, double, double >  InterpolatorType;
 typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NNInterpolatorType;
@@ -109,8 +112,9 @@ template<class T,class I> void generate_uniform_sampling(T* flt, const I* img,do
   flt->SetOutputSpacing(spc);
 }
 
-template<class Image,class ImageOut,class Interpolator> void resample_image(
-   const std::string& input_f,
+template<class Image,class ImageOut,class Interpolator> 
+void resample_image(
+   IOBase* base,  
    const std::string& output_f,
    const std::string& xfm_f,
    const std::string& like_f,
@@ -129,7 +133,9 @@ template<class Image,class ImageOut,class Interpolator> void resample_image(
   typename ImageReaderType::Pointer reader = ImageReaderType::New();
   
   //initializing the reader
-  reader->SetFileName(input_f.c_str());
+  reader->SetImageIO(base);
+  reader->SetFileName(base->GetFileName());
+  //reader->SetFileName(input_f.c_str());
   reader->Update();
   
   typename Image::Pointer in=reader->GetOutput();
@@ -147,8 +153,6 @@ template<class Image,class ImageOut,class Interpolator> void resample_image(
   }
 
   //creating the interpolator
-/*  InterpolatorType::Pointer interpolator = InterpolatorType::New();
-  interpolator->SetSplineOrder(order);*/
 
   filter->SetInterpolator( interpolator );
   filter->SetDefaultPixelValue( 0 );
@@ -292,22 +296,42 @@ int main (int argc, char **argv)
       order=0;
     
     itk::RegisterMincIO();
+    //try to figure out what we have got
+    IOBasePointer io = itk::ImageIOFactory::CreateImageIO(input_f.c_str(), itk::ImageIOFactory::ReadMode );
+    
+    if(!io)
+      throw itk::ExceptionObject("Unsupported image file type");
+    
+    io->SetFileName(input_f.c_str());
+    io->ReadImageInformation();
 
+    size_t nd = io->GetNumberOfDimensions();
+    size_t nc = io->GetNumberOfComponents();
+    itk::ImageIOBase::IOComponentType  ct = io->GetComponentType();
+    itk::ImageIOBase::IOComponentType  oct = ct;
+    
+    if(nc!=1) //not supported right now
+      throw itk::ExceptionObject("Currently only 1 component images are supported");
+    
+    if(nd!=3) //not supported right now
+      throw itk::ExceptionObject("Currently only 3D images are supported");
+
+    //std::cout<<"Image IO :"<<io<<std::endl;
     
     if(labels)
     {
       //creating the interpolator
       NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
       if(store_byte)
-        resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(input_f,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+        resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
       else if(store_short)
-        resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(input_f,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+        resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
       else
-        resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(input_f,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+        resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
     } else {
       InterpolatorType::Pointer interpolator = InterpolatorType::New();
       interpolator->SetSplineOrder(order);
-      resample_image<Float3DImage,Float3DImage,InterpolatorType>(input_f,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+      resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
     }
     free(history);
 
