@@ -25,6 +25,18 @@
 using namespace  std;
 using namespace  minc;
 
+//! a helper function for file reading
+template <class T> typename T::Pointer load_file(const char *file)
+{
+  typename itk::ImageFileReader<T>::Pointer reader = itk::ImageFileReader<T>::New();
+  
+  reader->SetFileName(file);
+  reader->Update();
+  
+  return reader->GetOutput();
+}
+
+
 void show_usage (const char *name)
 {
   std::cerr 
@@ -38,7 +50,6 @@ void show_usage (const char *name)
     << "--ccoeff Correlation coeffecient"<<endl
     << "--kappa Kappa measure of similarity (binary images)"<<endl;
 }
-typedef itk::MattesMutualInformationImageToImageMetric<image3d,image3d> MatesMetric;
 
 int main (int argc, char **argv)
 {
@@ -93,32 +104,39 @@ int main (int argc, char **argv)
   binary=(kappa==1);
 	try
   {
+    
     typedef itk::ImageMaskSpatialObject< 3 >   MaskType;
-    typedef itk::ImageToImageMetric< image3d, image3d> MetricBase;
-    typedef itk::ImageToImageMetric< mask3d, mask3d> BinaryMetricBase;
+    typedef float FloatVoxel;
+    typedef unsigned char BinaryVoxel;
+    typedef itk::Image<FloatVoxel, 3>          FloatImage;
+    typedef itk::Image<BinaryVoxel, 3>         BinaryImage;
+    
+    typedef itk::MattesMutualInformationImageToImageMetric<FloatImage,FloatImage> MatesMetric;
+    typedef itk::ImageToImageMetric< FloatImage, FloatImage> FloatMetricBase;
+    typedef itk::ImageToImageMetric< BinaryImage, BinaryImage>   BinaryMetricBase;
     
     if(binary) // treat input images as binary masks
     {
       BinaryMetricBase::Pointer metric;
       if(kappa) {
-        itk::KappaStatisticImageToImageMetric<mask3d,mask3d>::Pointer  
-            kmetric=itk::KappaStatisticImageToImageMetric<mask3d,mask3d>::New();
+        itk::KappaStatisticImageToImageMetric<BinaryImage,BinaryImage>::Pointer  
+            kmetric=itk::KappaStatisticImageToImageMetric<BinaryImage,BinaryImage>::New();
         kmetric->SetForegroundValue(1);
         metric=kmetric;
         
       }
       metric->ComputeGradientOff();
       
-      mask3d::Pointer img_src, img_trg;
-      img_src=load_minc<mask3d>(src.c_str());
-      img_trg=load_minc<mask3d>(target.c_str());
+      BinaryImage::Pointer img_src, img_trg;
+      img_src=load_file<BinaryImage>(src.c_str());
+      img_trg=load_file<BinaryImage>(target.c_str());
       
       MaskType::Pointer  src_mask_obj( MaskType::New()),
       trg_mask_obj( MaskType::New());
-      mask3d::Pointer    src_mask_img( mask3d::New() ),
-      trg_mask_img( mask3d::New() );
+      BinaryImage::Pointer    src_mask_img( BinaryImage::New() ),
+      trg_mask_img( BinaryImage::New() );
 
-      typedef itk::NearestNeighborInterpolateImageFunction< mask3d,double> NearestNeighborInterpolator;
+      typedef itk::NearestNeighborInterpolateImageFunction< BinaryImage,double> NearestNeighborInterpolator;
       typedef itk::AffineTransform<double,3> AffineTransform;
       
       AffineTransform::Pointer transform = AffineTransform::New();
@@ -128,14 +146,14 @@ int main (int argc, char **argv)
       
       if(!target_mask.empty())
       {
-        trg_mask_img=load_minc<mask3d>( target_mask.c_str());
+        trg_mask_img=load_file<BinaryImage>( target_mask.c_str());
         trg_mask_obj->SetImage( trg_mask_img );
         metric->SetFixedImageMask( trg_mask_obj );
       }
       
       if(!src_mask.empty())
       {
-        src_mask_img=load_minc<mask3d>( src_mask.c_str() );
+        src_mask_img=load_file<BinaryImage>( src_mask.c_str() );
         src_mask_obj->SetImage( src_mask_img );
         metric->SetMovingImageMask( src_mask_obj  );
       }
@@ -152,36 +170,36 @@ int main (int argc, char **argv)
       cout<<metric->GetValue(par)<<endl;
       
     } else {
-      MetricBase::Pointer metric;
+      FloatMetricBase::Pointer metric;
       if(ccoeff) {
-        metric=itk::CorrelationCoefficientHistogramImageToImageMetric<image3d,image3d>::New();
+        metric=itk::CorrelationCoefficientHistogramImageToImageMetric<FloatImage,FloatImage>::New();
       } else if(nmi) {
-        metric=itk::NormalizedMutualInformationHistogramImageToImageMetric<image3d,image3d>::New();
+        metric=itk::NormalizedMutualInformationHistogramImageToImageMetric<FloatImage,FloatImage>::New();
       } else if(msq) {
-        metric=itk::MeanSquaresImageToImageMetric<image3d,image3d>::New();
+        metric=itk::MeanSquaresImageToImageMetric<FloatImage,FloatImage>::New();
       } else if(mmi) {
-        MatesMetric::Pointer m=itk::MattesMutualInformationImageToImageMetric<image3d,image3d>::New();
+        MatesMetric::Pointer m=MatesMetric::New();
         m->SetUseAllPixels(true);
         m->SetNumberOfHistogramBins(50);
         
         metric=m;
       } else /* mi */{
-        metric=itk::MutualInformationHistogramImageToImageMetric<image3d,image3d>::New();
+        metric=itk::MutualInformationHistogramImageToImageMetric<FloatImage,FloatImage>::New();
       }
       metric->ComputeGradientOff();
       
-      image3d::Pointer img_src,img_trg;
+      FloatImage::Pointer img_src,img_trg;
                        
-      img_src=load_minc<image3d>(src.c_str());
-      img_trg=load_minc<image3d>(target.c_str());
+      img_src=load_file<FloatImage>(src.c_str());
+      img_trg=load_file<FloatImage>(target.c_str());
       
       
       MaskType::Pointer  src_mask_obj( MaskType::New()),
                          trg_mask_obj( MaskType::New());
-      mask3d::Pointer    src_mask_img( mask3d::New() ),
-                         trg_mask_img( mask3d::New() );
+      BinaryImage::Pointer    src_mask_img( BinaryImage::New() ),
+                         trg_mask_img( BinaryImage::New() );
 
-      typedef itk::NearestNeighborInterpolateImageFunction< image3d,double> NearestNeighborInterpolator;
+      typedef itk::NearestNeighborInterpolateImageFunction< FloatImage,double> NearestNeighborInterpolator;
       typedef itk::AffineTransform<double,3> AffineTransform;
       
       AffineTransform::Pointer transform = AffineTransform::New();
@@ -191,14 +209,14 @@ int main (int argc, char **argv)
       
       if(!target_mask.empty())
       {
-        trg_mask_img=load_minc<mask3d>( target_mask.c_str());
+        trg_mask_img=load_file<BinaryImage>( target_mask.c_str());
         trg_mask_obj->SetImage( trg_mask_img );
         metric->SetFixedImageMask( trg_mask_obj	);
       }
       
       if(!src_mask.empty())
       {
-        src_mask_img=load_minc<mask3d>( src_mask.c_str());
+        src_mask_img=load_file<BinaryImage>( src_mask.c_str());
         src_mask_obj->SetImage( src_mask_img );
         metric->SetMovingImageMask( src_mask_obj	);
       }
