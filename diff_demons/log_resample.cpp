@@ -38,6 +38,7 @@
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
 
+#include <itkImageIOBase.h>
 #include <itkMincImageIOFactory.h>
 #include <itkMincImageIO.h>
 #include <itkMincHelpers.h>
@@ -46,25 +47,24 @@
 typedef itk::Vector< double, 3 >    VectorType;
 typedef itk::Image< VectorType, 3 > VectorImageType;
 
-typedef itk::ImageBase<3>   Image3DBase;
-typedef itk::Image<float,3> Float3DImage;
-typedef itk::Image<int,3>   Int3DImage;
+typedef itk::ImageIOBase          IOBase;
+typedef itk::SmartPointer<IOBase> IOBasePointer;
+
+typedef itk::ImageBase<3>           Image3DBase;
+typedef itk::Image<float,3>         Float3DImage;
+typedef itk::Image<int,3>           Int3DImage;
+typedef itk::Image<short,3>         Short3DImage;
+typedef itk::Image<unsigned char,3> Byte3DImage;
 
 
 typedef itk::BSplineInterpolateImageFunction< Float3DImage, double, double >  InterpolatorType;
+typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NNInterpolatorType;
+
 typedef itk::ImageFileReader< VectorImageType >  VectorReaderType;
 
 typedef itk::ImageFileReader< Float3DImage > ReaderType;
 typedef itk::ImageFileWriter< Float3DImage > WriterType;
 typedef itk::ExponentialDeformationFieldImageFilter< VectorImageType, VectorImageType > ExponentiatorFilterType;
-typedef itk::WarpImageFilter < Float3DImage, Float3DImage, VectorImageType >  WarperType;
-
-
-typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NNInterpolatorType;
-typedef itk::ImageFileReader< Int3DImage > IntReaderType;
-typedef itk::ImageFileWriter< Int3DImage > IntWriterType;
-typedef itk::WarpImageFilter < Int3DImage, Int3DImage, VectorImageType >  IntWarperType;
-
 
 
 using namespace  std;
@@ -86,15 +86,15 @@ void show_usage (const char * prog)
     
 }
 
-template<class T> void generate_uniform_sampling(T* flt, const Image3DBase* img,double step)
+template<class T,class I> void generate_uniform_sampling(T* flt, const I* img,double step)
 {
   //obtain physical coordinats of all image corners
-  Image3DBase::RegionType r=img->GetLargestPossibleRegion();
+  typename I::RegionType r=img->GetLargestPossibleRegion();
   std::vector<double> corner[3];
   for(int i=0;i<8;i++)
   {
-    Image3DBase::IndexType idx;
-    Image3DBase::PointType c;
+    typename I::IndexType idx;
+    typename I::PointType c;
     idx[0]=r.GetIndex()[0]+r.GetSize()[0]*(i%2);
     idx[1]=r.GetIndex()[1]+r.GetSize()[1]*((i/2)%2);
     idx[2]=r.GetIndex()[2]+r.GetSize()[2]*((i/4)%2);
@@ -102,10 +102,10 @@ template<class T> void generate_uniform_sampling(T* flt, const Image3DBase* img,
     for(int j=0;j<3;j++)
       corner[j].push_back(c[j]);
   }
-  Image3DBase::IndexType start;
+  typename I::IndexType start;
   typename T::SizeType size;
   typename T::PointType org;
-  Image3DBase::SpacingType spc;
+  typename I::SpacingType spc;
   spc.Fill(step);
   for(int j=0;j<3;j++)
   {
@@ -122,6 +122,94 @@ template<class T> void generate_uniform_sampling(T* flt, const Image3DBase* img,
   flt->SetOutputOrigin(org);
   flt->SetOutputSpacing(spc);
 }
+
+
+template<class Image,class ImageOut,class Interpolator> 
+void resample_image(
+   IOBase* base,  
+   const std::string& output_f,
+   VectorImageType::Pointer input_def_field,
+   const std::string& like_f,
+   double uniformize,
+   const char* history,
+   bool store_float,
+   bool store_short,
+   bool store_byte,
+   Interpolator* interpolator)
+{
+
+  typedef itk::ImageFileReader< Image > ReaderType;
+  typedef itk::ImageFileWriter< ImageOut > WriterType;
+  typedef itk::WarpImageFilter < Image, ImageOut, VectorImageType >  WarperType;
+  
+  typename Image::Pointer in=0;
+  {
+    typename ReaderType::Pointer reader = ReaderType::New();
+    reader->SetImageIO(base);
+    reader->SetFileName(base->GetFileName());
+    reader->Update();
+    in=reader->GetOutput();
+    in->DisconnectPipeline();
+  }
+
+  //creating the interpolator
+  typename WarperType::Pointer filter = WarperType::New();
+
+  filter->SetInterpolator( interpolator );
+  filter->SetEdgePaddingValue( 0 );
+  filter->SetDeformationField(input_def_field);
+  filter->SetNumberOfThreads(1);
+  
+  if(!like_f.empty())
+  {
+    typename ReaderType::Pointer reader = ReaderType::New();
+    reader->SetFileName(like_f.c_str());
+    reader->Update();
+    if(uniformize!=0.0)
+    {
+      generate_uniform_sampling<WarperType,Image>(filter,reader->GetOutput(),uniformize);
+    } else {
+      filter->SetOutputParametersFromImage(reader->GetOutput());
+      filter->SetOutputDirection(reader->GetOutput()->GetDirection());
+    }
+  }
+  else
+  {
+    if(uniformize!=0.0)
+    {
+      generate_uniform_sampling<WarperType,Image>(filter,in,uniformize);
+    } else {
+      //we are using original sampling
+      filter->SetOutputParametersFromImage(in);
+      filter->SetOutputDirection(in->GetDirection());
+    }
+  }
+  filter->SetInput(in);
+  filter->Update();
+  //copy the metadate information, for some reason it is not preserved
+  //filter->GetOutput()->SetMetaDataDictionary(reader->GetOutput()->GetMetaDataDictionary());
+  typename ImageOut::Pointer out=filter->GetOutput();
+  minc::copy_metadata(out,in);
+  minc::append_history(out,history);
+  free((void*)history);
+  
+  //generic file writer
+  typename WriterType::Pointer writer = WriterType::New();
+  
+  if(store_float)
+  {
+    minc::set_minc_storage_type(out,NC_FLOAT,true);
+  } else if(store_short) {
+    minc::set_minc_storage_type(out,NC_SHORT,true);
+  } else if(store_byte) {
+    minc::set_minc_storage_type(out,NC_BYTE,false);
+  }
+  
+  writer->SetFileName(output_f.c_str());
+  writer->SetInput( out );
+  writer->Update();
+}
+
 
 
 int main (int argc, char **argv)
@@ -210,6 +298,25 @@ int main (int argc, char **argv)
     itk::RegisterMincIO();
 		
 		
+    IOBasePointer io = itk::ImageIOFactory::CreateImageIO(input_f.c_str(), itk::ImageIOFactory::ReadMode );
+    
+    if(!io)
+      throw itk::ExceptionObject("Unsupported image file type");
+    
+    io->SetFileName(input_f.c_str());
+    io->ReadImageInformation();
+
+    size_t nd = io->GetNumberOfDimensions();
+    size_t nc = io->GetNumberOfComponents();
+    itk::ImageIOBase::IOComponentType  ct = io->GetComponentType();
+    itk::ImageIOBase::IOComponentType  oct = ct;
+    
+    if(nc!=1) //not supported right now
+      throw itk::ExceptionObject("Currently only 1 component images are supported");
+    
+    if(nd!=3) //not supported right now
+      throw itk::ExceptionObject("Currently only 3D images are supported");
+    
 
 		VectorImageType::Pointer input_vector_field = 0;
 		VectorImageType::Pointer input_def_field = 0;
@@ -236,152 +343,26 @@ int main (int argc, char **argv)
 			input_def_field = exponentiator->GetOutput();
 			input_def_field->DisconnectPipeline();
 		}
-		
 
-
-    if(!labels)
+    if(labels)
     {
-      Float3DImage::Pointer in=0;
-      {
-        ReaderType::Pointer reader = ReaderType::New();
-        
-        //initializing the reader
-        reader->SetFileName(input_f.c_str());
-        reader->Update();
-        
-        in=reader->GetOutput();
-        in->DisconnectPipeline();
-      }
-
-      //creating the interpolator
-      WarperType::Pointer filter = WarperType::New();
-      InterpolatorType::Pointer interpolator = InterpolatorType::New();
-      interpolator->SetSplineOrder(order);
-      filter->SetInterpolator( interpolator );
-      filter->SetEdgePaddingValue( 0 );
-      filter->SetDeformationField(input_def_field);
-      filter->SetNumberOfThreads(1);
       
-      if(!like_f.empty())
-      {
-        itk::ImageFileReader<Float3DImage >::Pointer reader = itk::ImageFileReader<Float3DImage >::New();
-        reader->SetFileName(like_f.c_str());
-        reader->Update();
-        if(uniformize!=0.0)
-        {
-          generate_uniform_sampling<WarperType>(filter,reader->GetOutput(),uniformize);
-        } else {
-          filter->SetOutputParametersFromImage(reader->GetOutput());
-          filter->SetOutputDirection(reader->GetOutput()->GetDirection());
-        }
-      }
-      else
-      {
-        if(uniformize!=0.0)
-        {
-          generate_uniform_sampling<WarperType>(filter,in,uniformize);
-        } else {
-          //we are using original sampling
-          filter->SetOutputParametersFromImage(in);
-          filter->SetOutputDirection(in->GetDirection());
-        }
-      }
-      filter->SetInput(in);
-      filter->Update();
-      //copy the metadate information, for some reason it is not preserved
-      //filter->GetOutput()->SetMetaDataDictionary(reader->GetOutput()->GetMetaDataDictionary());
-      Float3DImage::Pointer out=filter->GetOutput();
-      minc::copy_metadata(out,in);
-      minc::append_history(out,history);
-      free(history);
-      
-      //generic file writer
-      WriterType::Pointer writer = WriterType::New();
-      
-      if(store_float)
-      {
-        minc::set_minc_storage_type(out,NC_FLOAT,true);
-      } else if(store_short) {
-        minc::set_minc_storage_type(out,NC_SHORT,true);
-      } else if(store_byte) {
-        minc::set_minc_storage_type(out,NC_BYTE,false);
-      }
-      
-      writer->SetFileName(output_f.c_str());
-      writer->SetInput( out );
-      writer->Update();
-    } else { //using discrete labels type
-      Int3DImage::Pointer in=0;
-      {
-        IntReaderType::Pointer reader = IntReaderType::New();
-        
-        //initializing the reader
-        reader->SetFileName(input_f.c_str());
-        reader->Update();
-        
-        in=reader->GetOutput();
-        in->DisconnectPipeline();
-      }
-
-      //creating the interpolator
-      IntWarperType::Pointer filter = IntWarperType::New();
-
       NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
       
-      filter->SetInterpolator( interpolator );
-      filter->SetEdgePaddingValue( 0 );
-      filter->SetDeformationField(input_def_field);
-      filter->SetNumberOfThreads(1);
-      
-      if(!like_f.empty())
-      {
-        itk::ImageFileReader<Int3DImage >::Pointer reader = itk::ImageFileReader<Int3DImage >::New();
-        reader->SetFileName(like_f.c_str());
-        reader->Update();
-        if(uniformize!=0.0)
-        {
-          generate_uniform_sampling<IntWarperType>(filter,reader->GetOutput(),uniformize);
-        } else {
-          filter->SetOutputParametersFromImage(reader->GetOutput());
-          filter->SetOutputDirection(reader->GetOutput()->GetDirection());
-        }
-      }
-      else
-      {
-        if(uniformize!=0.0)
-        {
-          generate_uniform_sampling<IntWarperType>(filter,in,uniformize);
-        } else {
-          //we are using original sampling
-          filter->SetOutputParametersFromImage(in);
-          filter->SetOutputDirection(in->GetDirection());
-        }
-      }
-      filter->SetInput(in);
-      filter->Update();
-      //copy the metadate information, for some reason it is not preserved
-      //filter->GetOutput()->SetMetaDataDictionary(reader->GetOutput()->GetMetaDataDictionary());
-      Int3DImage::Pointer out=filter->GetOutput();
-      minc::copy_metadata(out,in);
-      minc::append_history(out,history);
-      free(history);
-      
-      //generic file writer
-      IntWriterType::Pointer writer = IntWriterType::New();
-      
-      if(store_float)
-      {
-        minc::set_minc_storage_type(out,NC_FLOAT,true);
-      } else if(store_short) {
-        minc::set_minc_storage_type(out,NC_SHORT,true);
-      } else if(store_byte) {
-        minc::set_minc_storage_type(out,NC_BYTE,false);
-      }
-      
-      writer->SetFileName(output_f.c_str());
-      writer->SetInput( out );
-      writer->Update();
+       if(store_byte)
+         resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
+       else if(store_short)
+         resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
+       else
+          resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
+
+      //resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
+    } else { 
+      InterpolatorType::Pointer interpolator = InterpolatorType::New();
+      interpolator->SetSplineOrder(order);
+      resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
     }
+    
     return 0;
   } catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
@@ -393,5 +374,6 @@ int main (int argc, char **argv)
     std::cerr << err << std::endl;
     return 2;
   }
+  
   return 0;
 };
