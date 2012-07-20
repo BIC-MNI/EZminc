@@ -75,8 +75,17 @@ IF(ITK_FOUND)
   ADD_EXECUTABLE( itk_convert itk_convert.cpp )
   TARGET_LINK_LIBRARIES(itk_convert ITKIOMINC ${ITK_LIBRARIES})
   
+  ADD_EXECUTABLE( itk_morph
+               itk_morph.cpp )
+
+  TARGET_LINK_LIBRARIES( itk_morph  ITKIOMINC ${ITK_LIBRARIES})
+
+  ADD_EXECUTABLE( itk_g_morph
+             itk_g_morph.cpp )
+  TARGET_LINK_LIBRARIES( itk_g_morph  ITKIOMINC ${ITK_LIBRARIES} )
+
   INSTALL(TARGETS 
-   resample_grid multiple_volume_similarity itk_distance itk_similarity itk_resample  itk_convert
+   resample_grid multiple_volume_similarity itk_distance itk_similarity itk_resample  itk_convert itk_morph itk_g_morph
    RUNTIME DESTINATION bin )
 
 ENDIF(ITK_FOUND)
