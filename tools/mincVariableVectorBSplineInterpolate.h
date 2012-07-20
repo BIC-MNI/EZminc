@@ -1,7 +1,7 @@
-#ifndef __mincVectorBSplineInterpolate_h
-#define __mincVectorBSplineInterpolate_h
+#ifndef __mincVariableVectorBSplineInterpolate_h
+#define __mincVariableVectorBSplineInterpolate_h
 
-#include <itkVectorInterpolateImageFunction.h>
+#include "mincVariableVectorInterpolateImageFunction.h"
 #include <itkNthElementImageAdaptor.h>
 #include <itkBSplineInterpolateImageFunction.h>
 
@@ -9,26 +9,25 @@ namespace minc
 {
 
   /**
-  * \class mincVectorBSplineInterpolate
-  * \brief Linearly interpolate or NN extrapolate a vector image at
-  * specified positions.
+  * \class mincVariableVectorBSplineInterpolate
+  * \brief Use B-Spline interpolation to interpolate VectorImage
   *
   *
   * \author Vladimir S. Fonov
   *
-  * \warning This function work only for Vector images. For
+  * \warning This function work only for VectorImage 
   *
   * \ingroup ImageFunctions ImageInterpolators
   *
   */
   template <class TInputImage, class TCoordRep = double>
-  class mincVectorBSplineInterpolate :
-      public  itk::VectorInterpolateImageFunction<TInputImage,TCoordRep>
+  class mincVariableVectorBSplineInterpolate :
+      public  VariableVectorInterpolateImageFunction<TInputImage,TCoordRep>
   {
   public:
     /** Standard class typedefs. */
-    typedef mincVectorBSplineInterpolate Self;
-    typedef itk::VectorInterpolateImageFunction<TInputImage,TCoordRep>     Superclass;
+    typedef mincVariableVectorBSplineInterpolate Self;
+    typedef itk::ImageFunction<TInputImage,typename itk::NumericTraits<typename TInputImage::PixelType>::RealType, TCoordRep >     Superclass;
     typedef itk::SmartPointer<Self>                                        Pointer;
     typedef itk::SmartPointer<const Self>                                  ConstPointer;
   
@@ -36,20 +35,15 @@ namespace minc
     itkNewMacro(Self);
   
     /** Run-time type information (and related methods). */
-    itkTypeMacro(mincVectorBSplineInterpolate,
+    itkTypeMacro(mincVariableVectorBSplineInterpolate,
                  itk::VectorInterpolateImageFunction);
   
     /** InputImageType typedef support. */
     typedef typename Superclass::InputImageType                           InputImageType;
-    typedef typename Superclass::PixelType                                PixelType;
-    typedef typename Superclass::ValueType                                ValueType;
-    typedef typename Superclass::RealType                                 RealType;
-  
+    typedef typename InputImageType::PixelType                            PixelType;
+    typedef typename PixelType::ValueType                                 ValueType;
+    typedef typename itk::NumericTraits<ValueType>::RealType              RealType;
     typedef typename Superclass::PointType                                PointType;
-  
-    /** Grab the vector dimension from the superclass. */
-    itkStaticConstMacro(Dimension, unsigned int,
-                        Superclass::Dimension);
   
     /** Dimension underlying input image. */
     itkStaticConstMacro(ImageDimension, unsigned int,Superclass::ImageDimension);
@@ -82,6 +76,18 @@ namespace minc
     virtual bool IsInsideBuffer( const ContinuousIndexType & ) const
     {
       return true;
+    }
+    
+    /** Returns the interpolated image intensity at a 
+    * specified point position. No bounds checking is done.
+    * The point is assume to lie within the image buffer.
+    * ImageFunction::IsInsideBuffer() can be used to check bounds before
+    * calling the method. */
+    virtual OutputType Evaluate( const PointType& point ) const
+    {
+      ContinuousIndexType index;
+      this->GetInputImage()->TransformPhysicalPointToContinuousIndex( point, index );
+      return ( this->EvaluateAtContinuousIndex( index ) );
     }
   
     /** Evaluate the function at a ContinuousIndex position
@@ -143,25 +149,26 @@ namespace minc
     
     
   protected:
-    mincVectorBSplineInterpolate();
-    virtual ~mincVectorBSplineInterpolate() {}
+    mincVariableVectorBSplineInterpolate();
+    virtual ~mincVariableVectorBSplineInterpolate() {}
   
     virtual void PrintSelf(std::ostream& os, itk::Indent indent) const;
   
   private:
-    mincVectorBSplineInterpolate(const Self&); //purposely not implemented
+    mincVariableVectorBSplineInterpolate(const Self&); //purposely not implemented
     void operator=(const Self&); //purposely not implemented
   
     /** Number of neighbors used in the interpolation */
     unsigned long  m_Order;
-    ImageAdaptorPointer _adaptor[Dimension];
-    InterpolatorPointer _interpolator[Dimension];
+    
+    std::vector<ImageAdaptorPointer> _adaptor;
+    std::vector<InterpolatorPointer> _interpolator;
   };
 
 } // end namespace itk
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "mincVectorBSplineInterpolate.txx"
+#include "mincVariableVectorBSplineInterpolate.txx"
 #endif
 
 #endif

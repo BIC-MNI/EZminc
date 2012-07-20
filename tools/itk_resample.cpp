@@ -26,6 +26,10 @@
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkBSplineInterpolateImageFunction.h>
 #include <itkMincGeneralTransform.h>
+#include <itkVectorImage.h>
+
+#include "mincVariableVectorResampleImageFilter.h"
+#include "mincVariableVectorBSplineInterpolate.h"
 
 #include <unistd.h>
 #include <getopt.h>
@@ -46,15 +50,21 @@ typedef itk::Image<float,3> Float3DImage;
 typedef itk::Image<int,3>   Int3DImage;
 typedef itk::Image<short,3> Short3DImage;
 typedef itk::Image<unsigned char,3> Byte3DImage;
+//typedef itk::Image<itk::Vector<float,3>, 3>  Vector3DImage;
+typedef itk::VectorImage<float, 3>  Vector3DImage;
+
 
 typedef itk::ImageIOBase          IOBase;
 typedef itk::SmartPointer<IOBase> IOBasePointer;
 
 typedef itk::BSplineInterpolateImageFunction< Float3DImage, double, double >  InterpolatorType;
 typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NNInterpolatorType;
+typedef minc::VariableVectorBSplineInterpolate<Vector3DImage,double>      VectorInterpolatorType;
 
 typedef itk::ResampleImageFilter<Float3DImage, Float3DImage> FloatFilterType;
-typedef itk::ResampleImageFilter<Int3DImage, Int3DImage> IntFilterType;
+typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
+typedef itk::VariableVectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
+
 typedef minc::XfmTransform<double,3,3>  TransformType;
 
 using namespace  std;
@@ -214,6 +224,113 @@ void resample_image(
   writer->Update();
 }
 
+template<class Image,class ImageOut,class Interpolator> 
+void resample_vector_image(
+   IOBase* base,  
+   const std::string& output_f,
+   const std::string& xfm_f,
+   const std::string& like_f,
+   bool invert,
+   double uniformize,
+   const char* history,
+   bool store_float,
+   bool store_short,
+   bool store_byte,
+   Interpolator* interpolator)
+{
+  typedef typename itk::VariableVectorResampleImageFilter<Image, ImageOut> ResampleFilterType;
+  typedef typename itk::ImageFileReader<Image >   ImageReaderType;
+  typedef typename itk::ImageFileWriter<ImageOut >   ImageWriterType;
+  
+  typename ImageReaderType::Pointer reader = ImageReaderType::New();
+  
+  //initializing the reader
+  reader->SetImageIO(base);
+  reader->SetFileName(base->GetFileName());
+  //reader->SetFileName(input_f.c_str());
+  reader->Update();
+  
+  typename Image::Pointer in=reader->GetOutput();
+
+  typename ResampleFilterType::Pointer filter  = ResampleFilterType::New();
+  
+  //creating coordinate transformation objects
+  TransformType::Pointer transform = TransformType::New();
+  if(!xfm_f.empty())
+  {
+    //reading a minc style xfm file
+    transform->OpenXfm(xfm_f.c_str());
+    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    filter->SetTransform( transform );
+  }
+
+  //creating the interpolator
+
+  filter->SetInterpolator( interpolator );
+  //filter->SetDefaultPixelValue( 0 );
+  
+  //this is for processing using batch system
+  filter->SetNumberOfThreads(1);
+  
+  typename Image::Pointer like=0;
+  if(!like_f.empty())
+  {
+    typename ImageReaderType::Pointer reader = ImageReaderType::New();
+    reader->SetFileName(like_f.c_str());
+    reader->Update();
+    if(uniformize!=0.0)
+    {
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),uniformize);
+    } else {
+      filter->SetOutputSpacing(reader->GetOutput()->GetSpacing());
+      filter->SetOutputOrigin(reader->GetOutput()->GetOrigin());
+      filter->SetOutputDirection(reader->GetOutput()->GetDirection());
+    }
+    like=reader->GetOutput();
+    like->DisconnectPipeline();
+  }
+  else
+  {
+    if(uniformize!=0.0)
+    {
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,uniformize);
+    } else {
+      //we are using original sampling
+      filter->SetOutputSpacing(in->GetSpacing());
+      filter->SetOutputOrigin(in->GetOrigin());
+      filter->SetOutputDirection(in->GetDirection());
+    }
+  }
+  filter->SetInput(in);
+  filter->Update();
+  typename ImageOut::Pointer out=filter->GetOutput();
+  minc::copy_metadata(out,in);
+  minc::append_history(out,history);
+  
+  //correct dimension order
+  if(like.IsNotNull())
+    minc::copy_dimorder(out,like);
+  
+  //generic file writer
+  typename ImageWriterType::Pointer writer = ImageWriterType::New();
+  writer->SetFileName(output_f.c_str());
+  
+  if(store_float)
+  {
+    minc::set_minc_storage_type(out,NC_FLOAT,true);
+  } else if(store_short) {
+    minc::set_minc_storage_type(out,NC_SHORT,true);
+  } else if(store_byte) {
+    minc::set_minc_storage_type(out,NC_BYTE,false);
+  }
+  
+  writer->SetInput( out );
+  writer->Update();
+}
+
+
+
+
 int main (int argc, char **argv)
 {
   int store_float=0;
@@ -310,33 +427,42 @@ int main (int argc, char **argv)
     itk::ImageIOBase::IOComponentType  ct = io->GetComponentType();
     itk::ImageIOBase::IOComponentType  oct = ct;
     
-    if(nc!=1) //not supported right now
-      throw itk::ExceptionObject("Currently only 1 component images are supported");
-    
-    if(nd!=3) //not supported right now
-      throw itk::ExceptionObject("Currently only 3D images are supported");
+//     if(nc!=1) //not supported right now
+//       throw itk::ExceptionObject("Currently only 1 component images are supported");
+//     
+//     if(nd!=3) //not supported right now
+//       throw itk::ExceptionObject("Currently only 3D images are supported");
 
     //std::cout<<"Image IO :"<<io<<std::endl;
-    
-    if(labels)
+
+    if( nc==1 && nd==3 ) //3D image, simple case
     {
-      //creating the interpolator
-      NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
-      if(store_byte)
-        resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
-      else if(store_short)
-        resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
-      else
-        resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+      if(labels)
+      {
+        //creating the interpolator
+        NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
+        if(store_byte)
+          resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+        else if(store_short)
+          resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+        else
+          resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+      } else {
+        InterpolatorType::Pointer interpolator = InterpolatorType::New();
+        interpolator->SetSplineOrder(order);
+        resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+      }
+     } else if( nd==3 && nc==3 )  { // deal with this case as vector image 
+       VectorInterpolatorType::Pointer interpolator = VectorInterpolatorType::New();
+       interpolator->SetSplineOrder(order);
+       resample_vector_image<Vector3DImage,Vector3DImage,VectorInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
     } else {
-      InterpolatorType::Pointer interpolator = InterpolatorType::New();
-      interpolator->SetSplineOrder(order);
-      resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+      throw itk::ExceptionObject("This number of dimensions is not supported currently");
     }
     free(history);
 
-		return 0;
-	} catch (const minc::generic_error & err) {
+    return 0;
+  } catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;
   }
