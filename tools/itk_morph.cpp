@@ -305,13 +305,6 @@ ImageFilter::Pointer construct(mask3d::Pointer input, const std::string& par)
         std::cerr<<"Can't decode:"<<par.c_str()<<std::endl;
     }
   }
-  //catch (pcrepp::Pcre::exception &E) {
-   /*
-    * the Pcre class has thrown an exception
-    */
-   //cerr << "Pcre++ error: " << E.what() << endl;
-  //}
-  
   return ImageFilter::Pointer();
 }
 
@@ -382,23 +375,32 @@ int main (int argc, char **argv)
   
 	try
   {
+    itk::RegisterMincIO();
+
     mask3d::Pointer mask_img( mask3d::New() ),
                     output_img;
     if(bimodal)
     {
-      image3d::Pointer img(image3d::New());
-      load_minc(input.c_str(), img );
+      itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
+      reader->SetFileName(input.c_str());
+      reader->Update();
+      minc::image3d::Pointer img=reader->GetOutput();
+      
       OtsuThresholdFilter::Pointer flt=OtsuThresholdFilter::New();
       //flt->SetLowerThreshold(threshold);
       flt->SetOutsideValue( 1 );
       flt->SetInsideValue( 0 );
       flt->SetInput(img);
       flt->Update();
-      if(verbose) cout<<"BimodalT threshold:"<<flt->GetThreshold()<<endl;
+      if(verbose) 
+        cout<<"BimodalT threshold:"<<flt->GetThreshold()<<endl;
       mask_img=flt->GetOutput();
     } else if(threshold!=1e10) {
-      image3d::Pointer img(image3d::New());
-      load_minc(input.c_str(), img );
+      itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
+      reader->SetFileName(input.c_str());
+      reader->Update();
+      minc::image3d::Pointer img=reader->GetOutput();
+      
       BinaryThresholdFilter::Pointer flt=BinaryThresholdFilter::New();
       flt->SetLowerThreshold(threshold);
       flt->SetInput(img);
@@ -407,7 +409,10 @@ int main (int argc, char **argv)
       flt->Update();
       mask_img=flt->GetOutput();
     } else {
-      load_minc(input.c_str(), mask_img );
+      itk::ImageFileReader<minc::mask3d >::Pointer reader = itk::ImageFileReader<minc::mask3d >::New();
+      reader->SetFileName(input.c_str());
+      reader->Update();
+      mask_img=reader->GetOutput();
       normalize_mask(mask_img);
     }
     //parse through operations
@@ -453,7 +458,13 @@ int main (int argc, char **argv)
     minc::append_history(output_img,history);
     free(history);
     
-    save_minc<mask3d>(output.c_str(), output_img );
+    itk::ImageFileWriter< minc::mask3d >::Pointer writer = itk::ImageFileWriter<minc::mask3d >::New();
+    writer->SetFileName(output.c_str());
+    
+    writer->SetInput( output_img );
+    writer->UseInputMetaDataDictionaryOn();
+    
+    writer->Update();
 
     
 	} catch (const minc::generic_error & err) {

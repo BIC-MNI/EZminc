@@ -217,16 +217,16 @@ int main (int argc, char **argv)
   
 	try
   {
-    
-    itk::ObjectFactoryBase::RegisterFactory(itk::MincImageIOFactory::New());
-    itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();    
+    itk::RegisterMincIO();
+
+    itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
     
     image3d::Pointer output_img;
     
     reader->SetFileName(input.c_str());
     reader->Update();
     
-    minc::image3d::Pointer img=reader->GetOutput();    
+    minc::image3d::Pointer img=reader->GetOutput();
     
     //parse through operations
     if(operations.empty())
