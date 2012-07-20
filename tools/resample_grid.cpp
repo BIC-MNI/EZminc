@@ -20,7 +20,6 @@
 #include <getopt.h>
 //#include "data_proc.h"
 
-//#include <itkVectorLinearInterpolateImageFunction.h>
 #include "mincVectorBSplineInterpolate.h"
 #include <vnl/vnl_matrix_fixed.h>
 #include <vnl/vnl_vector_fixed.h>

@@ -42,14 +42,10 @@ template <class TInputImage, class TCoordRep = double>
 class ITK_EXPORT VariableVectorInterpolateImageFunction :
   public ImageFunction<
     TInputImage,
-    typename NumericTraits<typename TInputImage::PixelType>::RealType,
+    typename TInputImage::PixelType,
     TCoordRep >
 {
 public:
-  /** Extract the vector dimension from the pixel template parameter. */
-  itkStaticConstMacro(Dimension, unsigned int,
-                      TInputImage::PixelType::Dimension);
-  
   /** Dimension underlying input image. */
   itkStaticConstMacro(ImageDimension, unsigned int,
                       TInputImage::ImageDimension);
@@ -57,8 +53,9 @@ public:
   /** Standard class typedefs. */
   typedef VariableVectorInterpolateImageFunction Self;
   typedef ImageFunction<TInputImage,
-    typename NumericTraits<typename TInputImage::PixelType>::RealType,
+    typename TInputImage::PixelType,
     TCoordRep >                          Superclass;
+    
   typedef SmartPointer<Self>             Pointer;
   typedef SmartPointer<const Self>       ConstPointer;
   
@@ -69,7 +66,7 @@ public:
   typedef typename Superclass::InputImageType          InputImageType;
   typedef typename InputImageType::PixelType           PixelType;
   typedef typename PixelType::ValueType                ValueType;
-  typedef typename NumericTraits<ValueType>::RealType  RealType;
+  typedef typename TInputImage::InternalPixelType      RealType;
 
   /** Point typedef support. */
   typedef typename Superclass::PointType PointType;
@@ -135,6 +132,11 @@ public:
       output[k] = static_cast<double>( input[k] );
     }
     return ( output );
+  }
+  
+  unsigned int GetNumberOfComponentsPerPixel(void) const 
+  {
+    return m_Dimension;
   }
 
 protected:

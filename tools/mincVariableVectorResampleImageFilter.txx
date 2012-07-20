@@ -166,7 +166,7 @@ VariableVectorResampleImageFilter<TInputImage,TOutputImage,TInterpolatorPrecisio
   typedef ContinuousIndex<TInterpolatorPrecisionType, ImageDimension> ContinuousIndexType;
   ContinuousIndexType inputIndex;
 
-  const unsigned int numberOfComponents = PixelType::GetNumberOfComponents();
+  unsigned int numberOfComponents = inputPtr->GetNumberOfComponentsPerPixel();
 
   // Support for progress methods/callbacks
   ProgressReporter progress(this, threadId, outputRegionForThread.GetNumberOfPixels());

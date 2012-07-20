@@ -2,7 +2,7 @@
 #define __mincVariableVectorBSplineInterpolate_h
 
 #include "mincVariableVectorInterpolateImageFunction.h"
-#include <itkNthElementImageAdaptor.h>
+#include <itkVectorImageToImageAdaptor.h>
 #include <itkBSplineInterpolateImageFunction.h>
 
 namespace minc
@@ -21,13 +21,13 @@ namespace minc
   *
   */
   template <class TInputImage, class TCoordRep = double>
-  class mincVariableVectorBSplineInterpolate :
-      public  VariableVectorInterpolateImageFunction<TInputImage,TCoordRep>
+  class VariableVectorBSplineInterpolate :
+      public  itk::VariableVectorInterpolateImageFunction<TInputImage,TCoordRep>
   {
   public:
     /** Standard class typedefs. */
-    typedef mincVariableVectorBSplineInterpolate Self;
-    typedef itk::ImageFunction<TInputImage,typename itk::NumericTraits<typename TInputImage::PixelType>::RealType, TCoordRep >     Superclass;
+    typedef VariableVectorBSplineInterpolate Self;
+    typedef itk::VariableVectorInterpolateImageFunction<TInputImage,TCoordRep>  Superclass;
     typedef itk::SmartPointer<Self>                                        Pointer;
     typedef itk::SmartPointer<const Self>                                  ConstPointer;
   
@@ -35,15 +35,15 @@ namespace minc
     itkNewMacro(Self);
   
     /** Run-time type information (and related methods). */
-    itkTypeMacro(mincVariableVectorBSplineInterpolate,
+    itkTypeMacro(VariableVectorBSplineInterpolate,
                  itk::VectorInterpolateImageFunction);
   
     /** InputImageType typedef support. */
-    typedef typename Superclass::InputImageType                           InputImageType;
-    typedef typename InputImageType::PixelType                            PixelType;
-    typedef typename PixelType::ValueType                                 ValueType;
-    typedef typename itk::NumericTraits<ValueType>::RealType              RealType;
-    typedef typename Superclass::PointType                                PointType;
+    typedef typename Superclass::InputImageType                       InputImageType;
+    typedef typename Superclass::PixelType                            PixelType;
+    typedef typename Superclass::ValueType                            ValueType;
+    typedef typename Superclass::RealType                             RealType;
+    typedef typename Superclass::PointType                            PointType;
   
     /** Dimension underlying input image. */
     itkStaticConstMacro(ImageDimension, unsigned int,Superclass::ImageDimension);
@@ -105,11 +105,11 @@ namespace minc
     * image buffer a nearest neighbor interpolation is done. */
     virtual OutputType EvaluateAtIndex( const IndexType & index ) const;
     
-    typedef itk::NthElementImageAdaptor<TInputImage, RealType > ImageAdaptorType;
+    typedef itk::VectorImageToImageAdaptor<RealType,ImageDimension > ImageAdaptorType;
     typedef typename ImageAdaptorType::Pointer ImageAdaptorPointer;
     
-    typedef itk::BSplineInterpolateImageFunction
-        <ImageAdaptorType, TCoordRep, RealType >  InterpolatorType;
+    typedef itk::BSplineInterpolateImageFunction<ImageAdaptorType, TCoordRep, RealType >  InterpolatorType;
+    
     typedef typename InterpolatorType::Pointer InterpolatorPointer;
     typedef typename InterpolatorType::CovariantVectorType CovariantVectorType;
     
@@ -149,13 +149,13 @@ namespace minc
     
     
   protected:
-    mincVariableVectorBSplineInterpolate();
-    virtual ~mincVariableVectorBSplineInterpolate() {}
+    VariableVectorBSplineInterpolate();
+    virtual ~VariableVectorBSplineInterpolate() {}
   
     virtual void PrintSelf(std::ostream& os, itk::Indent indent) const;
   
   private:
-    mincVariableVectorBSplineInterpolate(const Self&); //purposely not implemented
+    VariableVectorBSplineInterpolate(const Self&); //purposely not implemented
     void operator=(const Self&); //purposely not implemented
   
     /** Number of neighbors used in the interpolation */

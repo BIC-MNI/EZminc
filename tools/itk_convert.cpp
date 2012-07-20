@@ -25,6 +25,7 @@
 
 typedef std::vector<double> double_vector;
 
+//TODO: add support for 6-component symmetric matrix file type
 
 void show_usage (const char *name)
 {

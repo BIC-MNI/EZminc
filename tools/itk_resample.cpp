@@ -409,6 +409,8 @@ int main (int argc, char **argv)
   
 	try
   {
+    //itk::NthElementImageAdaptor<Vector3DImage,float>::Pointer test=itk::NthElementImageAdaptor<Vector3DImage,float>::New();
+    
     if(labels)
       order=0;
     

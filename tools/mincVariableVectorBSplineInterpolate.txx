@@ -11,27 +11,27 @@ namespace minc
  * Constructor
  */
 template<class TInputImage, class TCoordRep> 
-mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >::mincVariableVectorBSplineInterpolate()
+VariableVectorBSplineInterpolate< TInputImage, TCoordRep >::VariableVectorBSplineInterpolate()
   :m_Order(2)
 {
 }
 
 template<class TInputImage, class TCoordRep>
-void mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >
+void VariableVectorBSplineInterpolate< TInputImage, TCoordRep >
 ::SetInputImage( const InputImageType * ptr )
 {
   Superclass::SetInputImage(ptr);
   
-  for(unsigned int i=0;i<m_Dimension;i++)
+  for(unsigned int i=0;i<this->GetNumberOfComponentsPerPixel();i++)
   {
     _adaptor[i]=ImageAdaptorType::New();
     _interpolator[i]=InterpolatorType::New();
   }
   
-  for(unsigned int i=0;i<m_Dimension;i++)
+  for(unsigned int i=0;i<this->GetNumberOfComponentsPerPixel();i++)
   {
     _adaptor[i]->SetImage((InputImageType*)(ptr));//a hack(?)
-    _adaptor[i]->SelectNthElement(i);
+    _adaptor[i]->SetExtractComponentIndex(i);
     _interpolator[i]->SetSplineOrder(m_Order);
     _interpolator[i]->SetInputImage(_adaptor[i]);
   }
@@ -40,7 +40,7 @@ void mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >
  * PrintSelf
  */
 template<class TInputImage, class TCoordRep>
-void mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >
+void VariableVectorBSplineInterpolate< TInputImage, TCoordRep >
   ::PrintSelf(std::ostream& os, itk::Indent indent) const
 {
   this->Superclass::PrintSelf(os,indent);
@@ -51,8 +51,8 @@ void mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >
  * Evaluate at image index position
  */
 template<class TInputImage, class TCoordRep>
-typename mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >::OutputType
-mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >
+typename VariableVectorBSplineInterpolate< TInputImage, TCoordRep >::OutputType
+VariableVectorBSplineInterpolate< TInputImage, TCoordRep >
 ::EvaluateAtContinuousIndex( const ContinuousIndexType& index) const
 {
   unsigned int dim;  // index over dimension
@@ -73,7 +73,7 @@ mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >
     }
   }
   
-  for( dim = 0; dim < m_Dimension; dim++ )
+  for( dim = 0; dim < this->GetNumberOfComponentsPerPixel(); dim++ )
     output[dim]=_interpolator[dim]->EvaluateAtContinuousIndex(insideIndex);
 
   return ( output );
@@ -84,9 +84,9 @@ mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >
  * Evaluate at image index position
  */
 template<class TInputImage, class TCoordRep>
-typename mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >
+typename VariableVectorBSplineInterpolate< TInputImage, TCoordRep >
 ::OutputType
-mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >
+VariableVectorBSplineInterpolate< TInputImage, TCoordRep >
 ::EvaluateAtIndex( const IndexType & index) const
 {
   unsigned int dim;
@@ -106,13 +106,13 @@ mincVariableVectorBSplineInterpolate< TInputImage, TCoordRep >
 
   OutputType output;
   PixelType input = this->GetInputImage()->GetPixel( index );
-  for( unsigned int k = 0; k < m_Dimension; k++ )
+  for( unsigned int k = 0; k < this->GetNumberOfComponentsPerPixel(); k++ )
   {
     output[k] = static_cast<double>( input[k] );
   }
   return ( output );
 }
 
-} // end namespace itk
+} // end namespace minc
 
 #endif
