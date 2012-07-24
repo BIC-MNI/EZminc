@@ -4,6 +4,9 @@
 #include "mincVariableVectorInterpolateImageFunction.h"
 #include <itkVectorImageToImageAdaptor.h>
 #include <itkBSplineInterpolateImageFunction.h>
+#include <itkImageAdaptor.h>
+#include <itkCastImageFilter.h>
+#include <itkOrientedImage.h>
 
 namespace minc
 {
@@ -44,9 +47,13 @@ namespace minc
     typedef typename Superclass::ValueType                            ValueType;
     typedef typename Superclass::RealType                             RealType;
     typedef typename Superclass::PointType                            PointType;
+    typedef typename TInputImage::InternalPixelType                   InternalPixelType;
   
     /** Dimension underlying input image. */
     itkStaticConstMacro(ImageDimension, unsigned int,Superclass::ImageDimension);
+    
+    /** Internal image type*/
+    typedef itk::OrientedImage<InternalPixelType,ImageDimension>              InternalImageType;
   
     /** Index typedef support. */
     typedef typename Superclass::IndexType                               IndexType;
@@ -107,8 +114,12 @@ namespace minc
     
     typedef itk::VectorImageToImageAdaptor<RealType,ImageDimension > ImageAdaptorType;
     typedef typename ImageAdaptorType::Pointer ImageAdaptorPointer;
+
+    typedef itk::CastImageFilter<ImageAdaptorType,InternalImageType > ImageCastFilterType;
+    typedef typename ImageCastFilterType::Pointer ImageCastFilterPointer;
     
-    typedef itk::BSplineInterpolateImageFunction<ImageAdaptorType, TCoordRep, RealType >  InterpolatorType;
+    //typedef itk::BSplineInterpolateImageFunction<ImageAdaptorType, TCoordRep, RealType >  InterpolatorType;
+    typedef itk::BSplineInterpolateImageFunction<InternalImageType, TCoordRep, RealType >  InterpolatorType;
     
     typedef typename InterpolatorType::Pointer InterpolatorPointer;
     typedef typename InterpolatorType::CovariantVectorType CovariantVectorType;
@@ -162,6 +173,7 @@ namespace minc
     unsigned long  m_Order;
     
     std::vector<ImageAdaptorPointer> _adaptor;
+    std::vector<ImageCastFilterPointer> _caster;
     std::vector<InterpolatorPointer> _interpolator;
   };
 

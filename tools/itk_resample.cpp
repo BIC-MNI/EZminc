@@ -28,8 +28,10 @@
 #include <itkMincGeneralTransform.h>
 #include <itkVectorImage.h>
 
-#include "mincVariableVectorResampleImageFilter.h"
-#include "mincVariableVectorBSplineInterpolate.h"
+//#include "mincVariableVectorResampleImageFilter.h"
+//#include "mincVariableVectorBSplineInterpolate.h"
+#include <itkVectorResampleImageFilter.h>
+#include "mincVectorBSplineInterpolate.h"
 
 #include <unistd.h>
 #include <getopt.h>
@@ -50,8 +52,8 @@ typedef itk::Image<float,3> Float3DImage;
 typedef itk::Image<int,3>   Int3DImage;
 typedef itk::Image<short,3> Short3DImage;
 typedef itk::Image<unsigned char,3> Byte3DImage;
-//typedef itk::Image<itk::Vector<float,3>, 3>  Vector3DImage;
-typedef itk::VectorImage<float, 3>  Vector3DImage;
+typedef itk::Image<itk::Vector<float,3>, 3>  Vector3DImage;
+//typedef itk::VectorImage<float, 3>  Vector3DImage;
 
 
 typedef itk::ImageIOBase          IOBase;
@@ -59,11 +61,15 @@ typedef itk::SmartPointer<IOBase> IOBasePointer;
 
 typedef itk::BSplineInterpolateImageFunction< Float3DImage, double, double >  InterpolatorType;
 typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NNInterpolatorType;
-typedef minc::VariableVectorBSplineInterpolate<Vector3DImage,double>      VectorInterpolatorType;
+
+//typedef minc::VariableVectorBSplineInterpolate<Vector3DImage,double>      VectorInterpolatorType;
+typedef minc::mincVectorBSplineInterpolate<Vector3DImage,double>      VectorInterpolatorType;
+
 
 typedef itk::ResampleImageFilter<Float3DImage, Float3DImage> FloatFilterType;
 typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
-typedef itk::VariableVectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
+//typedef itk::VariableVectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
+typedef itk::VectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
 
 typedef minc::XfmTransform<double,3,3>  TransformType;
 
@@ -238,7 +244,8 @@ void resample_vector_image(
    bool store_byte,
    Interpolator* interpolator)
 {
-  typedef typename itk::VariableVectorResampleImageFilter<Image, ImageOut> ResampleFilterType;
+  //typedef typename itk::VariableVectorResampleImageFilter<Image, ImageOut> ResampleFilterType;
+  typedef typename itk::VectorResampleImageFilter<Image, ImageOut> ResampleFilterType;
   typedef typename itk::ImageFileReader<Image >   ImageReaderType;
   typedef typename itk::ImageFileWriter<ImageOut >   ImageWriterType;
   
@@ -429,14 +436,6 @@ int main (int argc, char **argv)
     itk::ImageIOBase::IOComponentType  ct = io->GetComponentType();
     itk::ImageIOBase::IOComponentType  oct = ct;
     
-//     if(nc!=1) //not supported right now
-//       throw itk::ExceptionObject("Currently only 1 component images are supported");
-//     
-//     if(nd!=3) //not supported right now
-//       throw itk::ExceptionObject("Currently only 3D images are supported");
-
-    //std::cout<<"Image IO :"<<io<<std::endl;
-
     if( nc==1 && nd==3 ) //3D image, simple case
     {
       if(labels)

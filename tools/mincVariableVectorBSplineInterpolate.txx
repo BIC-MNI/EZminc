@@ -25,6 +25,7 @@ void VariableVectorBSplineInterpolate< TInputImage, TCoordRep >
   for(unsigned int i=0;i<this->GetNumberOfComponentsPerPixel();i++)
   {
     _adaptor[i]=ImageAdaptorType::New();
+    _caster[i]=ImageCastFilterType::New();
     _interpolator[i]=InterpolatorType::New();
   }
   
@@ -32,8 +33,10 @@ void VariableVectorBSplineInterpolate< TInputImage, TCoordRep >
   {
     _adaptor[i]->SetImage((InputImageType*)(ptr));//a hack(?)
     _adaptor[i]->SetExtractComponentIndex(i);
+    _caster[i]->SetInputImage(_adaptor[i]);
+    //_caster[i]->Update();
     _interpolator[i]->SetSplineOrder(m_Order);
-    _interpolator[i]->SetInputImage(_adaptor[i]);
+    _interpolator[i]->SetInputImage(_caster[i]->GetOutput());
   }
 }
 /**
