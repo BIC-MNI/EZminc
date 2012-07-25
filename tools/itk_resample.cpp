@@ -16,6 +16,7 @@
 #include <fstream>
 #include <getopt.h>
 #include <vector>
+#include <set>
 #include <valarray>
 #include <math.h>
 #include <limits>
@@ -27,11 +28,13 @@
 #include <itkBSplineInterpolateImageFunction.h>
 #include <itkMincGeneralTransform.h>
 #include <itkVectorImage.h>
+#include <itkBinaryThresholdImageFilter.h>
 
 //#include "mincVariableVectorResampleImageFilter.h"
 //#include "mincVariableVectorBSplineInterpolate.h"
 #include <itkVectorResampleImageFilter.h>
 #include "mincVectorBSplineInterpolate.h"
+#include <itkImageConstIterator.h>
 
 #include <unistd.h>
 #include <getopt.h>
@@ -61,11 +64,8 @@ typedef itk::SmartPointer<IOBase> IOBasePointer;
 
 typedef itk::BSplineInterpolateImageFunction< Float3DImage, double, double >  InterpolatorType;
 typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NNInterpolatorType;
-
 //typedef minc::VariableVectorBSplineInterpolate<Vector3DImage,double>      VectorInterpolatorType;
 typedef minc::mincVectorBSplineInterpolate<Vector3DImage,double>      VectorInterpolatorType;
-
-
 typedef itk::ResampleImageFilter<Float3DImage, Float3DImage> FloatFilterType;
 typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
 //typedef itk::VariableVectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
@@ -151,7 +151,6 @@ void resample_image(
   //initializing the reader
   reader->SetImageIO(base);
   reader->SetFileName(base->GetFileName());
-  //reader->SetFileName(input_f.c_str());
   reader->Update();
   
   typename Image::Pointer in=reader->GetOutput();
@@ -225,10 +224,181 @@ void resample_image(
   } else if(store_byte) {
     minc::set_minc_storage_type(out,NC_BYTE,false);
   }
-  
   writer->SetInput( out );
   writer->Update();
 }
+
+template<class Image,class TmpImage,class ImageOut,class Interpolator> 
+void resample_label_image(
+   IOBase* base,
+   const std::string& output_f,
+   const std::string& xfm_f,
+   const std::string& like_f,
+   bool invert,
+   double uniformize,
+   const char* history,
+   bool store_float,
+   bool store_short,
+   bool store_byte,
+   Interpolator* interpolator)
+{
+  typedef typename itk::ResampleImageFilter<TmpImage, TmpImage> ResampleFilterType;
+  typedef typename itk::ImageFileReader<Image >      ImageReaderType;
+  typedef typename itk::ImageFileWriter<ImageOut >   ImageWriterType;
+  typedef itk::ImageRegionConstIterator<Image>    ConstInputImageIteratorType;
+  typedef itk::ImageRegionConstIterator<TmpImage> ConstTmpImageIteratorType;
+  typedef itk::ImageRegionIterator<TmpImage>       TmpImageIteratorType;
+  
+  typedef itk::ImageRegionIterator<ImageOut>              ImageOutIteratorType;
+  typedef itk::BinaryThresholdImageFilter<Image,TmpImage> ThresholdFilterType;
+
+  typedef typename Image::PixelType InputPixelType;
+  typename ImageReaderType::Pointer reader = ImageReaderType::New();
+
+  //initializing the reader
+  reader->SetImageIO(base);
+  reader->SetFileName(base->GetFileName());
+  reader->Update();
+
+  typename Image::Pointer in=reader->GetOutput();
+
+  typename ResampleFilterType::Pointer  filter           = ResampleFilterType::New();
+  typename ThresholdFilterType::Pointer threshold_filter = ThresholdFilterType::New();
+
+  //creating coordinate transformation objects
+  TransformType::Pointer transform = TransformType::New();
+  if(!xfm_f.empty())
+  {
+    //reading a minc style xfm file
+    transform->OpenXfm(xfm_f.c_str());
+    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    filter->SetTransform( transform );
+  }
+
+  //creating the interpolator
+  filter->SetInterpolator( interpolator );
+  filter->SetDefaultPixelValue( 0 );
+  
+  //this is for processing using batch system
+  filter->SetNumberOfThreads(1);
+
+  typename Image::Pointer like=0;
+  
+  
+  if(!like_f.empty())
+  {
+    typename ImageReaderType::Pointer reader = ImageReaderType::New();
+    reader->SetFileName(like_f.c_str());
+    reader->Update();
+    if(uniformize!=0.0)
+    {
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),uniformize);
+    } else {
+      filter->SetOutputParametersFromImage(reader->GetOutput());
+      filter->SetOutputDirection(reader->GetOutput()->GetDirection());
+    }
+    like=reader->GetOutput();
+    like->DisconnectPipeline();
+  }
+  else
+  {
+    if(uniformize!=0.0)
+    {
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,uniformize);
+    } else {
+      //we are using original sampling
+      filter->SetOutputParametersFromImage(in);
+      filter->SetOutputDirection(in->GetDirection());
+    }
+  }
+  typename TmpImage::RegionType region;
+  region.SetSize (filter->GetSize());
+  region.SetIndex(filter->GetOutputStartIndex());
+  
+  
+  typename TmpImage::Pointer MaxImage= TmpImage::New();
+  MaxImage->SetOrigin(filter->GetOutputOrigin());
+  MaxImage->SetSpacing(filter->GetOutputSpacing());
+  MaxImage->SetDirection(filter->GetOutputDirection());
+  
+  MaxImage->SetLargestPossibleRegion(region);
+  MaxImage->SetBufferedRegion(region);
+  MaxImage->SetRequestedRegion(region);
+  MaxImage->Allocate();
+  
+  typename ImageOut::Pointer LabelImage= ImageOut::New();
+  LabelImage->SetOrigin(filter->GetOutputOrigin());
+  LabelImage->SetSpacing(filter->GetOutputSpacing());
+  LabelImage->SetDirection(filter->GetOutputDirection());
+  
+  LabelImage->SetLargestPossibleRegion(region);
+  LabelImage->SetBufferedRegion(region);
+  LabelImage->SetRequestedRegion(region);
+  LabelImage->Allocate();
+  
+  //split the input image
+  std::set<InputPixelType> sval;
+  for(ConstInputImageIteratorType it(in, in->GetBufferedRegion()); !it.IsAtEnd(); ++it)
+  {
+    InputPixelType val = it.Get();
+    if(vnl_math_isfinite(val))
+      sval.insert(val);
+  }
+  
+  //std::vector<typename TmpImage::Pointer> list_of_labels;
+  // Generate a bunch of binary copies (unfortunately, we store them as double)
+  for(typename set<InputPixelType>::iterator label_it = sval.begin(); label_it != sval.end(); ++label_it)
+  {
+    threshold_filter->SetLowerThreshold(*label_it);
+    threshold_filter->SetUpperThreshold(*label_it);
+    threshold_filter->SetInsideValue(1.0);
+    threshold_filter->SetOutsideValue(0.0);
+    threshold_filter->SetInput(in);
+    
+    filter->SetInput(threshold_filter->GetOutput());
+    filter->Update();
+    
+    ConstTmpImageIteratorType it_filter(filter->GetOutput(), filter->GetOutput()->GetBufferedRegion());
+    TmpImageIteratorType      it_max(MaxImage, MaxImage->GetBufferedRegion());
+    ImageOutIteratorType      it_out(LabelImage, LabelImage->GetBufferedRegion());
+    for(; !it_filter.IsAtEnd(); ++it_filter,++it_max,++it_out)
+    {
+      typename TmpImage::PixelType val = it_filter.Get();
+      typename TmpImage::PixelType val_max = it_max.Get();
+      if(label_it == sval.begin() || vnl_math_isfinite(val) && val>val_max)
+      {
+        it_max.Set(val);
+        it_out.Set(*label_it);
+      }
+    }
+  }
+  
+  
+  //typename ImageOut::Pointer out=filter->GetOutput();
+  minc::copy_metadata(LabelImage,in);
+  minc::append_history(LabelImage,history);
+  
+  //correct dimension order
+  if(like.IsNotNull())
+    minc::copy_dimorder(LabelImage,like);
+  
+  //generic file writer
+  typename ImageWriterType::Pointer writer = ImageWriterType::New();
+  writer->SetFileName(output_f.c_str());
+  
+  if(store_float)
+  {
+    minc::set_minc_storage_type(LabelImage,NC_FLOAT,true);
+  } else if(store_short) {
+    minc::set_minc_storage_type(LabelImage,NC_SHORT,true);
+  } else if(store_byte) {
+    minc::set_minc_storage_type(LabelImage,NC_BYTE,false);
+  }
+  writer->SetInput( LabelImage );
+  writer->Update();
+}
+
+
 
 template<class Image,class ImageOut,class Interpolator> 
 void resample_vector_image(
@@ -254,7 +424,6 @@ void resample_vector_image(
   //initializing the reader
   reader->SetImageIO(base);
   reader->SetFileName(base->GetFileName());
-  //reader->SetFileName(input_f.c_str());
   reader->Update();
   
   typename Image::Pointer in=reader->GetOutput();
@@ -334,8 +503,6 @@ void resample_vector_image(
   writer->SetInput( out );
   writer->Update();
 }
-
-
 
 
 int main (int argc, char **argv)
@@ -418,8 +585,8 @@ int main (int argc, char **argv)
   {
     //itk::NthElementImageAdaptor<Vector3DImage,float>::Pointer test=itk::NthElementImageAdaptor<Vector3DImage,float>::New();
     
-    if(labels)
-      order=0;
+//     if(labels)
+//       order=0;
     
     itk::RegisterMincIO();
     //try to figure out what we have got
@@ -440,14 +607,27 @@ int main (int argc, char **argv)
     {
       if(labels)
       {
-        //creating the interpolator
-        NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
-        if(store_byte)
-          resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
-        else if(store_short)
-          resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
-        else
-          resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+        if(order==0)
+        {
+          //creating the interpolator
+          NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
+          if(store_byte)
+            resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+          else if(store_short)
+            resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+          else
+            resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+        } else { //using slow algorithm
+          InterpolatorType::Pointer interpolator = InterpolatorType::New();
+          interpolator->SetSplineOrder(order);
+          
+          if(store_byte)
+            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+          else if(store_short)
+            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+          else
+            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,history,store_float,store_short,store_byte,interpolator);
+        }
       } else {
         InterpolatorType::Pointer interpolator = InterpolatorType::New();
         interpolator->SetSplineOrder(order);
