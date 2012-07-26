@@ -76,12 +76,11 @@ IF(ITK_FOUND)
   TARGET_LINK_LIBRARIES(itk_convert ITKIOMINC ${ITK_LIBRARIES})
   
   ADD_EXECUTABLE( itk_morph
-               itk_morph.cpp )
-
+                  itk_morph.cpp )
   TARGET_LINK_LIBRARIES( itk_morph  ITKIOMINC ${ITK_LIBRARIES})
 
   ADD_EXECUTABLE( itk_g_morph
-             itk_g_morph.cpp )
+                  itk_g_morph.cpp )
   TARGET_LINK_LIBRARIES( itk_g_morph  ITKIOMINC ${ITK_LIBRARIES} )
 
   INSTALL(TARGETS 

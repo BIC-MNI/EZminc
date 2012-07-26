@@ -1,4 +1,4 @@
-#include "minc_io.h"
+//#include "minc_io.h"
 #include <stdlib.h>
 #include <iostream>
 #include <getopt.h>
