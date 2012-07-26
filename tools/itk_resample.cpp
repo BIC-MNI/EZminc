@@ -229,7 +229,7 @@ void resample_image(
 }
 
 template<class Image,class TmpImage,class ImageOut,class Interpolator> 
-void resample_label_image(
+void resample_label_image (
    IOBase* base,
    const std::string& output_f,
    const std::string& xfm_f,
@@ -325,6 +325,7 @@ void resample_label_image(
   MaxImage->SetBufferedRegion(region);
   MaxImage->SetRequestedRegion(region);
   MaxImage->Allocate();
+  MaxImage->FillBuffer(0.0);
   
   typename ImageOut::Pointer LabelImage= ImageOut::New();
   LabelImage->SetOrigin(filter->GetOutputOrigin());
@@ -335,12 +336,14 @@ void resample_label_image(
   LabelImage->SetBufferedRegion(region);
   LabelImage->SetRequestedRegion(region);
   LabelImage->Allocate();
+  LabelImage->FillBuffer(0);
   
   //split the input image
   std::set<InputPixelType> sval;
   for(ConstInputImageIteratorType it(in, in->GetBufferedRegion()); !it.IsAtEnd(); ++it)
   {
     InputPixelType val = it.Get();
+
     if(vnl_math_isfinite(val))
       sval.insert(val);
   }
@@ -518,6 +521,7 @@ int main (int argc, char **argv)
   int invert=0;
   int labels=0;
   char *history = time_stamp(argc, argv); 
+  bool order_was_set=false;
   
   static struct option long_options[] = {
 		{"verbose", no_argument,       &verbose, 1},
@@ -557,7 +561,9 @@ int main (int argc, char **argv)
       case 't':
         xfm_f=optarg; break;
       case 'o':
-        order=atoi(optarg);break;
+        order=atoi(optarg);
+        order_was_set=true;
+        break;
       case 'u':
         uniformize=atof(optarg);break;
 			case '?':
@@ -583,11 +589,6 @@ int main (int argc, char **argv)
   
 	try
   {
-    //itk::NthElementImageAdaptor<Vector3DImage,float>::Pointer test=itk::NthElementImageAdaptor<Vector3DImage,float>::New();
-    
-//     if(labels)
-//       order=0;
-    
     itk::RegisterMincIO();
     //try to figure out what we have got
     IOBasePointer io = itk::ImageIOFactory::CreateImageIO(input_f.c_str(), itk::ImageIOFactory::ReadMode );
@@ -607,7 +608,7 @@ int main (int argc, char **argv)
     {
       if(labels)
       {
-        if(order==0)
+        if(order==0 || !order_was_set)
         {
           //creating the interpolator
           NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
