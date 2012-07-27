@@ -453,7 +453,8 @@ public:
     {
       std::cout<<"Dimensions:"<<img->GetLargestPossibleRegion().GetSize()<<" ";
       std::cout<<"Origin:"<<img->GetOrigin()<<std::endl;
-      std::cout<<"Directions:"<<img->GetDirection();
+      std::cout<<"Steps:"<<img->GetSpacing()<<std::endl;
+      std::cout<<"Directions:["<<img->GetDirection()<<"]"<<std::endl;
     }
     
     if(inv_x||inv_y||inv_z)

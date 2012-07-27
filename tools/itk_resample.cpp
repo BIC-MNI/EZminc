@@ -84,6 +84,7 @@ void show_usage (const char * prog)
     << "--transform <xfm_transform> "<<std::endl
     << "--order <n> spline order, default 2 "<<std::endl
     << "--uniformize <step> - will make a volume with uniform step size and no direction cosines" << std::endl
+    << "--normalize - outputs volume with right-hand direction cosines and positive step-sizes, uses NN interpolation" << std::endl
     << "--invert_transform  - apply inverted transform"<<std::endl
     << "--labels - assume that input data is discrete labels, will use Nearest-Neighbour interpolator"<<std::endl
     << "--byte  - store image in byte  voxels minc file"<<std::endl
@@ -127,6 +128,64 @@ template<class T,class I> void generate_uniform_sampling(T* flt, const I* img,do
   flt->SetOutputOrigin(org);
   flt->SetOutputSpacing(spc);
 }
+
+template<class T,class I> void generate_normalized_sampling(T* flt, const I* img)
+{
+  //obtain physical coordinats of all image corners
+  typename I::RegionType r=img->GetLargestPossibleRegion();
+  std::vector<typename I::PointType> corner_w;
+  std::vector<typename I::IndexType> corner_v;
+  
+  int i[3];
+  //check all combinations of corners
+  for(i[0]=0;i[0]<2;i[0]++)
+    for(i[1]=0;i[1]<2;i[1]++)
+      for(i[2]=0;i[2]<2;i[2]++)
+  {
+    typename I::IndexType idx,idx2[3];
+    typename I::PointType c,c2[3];
+    typename I::PointType::VectorType v[3];
+    std::vector<int> d[3];
+    std::vector<double dist[3];
+    
+    for(int j=0;j<3;j++)
+      idx[j]=r.GetIndex()[j]+r.GetSize()[j]*i[j];
+    
+    img->TransformIndexToPhysicalPoint(idx,c);
+    
+    for(int j=0;j<3;j++)
+    {
+      idx2[j]=idx;
+      idx2[j]=r.GetIndex()[j]+r.GetSize()[j]*(i[j]^1);
+      d[j]=r.GetSize()[j];
+      
+      img->TransformIndexToPhysicalPoint(idx2[j],c2[j]);
+      
+      dist[j]=c.EuclideanDistanceTo(c2[j]);
+      
+      v[j]=(c2[j]-c)/dist[j];
+    }
+    //check if coordinate system is positive (right handed) i.e determinant is positive
+    //if( v[2][0]*(v[0][1]*v[1][2]-v[0][2]*v[1][1])+ v[
+  }
+  
+  
+  typename I::IndexType start;
+  typename T::SizeType size;
+  typename T::OriginPointType org;
+  typename I::SpacingType spc;
+  
+  Float3DImage::DirectionType identity;
+  identity.SetIdentity();
+  flt->SetOutputDirection(identity);
+  start.Fill(0);
+  flt->SetOutputStartIndex(start);
+  flt->SetSize(size);
+  flt->SetOutputOrigin(org);
+  flt->SetOutputSpacing(spc);
+}
+
+
 
 template<class Image,class ImageOut,class Interpolator> 
 void resample_image(
