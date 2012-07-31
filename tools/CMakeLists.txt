@@ -83,8 +83,14 @@ IF(ITK_FOUND)
                   itk_g_morph.cpp )
   TARGET_LINK_LIBRARIES( itk_g_morph  ITKIOMINC ${ITK_LIBRARIES} )
 
+  ADD_EXECUTABLE( dircos_to_xfm
+                  dircos_to_xfm.cpp )
+  TARGET_LINK_LIBRARIES( dircos_to_xfm  ITKIOMINC ${ITK_LIBRARIES} )
+  
+  
   INSTALL(TARGETS 
    resample_grid multiple_volume_similarity itk_distance itk_similarity itk_resample  itk_convert itk_morph itk_g_morph
+   dircos_to_xfm
    RUNTIME DESTINATION bin )
 
 ENDIF(ITK_FOUND)
