@@ -299,9 +299,19 @@ public:
         itk::EncapsulateMetaData<double_vector>( dict , "acquisition:direction_y",direction_y);
         itk::EncapsulateMetaData<double_vector>( dict , "acquisition:direction_z",direction_z);
         itk::EncapsulateMetaData<double>( dict ,        "acquisition:b_value", bval);
+
+        // cleanup NRRD style meta information
+        // unfortunately it is impossible to delete entries from metadata :(
+        itk::EncapsulateMetaData<std::string>( dict , "DWMRI_b-value","");
+        for(int i=0;i<bvalues.size();i++)
+        {
+          std::ostringstream ossKey;
+          ossKey << "DWMRI_gradient_" << std::setw(4) << std::setfill('0') << i;
+          itk::EncapsulateMetaData<std::string>( dict ,ossKey.str(),"");
+        }
       }
     }
-    // now let's force time to be fastes varying dimension to simplify using xdisp
+    // force time to be fastes varying dimension to simplify using xdisp
     std::vector<std::string> dimorder;
 
     dimorder.push_back(MItime); //fastest varying
@@ -311,6 +321,7 @@ public:
     dimorder.push_back(MIxspace);
     
     itk::EncapsulateMetaData(dict,"dimorder", dimorder);
+    
 
   }
 
@@ -666,6 +677,7 @@ int main(int argc,char **argv)
     size_t nc = io->GetNumberOfComponents();
     itk::ImageIOBase::IOComponentType  ct = io->GetComponentType();
     itk::ImageIOBase::IOComponentType  oct = ct;
+    itk::ImageIOBase::IOPixelType      pt = io->GetPixelType();
     
   
     if(store_char)
@@ -687,12 +699,14 @@ int main(int argc,char **argv)
     
     std::string ct_s = io->GetComponentTypeAsString(ct);
     std::string oct_s = io->GetComponentTypeAsString(oct);
-
+    
+    std::string pt_s = io->GetPixelTypeAsString(pt);
     
     if(verbose)
     {
       std::cout<<"dimensions:"<< nd << std::endl
                <<"components:"<< nc << std::endl
+               <<"pixel type:"<< pt_s << std::endl
                <<"input type:"<< ct_s.c_str() <<std::endl
                <<"output type:"<<oct_s.c_str()<<std::endl;
     }
