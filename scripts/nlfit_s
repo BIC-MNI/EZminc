@@ -37,46 +37,56 @@ my @def_minctracc_args = (
 
 my @conf = (
 
-   {'step'         => 32,
-    'blur_fwhm'    => 16,
+   {'step'         => 32.0,
+    'blur_fwhm'    => 16.0,
     'iterations'   => 20,
     },
 
-   {'step'         => 16,
-    'blur_fwhm'    => 8,
+   {'step'         => 16.0,
+    'blur_fwhm'    => 8.0,
     'iterations'   => 20,
     },
 
-   {'step'         => 12,
-    'blur_fwhm'    => 6,
+   {'step'         => 12.0,
+    'blur_fwhm'    => 6.0,
     'iterations'   => 20,
     },
 
-   {'step'         => 8,
-    'blur_fwhm'    => 4,
+   {'step'         => 8.0,
+    'blur_fwhm'    => 4.0,
     'iterations'   => 20,
     },
 
-   {'step'         => 6,
-    'blur_fwhm'    => 3,
+   {'step'         => 6.0,
+    'blur_fwhm'    => 3.0,
     'iterations'   => 20,
     },
 
-   {'step'         => 4,
-    'blur_fwhm'    => 2,
+   {'step'         => 4.0,
+    'blur_fwhm'    => 2.0,
     'iterations'   => 10,
     },
 
-   {'step'         => 2,
-    'blur_fwhm'    => 1,
+   {'step'         => 2.0,
+    'blur_fwhm'    => 1.0,
     'iterations'   => 10,
     },
 
-   {'step'         => 1,
-    'blur_fwhm'    => 1,
+   {'step'         => 1.0,
+    'blur_fwhm'    => 1.0,
     'iterations'   => 10,
     },
 
+    {'step'         => 1.0,
+    'blur_fwhm'    => 0.5,
+    'iterations'   => 10,
+    },
+
+    {'step'         => 0.5,
+    'blur_fwhm'    => 0.25,
+    'iterations'   => 10,
+    },
+    
    );
 
 my($Help, $Usage, $me);
@@ -91,8 +101,8 @@ $me = &basename($0);
    'init_xfm'  => undef,
    'source_mask' => undef,
    'target_mask' => undef,
-   'level'       => 4,
-   'start'       => 32,
+   'level'       => 4.0,
+   'start'       => 32.0,
    'work_dir'    => undef,
    'sec_source'  => undef,
    'sec_target'  => undef,
@@ -124,9 +134,9 @@ $Usage = "Usage: $me [options] source.mnc target.mnc output.xfm [output.mnc]\n".
    ["-target_mask", "string", 1, \$opt{target_mask},
       "target mask to use during fitting" ],
    ["-level", "float", 1, \$opt{level},
-      "Perform fitting down to step , minimum 2" ], 
+      "Perform fitting down to step , minimum 0.5" ], 
    ["-start", "float", 1, \$opt{start},
-      "Perform fitting starting at step , minimum 2" ], 
+      "Perform fitting starting at step , minimum 0.5" ], 
    ["-work_dir", "string", 1, \$opt{work_dir},
       "Directory to keep blurred files" ],
    ["-sec_source", "string", 1, \$opt{sec_source},
