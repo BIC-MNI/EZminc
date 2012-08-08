@@ -27,7 +27,7 @@
 #include <itkMincGeneralTransform.h>
 #include <itkWarpImageFilter.h>
 #include <itkExponentialDeformationFieldImageFilter.h>
-
+#include <itkMultiplyByConstantImageFilter.h>
 
 #include <unistd.h>
 #include <getopt.h>
@@ -65,7 +65,7 @@ typedef itk::ImageFileReader< VectorImageType >  VectorReaderType;
 typedef itk::ImageFileReader< Float3DImage > ReaderType;
 typedef itk::ImageFileWriter< Float3DImage > WriterType;
 typedef itk::ExponentialDeformationFieldImageFilter< VectorImageType, VectorImageType > ExponentiatorFilterType;
-
+typedef itk::MultiplyByConstantImageFilter< VectorImageType, double, VectorImageType > MultiplicatorFilterType;
 
 using namespace  std;
 
@@ -79,6 +79,7 @@ void show_usage (const char * prog)
     << "--order <n> spline order, default 2 "<<std::endl
     << "--uniformize <step> - will make a volume with uniform step size and no direction cosines" << std::endl
     << "--invert_transform  - apply inverted transform"<<std::endl
+    << "--factor <f>  - multiply by factor"<<std::endl
     << "--labels  - for resampling label data"<<std::endl
     << "--byte  - store image in byte  voxels minc file"<<std::endl
     << "--short - store image in short voxels minc file"<<std::endl
@@ -224,6 +225,7 @@ int main (int argc, char **argv)
   double uniformize=0.0;
   int invert=0;
   int labels=0;
+  double factor=1.0;
   char *history = time_stamp(argc, argv); 
   
   static struct option long_options[] = {
@@ -232,10 +234,11 @@ int main (int argc, char **argv)
     {"clobber", no_argument,       &clobber, 1},
     {"like",    required_argument, 0,       'l'},
     {"log_transform",    required_argument, 0, 't'},
+    {"factor",    required_argument, 0, 'f'},
     {"order",    required_argument, 0, 'o'},
     {"uniformize",    required_argument, 0, 'u'},
     {"invert_transform", no_argument, &invert, 1},
-    {"labels", no_argument, &labels, 1},
+    {"labels",  no_argument, &labels, 1},
     {"float",   no_argument, &store_float, 1},
     {"short",   no_argument, &store_short, 1},
     {"byte",    no_argument, &store_byte,  1},
@@ -246,7 +249,7 @@ int main (int argc, char **argv)
       /* getopt_long stores the option index here. */
       int option_index = 0;
 
-      int c = getopt_long (argc, argv, "vqcl:t:o:u:", long_options, &option_index);
+      int c = getopt_long (argc, argv, "vqcl:t:o:u:f:", long_options, &option_index);
 
       /* Detect the end of the options. */
       if (c == -1) break;
@@ -266,6 +269,8 @@ int main (int argc, char **argv)
         order=atoi(optarg);break;
       case 'u':
         uniformize=atof(optarg);break;
+      case 'f':
+        factor=atof(optarg);break;
 			case '?':
 				/* getopt_long already printed an error message. */
 			default:
@@ -333,7 +338,16 @@ int main (int argc, char **argv)
 		
 		{
 			ExponentiatorFilterType::Pointer exponentiator = ExponentiatorFilterType::New();
-			exponentiator->SetInput(input_vector_field);
+      MultiplicatorFilterType::Pointer multiplicator = MultiplicatorFilterType::New();
+      
+      if(factor!=1.0)
+      {
+        multiplicator->SetConstant(factor);
+        multiplicator->SetInput(input_vector_field);
+        multiplicator->Update();
+        exponentiator->SetInput(multiplicator->GetOutput());
+      } else 
+        exponentiator->SetInput(input_vector_field);
 			
 			if(!invert) //need to calculate inverse by default!
 				exponentiator->ComputeInverseOn();
