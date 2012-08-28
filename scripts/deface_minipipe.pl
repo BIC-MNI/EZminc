@@ -46,7 +46,7 @@ my $pdw_xfm;
 my $brain_mask;
 my $keep_real_range;
 
-GetOptions (    
+GetOptions (
   "verbose"       => \$verbose,
   "clobber"       => \$clobber,
   "dual-echo"     => \$dual_echo,
@@ -61,7 +61,6 @@ GetOptions (
   'brain-mask=s'  => \$brain_mask,
   'keep-tmp'      => \$keep_tmp,
   'keep-real-range' => \$keep_real_range
-  
 ); 
 
 die <<HELP
@@ -123,7 +122,7 @@ correct($t2w,$model_t2w,"$tmpdir/clp_t2w.mnc") if $t2w && !($t1w_xfm&&$brain_mas
 correct($pdw,$model_pdw,"$tmpdir/clp_pdw.mnc") if $pdw && !($t1w_xfm&&$brain_mask);
 
 #stx registration
-unless($t1w_xfm&&$brain_mask)
+unless($t1w_xfm && $brain_mask)
 {
   unless($t1w_xfm)
   {
@@ -160,7 +159,8 @@ unless($t1w_xfm&&$brain_mask)
 unless($brain_mask)
 {
   do_cmd('itk_resample',"$tmpdir/clp_t1w.mnc","$tmpdir/stx_t1w.mnc",'--transform',$t1w_xfm,'--like',$model_t1w);
-  do_cmd('mincbet',"$tmpdir/stx_t1w.mnc","$tmpdir/stx_brain",'-m','-n');
+  #do_cmd('mincbet',"$tmpdir/stx_t1w.mnc","$tmpdir/stx_brain",'-m','-n');
+  do_cmd('mincbeast', "$tmpdir/stx_t1w.mnc", "$tmpdir/stx_brain_mask.mnc");
   $brain_mask="$tmpdir/stx_brain_mask.mnc";
 }
 
