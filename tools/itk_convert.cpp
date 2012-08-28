@@ -9,6 +9,7 @@
 #include <itkMetaDataObject.h>
 #include <itkMetaDataDictionary.h>
 #include <itkCastImageFilter.h>
+#include <itkDiffusionTensor3D.h>
 
 #include "itkMincImageIOFactory.h"
 #include "itkMincImageIO.h"
@@ -41,6 +42,7 @@ void show_usage (const char *name)
       << "--center set origin to the center of the image"<<std::endl
       << " DWI related flags "<<std::endl
       << "--dwi - assume that we are dealing with DWI scan"<<std::endl
+      << "--dti - assume that we are dealing with DTI information (or DWI scan)"<<std::endl
       << "--use-b-matrix - convert b-matrix (if present) into DWI gradient directions and b-value, implies DWI"<<std::endl
       << "--minc-to-nrrd Convert minc style to nrrd style "<<std::endl
       << "--nrrd-to-minc Convert nrrd style to minc style "<<std::endl
@@ -714,7 +716,39 @@ int main(int argc,char **argv)
     
     ImageConverterBase *converter=NULL;
     
-    if(nd==3 || assume_dti)
+    if(nd==3 && nc==6 && assume_dti) //we are dealing with tesor image
+    {
+      if(verbose) std::cout<<"Writing 3D tensor image..."<<std::endl;
+      switch(ct) //TODO: maybe tensors should be stored as float or double only?
+      { 
+        case itk::ImageIOBase::UCHAR :
+          converter=new ImageConverter<itk::DiffusionTensor3D<unsigned char> >();
+          break;
+        case itk::ImageIOBase::CHAR :
+          converter=new ImageConverter<itk::DiffusionTensor3D<char> >();
+          break;
+        case itk::ImageIOBase::USHORT :
+          converter=new ImageConverter<itk::DiffusionTensor3D<unsigned short> >();
+          break;
+        case itk::ImageIOBase::SHORT :
+          converter=new ImageConverter<itk::DiffusionTensor3D<short> >();
+          break;
+        case itk::ImageIOBase::INT :
+          converter=new ImageConverter<itk::DiffusionTensor3D<int> >();
+          break; 
+        case itk::ImageIOBase::UINT:
+          converter=new ImageConverter<itk::DiffusionTensor3D<unsigned int> >();
+           break; 
+        case itk::ImageIOBase::FLOAT :
+          converter=new ImageConverter<itk::DiffusionTensor3D<float> >();
+          break; 
+        case itk::ImageIOBase::DOUBLE:
+          converter=new ImageConverter<itk::DiffusionTensor3D<double> >();
+          break; 
+        default:
+          itk::ExceptionObject("Unsupported component type");
+      }
+    } else if(nd==3 || assume_dti)
     {
       if(verbose) std::cout<<"Writing 3D image..."<<std::endl;
       switch(ct)
