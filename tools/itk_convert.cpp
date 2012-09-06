@@ -117,27 +117,7 @@ public:
 
   virtual ~ImageConverterBase()
   {}
-};
 
-template<class TInputImage> class ImageConverter: public ImageConverterBase
-{
-protected:
-  
-  typedef TInputImage InputImageType;
-  typedef typename InputImageType::PixelType InputImagePixelType;
-  
-public:
-  
-  ~ImageConverter()
-  {
-    
-  }
-  
-  ImageConverter()
-  {
-    setup();
-  }
- 
   void convert_meta_minc_to_nrrd(itk::MetaDataDictionary& dict)
   {
     // let's try converting DTI-related meta-information
@@ -393,53 +373,49 @@ public:
     }
     return max_bval;
   }
-
-  template<class TOutputImage> void _load_and_save_image(IOBase* base,const char *fname)
+  
+  void print_metadata(itk::MetaDataDictionary &thisDic)
   {
-    typename itk::ImageFileReader<TInputImage >::Pointer reader = itk::ImageFileReader<TInputImage >::New();
-    typename itk::FlipImageFilter<TInputImage >::Pointer flip=itk::FlipImageFilter<TInputImage >::New();
-    
-    
-    reader->SetImageIO(base);
-    reader->SetFileName(base->GetFileName());
-    reader->Update();
-    
-    typename TInputImage::Pointer img=reader->GetOutput();
-    itk::MetaDataDictionary &thisDic=img->GetMetaDataDictionary();
-
-    if(show_meta)
+    //let's write some meta information if there is any 
+    for(itk::MetaDataDictionary::ConstIterator it=thisDic.Begin();it!=thisDic.End();++it)
     {
+      itk::MetaDataObjectBase *bs=(*it).second;
+      itk::MetaDataObject<std::string> * str=dynamic_cast<itk::MetaDataObject<std::string> *>(bs);
+      if(str)
+        std::cout<<(*it).first.c_str()<<" = "<< str->GetMetaDataObjectValue().c_str()<<std::endl;
+      else
+        std::cout<<(*it).first.c_str()<<" type: "<< typeid(*bs).name()<<std::endl;
+    }
+  }
+  
+  void convert_bmatrix(itk::MetaDataDictionary &thisDic)
+  {
+    double_vector bmatrix;
+    
+    if( itk::ExposeMetaData<double_vector>( thisDic , "acquisition:b_matrix",bmatrix))
+    {
+      double_vector bvalues,direction_x,direction_y,direction_z;
+      double bval=decompose_b_matrix(bmatrix,bvalues,direction_x,direction_y,direction_z);
       
-      //let's write some meta information if there is any 
-      for(itk::MetaDataDictionary::ConstIterator it=thisDic.Begin();it!=thisDic.End();++it)
+      if(!bvalues.empty())
       {
-        itk::MetaDataObjectBase *bs=(*it).second;
-        itk::MetaDataObject<std::string> * str=dynamic_cast<itk::MetaDataObject<std::string> *>(bs);
-        if(str)
-          std::cout<<(*it).first.c_str()<<" = "<< str->GetMetaDataObjectValue().c_str()<<std::endl;
-        else
-          std::cout<<(*it).first.c_str()<<" type: "<< typeid(*bs).name()<<std::endl;
+        itk::EncapsulateMetaData<double_vector>( thisDic , "acquisition:bvalues"    ,bvalues);
+        itk::EncapsulateMetaData<double_vector>( thisDic , "acquisition:direction_x",direction_x);
+        itk::EncapsulateMetaData<double_vector>( thisDic , "acquisition:direction_y",direction_y);
+        itk::EncapsulateMetaData<double_vector>( thisDic , "acquisition:direction_z",direction_z);
+        itk::EncapsulateMetaData<double>(        thisDic , "acquisition:b_value"    ,bval);
       }
     }
+  }
+  
+  void convert_metadata(itk::MetaDataDictionary &thisDic)
+  {
+    if(show_meta)
+     print_metadata(thisDic);
     
     if( thisDic.HasKey( "acquisition:b_matrix" ) && use_b_matrix )
     { 
-      double_vector bmatrix;
-      
-      if( itk::ExposeMetaData<double_vector>( thisDic , "acquisition:b_matrix",bmatrix))
-      {
-        double_vector bvalues,direction_x,direction_y,direction_z;
-        double bval=decompose_b_matrix(bmatrix,bvalues,direction_x,direction_y,direction_z);
-        
-        if(!bvalues.empty())
-        {
-          itk::EncapsulateMetaData<double_vector>( thisDic , "acquisition:bvalues"    ,bvalues);
-          itk::EncapsulateMetaData<double_vector>( thisDic , "acquisition:direction_x",direction_x);
-          itk::EncapsulateMetaData<double_vector>( thisDic , "acquisition:direction_y",direction_y);
-          itk::EncapsulateMetaData<double_vector>( thisDic , "acquisition:direction_z",direction_z);
-          itk::EncapsulateMetaData<double>(        thisDic , "acquisition:b_value"    ,bval);
-        }
-      }
+      convert_bmatrix(thisDic);
     }
     
     //making sure that all vectors contain the same number of parameters (just in case)
@@ -460,7 +436,43 @@ public:
     } else if( nrrd_to_minc || minc_to_nrrd) {
       std::cerr<<"ERROR: requested DWI headers are missing!"<<std::endl;
     }
+  }
+};
 
+template<class TInputImage> class ImageConverter: public ImageConverterBase
+{
+protected:
+  
+  typedef TInputImage InputImageType;
+  typedef typename InputImageType::PixelType InputImagePixelType;
+
+public:
+
+  ~ImageConverter()
+  {
+
+  }
+
+  ImageConverter()
+  {
+    setup();
+  }
+
+  template<class TOutputImage> void _load_and_save_image(IOBase* base,const char *fname)
+  {
+    typename itk::ImageFileReader<TInputImage >::Pointer reader = itk::ImageFileReader<TInputImage >::New();
+    typename itk::FlipImageFilter<TInputImage >::Pointer flip=itk::FlipImageFilter<TInputImage >::New();
+    
+    
+    reader->SetImageIO(base);
+    reader->SetFileName(base->GetFileName());
+    reader->Update();
+    
+    typename TInputImage::Pointer img=reader->GetOutput();
+    itk::MetaDataDictionary &thisDic=img->GetMetaDataDictionary();
+
+    convert_metadata(thisDic);
+    
     // let's analyze direction cosines, and convert image into something resambling neurological notation
     if(verbose)
     {
@@ -507,7 +519,6 @@ public:
     
     if(!history.empty())
       minc::append_history(img,history);
-
     
     typename itk::CastImageFilter< TInputImage, TOutputImage >::Pointer cast=itk::CastImageFilter< TInputImage, TOutputImage >::New();
     
@@ -528,7 +539,6 @@ public:
     writer->SetInput( cast->GetOutput() );
     writer->Update();
   }
-  
 
   virtual void load_and_save_image(IOBase* io,const char *fname,itk::ImageIOBase::IOComponentType oct)
   {
@@ -563,6 +573,123 @@ public:
     }
   }
 };
+
+template<class TInputImage> class TensorImageConverter: public ImageConverterBase
+{
+protected:
+  
+  typedef TInputImage InputImageType;
+  typedef typename InputImageType::PixelType InputImagePixelType;
+
+public:
+
+  ~TensorImageConverter()
+  {
+
+  }
+
+  TensorImageConverter()
+  {
+    setup();
+  }
+
+  template<class TOutputImage> void _load_and_save_image(IOBase* base,const char *fname)
+  {
+    typename itk::ImageFileReader<TInputImage >::Pointer reader = itk::ImageFileReader<TInputImage >::New();
+    typename itk::FlipImageFilter<TInputImage >::Pointer flip=itk::FlipImageFilter<TInputImage >::New();
+    
+    
+    reader->SetImageIO(base);
+    reader->SetFileName(base->GetFileName());
+    reader->Update();
+    
+    typename TInputImage::Pointer img=reader->GetOutput();
+    itk::MetaDataDictionary &thisDic=img->GetMetaDataDictionary();
+
+    convert_metadata(thisDic);
+    
+    // let's analyze direction cosines, and convert image into something resambling neurological notation
+    if(verbose)
+    {
+      std::cout<<"Dimensions:"<<img->GetLargestPossibleRegion().GetSize()<<" ";
+      std::cout<<"Origin:"<<img->GetOrigin()<<std::endl;
+      std::cout<<"Steps:"<<img->GetSpacing()<<std::endl;
+      std::cout<<"Directions:["<<img->GetDirection()<<"]"<<std::endl;
+    }
+    
+    if(inv_x||inv_y||inv_z)
+    {
+      typename itk::FlipImageFilter<TInputImage >::FlipAxesArrayType arr;
+      arr[0]=inv_x;
+      arr[1]=inv_y;
+      arr[2]=inv_z;
+      flip->SetFlipAxes(arr);
+      flip->SetInput(img);
+      flip->Update();
+      img=flip->GetOutput();
+    }
+    
+    if(center)//move origin to the center of the image
+    {
+      typename TInputImage::RegionType r=img->GetLargestPossibleRegion();
+      //std::vector<double> corner[3];
+      
+      typename TInputImage::IndexType idx;
+      typename TInputImage::PointType c;
+      
+      idx[0]=r.GetIndex()[0]+r.GetSize()[0]/2.0;
+      idx[1]=r.GetIndex()[1]+r.GetSize()[1]/2.0;
+      idx[2]=r.GetIndex()[2]+r.GetSize()[2]/2.0;
+      
+      img->TransformIndexToPhysicalPoint(idx,c);
+      
+      typename TInputImage::PointType org=img->GetOrigin();
+      
+      org[0]-=c[0];
+      org[1]-=c[1];
+      org[2]-=c[2];
+      
+      img->SetOrigin(org);
+    }
+    
+    if(!history.empty())
+      minc::append_history(img,history);
+    
+    typename itk::CastImageFilter< TInputImage, TOutputImage >::Pointer cast=itk::CastImageFilter< TInputImage, TOutputImage >::New();
+    
+    cast->SetInput(img);
+    
+    if(verbose)
+      std::cout<<"Writing "<<fname<<"..."<<std::endl;
+    
+    typename itk::ImageFileWriter< TOutputImage >::Pointer writer = itk::ImageFileWriter<TOutputImage >::New();
+    writer->SetFileName(fname);
+    cast->Update();
+    
+    cast->GetOutput()->SetMetaDataDictionary(thisDic);
+    
+    if(minc_type!=-1) 
+      minc::set_minc_storage_type(cast->GetOutput(),(nc_type)minc_type,minc_type!=NC_BYTE); //store byte as unsigned only
+    
+    writer->SetInput( cast->GetOutput() );
+    writer->Update();
+  }
+
+  virtual void load_and_save_image(IOBase* io, const char *fname, itk::ImageIOBase::IOComponentType oct)
+  {
+    switch(oct)
+    {
+      //default:
+      case itk::ImageIOBase::FLOAT:
+        _load_and_save_image<itk::Image<itk::DiffusionTensor3D<float>,3 > >(io,fname);
+        break; 
+      case itk::ImageIOBase::DOUBLE:
+        _load_and_save_image<itk::Image<itk::DiffusionTensor3D<double>,3 > >(io,fname);
+        break; 
+    }
+  }
+};
+
 
 int main(int argc,char **argv)
 {
@@ -712,41 +839,20 @@ int main(int argc,char **argv)
                <<"input type:"<< ct_s.c_str() <<std::endl
                <<"output type:"<<oct_s.c_str()<<std::endl;
     }
-    
-    
+
     ImageConverterBase *converter=NULL;
-    
+
     if(nd==3 && nc==6 && assume_dti) //we are dealing with tesor image
     {
       if(verbose) std::cout<<"Writing 3D tensor image..."<<std::endl;
       switch(ct) //TODO: maybe tensors should be stored as float or double only?
       { 
-        case itk::ImageIOBase::UCHAR :
-          converter=new ImageConverter<itk::DiffusionTensor3D<unsigned char> >();
-          break;
-        case itk::ImageIOBase::CHAR :
-          converter=new ImageConverter<itk::DiffusionTensor3D<char> >();
-          break;
-        case itk::ImageIOBase::USHORT :
-          converter=new ImageConverter<itk::DiffusionTensor3D<unsigned short> >();
-          break;
-        case itk::ImageIOBase::SHORT :
-          converter=new ImageConverter<itk::DiffusionTensor3D<short> >();
-          break;
-        case itk::ImageIOBase::INT :
-          converter=new ImageConverter<itk::DiffusionTensor3D<int> >();
-          break; 
-        case itk::ImageIOBase::UINT:
-          converter=new ImageConverter<itk::DiffusionTensor3D<unsigned int> >();
-           break; 
-        case itk::ImageIOBase::FLOAT :
-          converter=new ImageConverter<itk::DiffusionTensor3D<float> >();
-          break; 
         case itk::ImageIOBase::DOUBLE:
-          converter=new ImageConverter<itk::DiffusionTensor3D<double> >();
+          converter=new TensorImageConverter<itk::Image<itk::DiffusionTensor3D<double>,3> >();
           break; 
-        default:
-          itk::ExceptionObject("Unsupported component type");
+        default  : //itk::ImageIOBase::FLOAT 
+          converter=new TensorImageConverter<itk::Image<itk::DiffusionTensor3D<float>,3> >();
+          break; 
       }
     } else if(nd==3 || assume_dti)
     {
@@ -811,20 +917,17 @@ int main(int argc,char **argv)
           default:
             itk::ExceptionObject("Unsupported component type");
         }
-    } 
-    else {
-        throw itk::ExceptionObject("Unsupported number of dimensions");
+    } else {
+      throw itk::ExceptionObject("Unsupported number of dimensions");
     }
-    
+
     if(converter)
     {
       converter->setup(verbose,assume_dti,use_b_matrix,dwi_flip_z,inv_x,inv_y,inv_z,center,show_meta,history,minc_type,minc_to_nrrd,nrrd_to_minc);
       converter->load_and_save_image(io,output.c_str(),oct);
-      
-      delete converter;
     }
   }
-  
+
   catch( itk::ExceptionObject & err )
   {
     std::cerr << "ExceptionObject caught !" << std::endl;
