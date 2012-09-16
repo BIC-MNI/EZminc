@@ -122,7 +122,7 @@ int main(int argc,char **argv)
     }
   }
 
-	//TODO: add reading from file list
+  //TODO: add reading from file list
   if((argc - optind) < 2) {
     show_usage (argv[0]);
     return 1;
