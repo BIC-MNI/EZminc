@@ -81,6 +81,7 @@ GetOptions(
           "pca=s"     =>       \$pca,
           "pcs=n"     =>       \$pcs,
           "keep-tmp"  =>       \$keep_tmp,
+          "ants"      =>       \$use_ants,
           );
 
 die <<END 
@@ -172,12 +173,12 @@ if(!$acr && !$adni)
     if($mask)
     {
       #do_cmd('cp',$mask,"$tmpdir/fit.mnc");
-      do_cmd('itk_morph','--threshold',1,'--exp','D[2] D[2] D[2] E[2]',$model,"$tmpdir/fit_1.mnc");
+      do_cmd('itk_morph','--threshold',1,'--exp','D[4] E[2]',$model,"$tmpdir/fit_1.mnc");
       do_cmd('mincresample','-nearest','-like',"$tmpdir/fit_1.mnc",$mask,"$tmpdir/mask.mnc",'-q','-clob');
       do_cmd('minccalc','-express','A[0]>0.5?A[1]:0',"$tmpdir/mask.mnc","$tmpdir/fit_1.mnc","$tmpdir/fit.mnc");
       do_cmd('rm','-f',"$tmpdir/fit_1.mnc");
     } else {
-      do_cmd('itk_morph','--threshold',1,'--exp','D[2] D[2] D[2] E[2]',$model,"$tmpdir/fit.mnc");
+      do_cmd('itk_morph','--threshold',1,'--exp','D[4] E[2]',$model,"$tmpdir/fit.mnc");
     }
   }
 } elsif( $adni) {
@@ -303,23 +304,33 @@ foreach $scan(@scans) {
              '-like',"$work_dir/core_${name}",
              '-transform',"$work_dir/align_${name}.xfm",'-nearest');
     } else {
-
-      do_cmd('mincresample',"$tmpdir/fit.mnc",
-             "$work_dir/fit_${name}",'-like',"$work_dir/core_${name}",
-             '-transform',"$work_dir/align_${name}.xfm",'-nearest');
-
-      do_cmd('mincresample',"$tmpdir/skeleton.mnc","$tmpdir/estimate_${name}",
-             '-like',"$work_dir/core_${name}",
-             '-transform',"$work_dir/align_${name}.xfm",'-trilinear','-float');
-
-    }
+      
+       do_cmd('mincresample',"$tmpdir/fit.mnc",
+              "$tmpdir/fit_${name}",'-like',"$work_dir/core_${name}",
+              '-transform',"$work_dir/align_${name}.xfm",'-nearest');
+       
+       do_cmd('mincANTS','3','-x',"$tmpdir/fit_${name}",'-m',"CC[$tmpdir/ideal_${name},$work_dir/core_${name},1,2]",
+              '-t','SyN[0.25]','--number-of-affine-iterations','0x0x0','-i','100x100x0',
+              '-o',"$tmpdir/ants_${name}.xfm");
+       
+       do_cmd('mincresample','-nearest','-like',"$tmpdir/fit_${name}","$work_dir/core_${name}",
+              '-transform',"$tmpdir/ants_${name}.xfm",'-invert_transformation',
+              "$tmpdir/fit2_${name}");
+       
+       do_cmd('itk_morph','--threshold','50','--exp','D[2] E[1]',"$tmpdir/fit2_${name}","$tmpdir/fit2c_${name}");
+       
+       do_cmd('mincresample','-nearest','-like',"$tmpdir/fit_${name}","$tmpdir/fit2c_${name}","$tmpdir/fit2r_${name}");
+       
+       do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0','-byte',"$tmpdir/fit_${name}","$tmpdir/fit2r_${name}","$work_dir/fit_${name}");
+     }
   }
 
-  unless(-e "$work_dir/estimate_${name}" || $acr)
+  unless(-e "$work_dir/estimate_${name}" )
   {
-      do_cmd('minccalc','-byte','-express','A[0]>0.5?1:0',"$tmpdir/estimate_${name}",
-              "$work_dir/estimate_${name}");
+    do_cmd('mincresample','-like',"$work_dir/fit_${name}","$tmpdir/skeleton.mnc","$tmpdir/skeleton_${name}",'-transform',"$work_dir/align_${name}.xfm",'-nearest');
+    do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0','-byte',"$work_dir/fit_${name}","$tmpdir/skeleton_${name}","$work_dir/estimate_${name}");
   }
+  
   if($acr) {
     push @args,"$work_dir/ideal_${name}","$work_dir/core_${name}","$work_dir/fit_${name}","$work_dir/fit_${name}";
   } else {

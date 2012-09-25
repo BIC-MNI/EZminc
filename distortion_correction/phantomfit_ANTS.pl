@@ -3,11 +3,9 @@
 
 ############################# MNI Header #####################################
 #@NAME       :  phantomfit.pl
-#@DESCRIPTION:  perform hierarchical non-linear registration 
-#               with additional constraint based on spherical harmonics decompositin
-#               Using diffeomorphic demons 
+#@DESCRIPTION:  estimate distortion field based on nonlinear registration using ANTs
 #@COPYRIGHT  :
-#              Vladimir S. Fonov  February, 2009
+#              Vladimir S. Fonov  February, 2012
 #              Montreal Neurological Institute, McGill University.
 #              Permission to use, copy, modify, and distribute this
 #              software and its documentation for any purpose and without
@@ -26,31 +24,11 @@ use File::Basename;
 use File::Temp qw/ tempdir /;
 
 # default minctracc parameters
-my @def_dd_args = (
-#   '-debug',
-   '-a',0, # Diffeomorphic Demons update rule
-   '-t',0, # using symmetrized gradient
-   '-l',1, # maximum 1 voxel length per iteration
-   '-s',0, # don't filter final def. field
-   '-g',2, # 2mm filtering of update field
-   );
-
-my @conf = (
-
-   {'step'         => 4,
-    'prog'         => '20x0x0',
-    'iterations'   => 2,
-    },
-
-   {'step'         => 2,
-    'prog'         => '20x0',
-    'iterations'   => 2,
-    },
-
-   {'step'         => 1,
-    'prog'         => '20',
-    'iterations'   => 2,
-    },
+my @def_ants_args = (
+  '-t','SyN[0.25]',
+  '--number-of-affine-iterations','0x0x0',
+  '-i','100x100x20',
+  # TODO: add regularization ?
    );
 
 my($Help, $Usage, $me);
@@ -79,7 +57,7 @@ $me = &basename($0);
    );
 
 $Help = <<HELP;
-| $me does hierachial non-linear fitting between N files
+| $me does non-linear fitting between N files
 | restricted by spherical harmonics functions
 | 
 | Problems or comments should be sent to: vladimir.fonov\@gmail.com
@@ -152,13 +130,8 @@ $outfile = $opt{output};
 check_file($outxfm) unless $opt{clobber};
 check_file($outfile) unless $opt{clobber} || !defined($outfile);
 check_file($opt{par}) unless $opt{clobber} || !defined($opt{par});
-check_file($opt{measure}) unless $opt{clobber} || !defined($opt{measure});
+#check_file($opt{measure}) unless $opt{clobber} || !defined($opt{measure});
 
-if($opt{measure})
-{
-  open MEASURE,">$opt{measure}" ;
-  print MEASURE "step,blur,measure\n";
-}
 # make tmpdir
 unless($opt{work_dir})
 {
@@ -168,81 +141,41 @@ unless($opt{work_dir})
   do_cmd('mkdir','-p',$tmpdir);
 }
 
-if($opt{init})
-{
-  do_cmd('xfminvert',$opt{init},"$tmpdir/init.xfm");
-}
-
-
 # set up filename base
-my($i, $s_base, $t_base, $tmp_grid, $tmp_source, $tmp_target, $prev_grid,$prev_xfm);
+my($i, $s_base, $t_base, $tmp_xfm, $tmp_grid, $tmp_source, $tmp_target, $prev_grid, $prev_xfm);
+my @grids;
 
 # a fitting we shall go...
-for ($i=0; $i<=$#conf; $i++) {
-  last if $conf[$i]{step}<$opt{min_step};
+for(my $k=0;$k<=$#source;$k++)
+{
+  $s_base = &basename($source[$k]);
+  $s_base =~ s/\.gz$//;
+  $s_base =~ s/\.mnc$//;
+
+  $tmp_xfm  = "$tmpdir/$s_base\_${k}.xfm";
+  $tmp_grid = "$tmpdir/$s_base\_${k}_grid_0.mnc";
+
+  @args = ('mincANTS','3',@def_ants_args,
+           '-m',"CC[$source[$k],$target[$k],1,2]",
+           '-o',$tmp_xfm,
+           '-x',$fit_mask[$k]);
+            
+  # transformation
+  my $transform;
   
-  
-  for(my $j=0;$j<$conf[$i]{iterations};$j++)
-  {
-    my @grids;
-     
-    if($opt{measure}) 
-    {
-      my @mes;
-      if($i == 0 && $j == 0 )
-      {
-        @mes=split(/Distance\:/,`nl_distance.pl $source[0] $target[0] --mask $fit_mask[0]`);
-      } else {
-        # now we need to resample the source & mask
-        do_cmd('mincresample',$source[0],'-like',$target[0],"$tmpdir/measure.mnc",'-transform',$prev_xfm);
-        do_cmd('mincresample',$fit_mask[0],'-like',$target[0],"$tmpdir/measure_mask.mnc",'-transform',$prev_xfm,'-nearest');
-        @mes=split(/Distance\:/,`nl_distance.pl $tmpdir/measure.mnc $target[0] --mask $tmpdir/measure_mask.mnc`);
-        do_cmd('rm','-f',"$tmpdir/measure.mnc","$tmpdir/measure_mask.mnc");
-      }
-      my $m=pop @mes;
-      chomp($m);
-      print MEASURE "$conf[$i]{step},$conf[$i]{blur_fwhm},$m\n"
-    }
-     
-    for(my $k=0;$k<=$#source;$k++)
-    {
-      $s_base = &basename($source[$k]);
-      $s_base =~ s/\.gz$//;
-      $s_base =~ s/\.mnc$//;
-
-      $tmp_grid = "$tmpdir/$s_base\_${i}_${j}_${k}_grid_0.mnc";
-
-      @args = ('DemonsRegistration',@def_dd_args,
-               '-i',$conf[$i]{prog},
-               '--fixed-image',$source[$k],
-               '--moving-image',$target[$k],
-               '--fixed-mask',$fit_mask[$k],
-               '--moving-mask',$fit_mask[$k]);
-               
-      # transformation
-      my $transform;
-
-      if($prev_grid )
-      { 
-        push(@args, '--input-field', $prev_grid );
-        #push(@args, '--input-transform',$prev_xfm );
-      } elsif($opt{init}) {
-        push(@args, '--input-transform',"$tmpdir/init.xfm" );
-      }
-
-      push(@args, '--outputDef-field', $tmp_grid);
-      &do_cmd(@args);
-      push @grids,$tmp_grid;
-    }
-    regularize_grids(\@grids,\@estimate_mask,$opt{order},"$tmpdir/regularize_${i}_${j}.xfm",1);
-    cleanup_grids(\@grids) unless $opt{debug};
-    $prev_xfm = "$tmpdir/regularize_${i}_${j}.xfm";
-    $prev_grid = "$tmpdir/regularize_${i}_${j}_grid_0.mnc";
-  }
+  &do_cmd(@args);
+  push @grids,$tmp_grid;
 }
+
+regularize_grids(\@grids,\@estimate_mask,$opt{order},"$tmpdir/regularize.xfm",1);
+cleanup_grids(\@grids) unless $opt{debug};
+
+$prev_xfm = "$tmpdir/regularize.xfm";
+$prev_grid = "$tmpdir/regularize_grid_0.mnc";
+    
+    
 do_cmd('cp',"$tmpdir/regularize.par",$opt{par}) if $opt{par};
 do_cmd('xfminvert',$prev_xfm,$outxfm);
-close MEASURE if $opt{measure};
 
 sub do_cmd { 
    print STDOUT "@_\n" if $opt{verbose};
@@ -279,7 +212,7 @@ sub regularize_grids {
   my @args;
   if($opt{pca})
   {
-    @args=('fit_harmonics_grids_regularize','--order',$opt{order},'--skip',2);
+    @args=('fit_harmonics_grids_regularize','--order',$opt{order},'--skip',2); # ANTS outputs grid @ 1mm
     push @args,'--cylindrical' if $opt{cyl};
     push @args,'--pca',$opt{pca};
     push @args,'--pcs',$opt{pcs} if $opt{pcs};
@@ -288,12 +221,14 @@ sub regularize_grids {
     push(@args,"--limit") if $opt{limit};
     push(@args,"--keep",$opt{keep}) if $opt{keep};
     push(@args,'--iter',1) if $opt{keep}>0.99;
-  } 
+  }
+  
   for(my $i=0;$i<=$#grids;$i++)
   {
     die "Can't find  grid file: $grids[$i]" unless -e $grids[$i];
     push (@args,$grids[$i],$masks[$i]);
   }
+  
   push(@args,"$tmpdir/regularize.par",'--clobber');
   
   do_cmd(@args);
