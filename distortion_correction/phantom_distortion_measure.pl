@@ -50,6 +50,7 @@ my $dilate_roi=0;
 my $pca;
 my $pcs;
 my $use_dd=0;
+my $use_ants=0;
 my $keep_tmp=0;
 
 #additional parameters
@@ -105,6 +106,7 @@ die <<END
   --pca <rotation.csv>  - Principal Components rotation matrix
   --pcs <n>             - Number of Principal components to use
   --dd                  - Use Diffeomorphic Demons registration instead of minctracc 
+  --ants                - Use mincANTS
 ] 
 END
   if $#ARGV<2; #number of arguments -1 
@@ -199,12 +201,7 @@ foreach $scan(@scans) {
   {
     if($no_core_extract) # core was already extracted
     {
-#       if($scan =~ /\.gz$/)
-#       { 
-#         do_cmd("gunzip -c $scan > $work_dir/core_${name}");
-#       } else { 
-        do_cmd('minccalc','-express','A[0]>20?A[0]:0',$scan,"$work_dir/core_${name}");
-#       }
+      do_cmd('minccalc','-express','A[0]>20?A[0]:0',$scan,"$work_dir/core_${name}");
     } else {
       if($acr)
       {
@@ -323,7 +320,6 @@ foreach $scan(@scans) {
       do_cmd('minccalc','-byte','-express','A[0]>0.5?1:0',"$tmpdir/estimate_${name}",
               "$work_dir/estimate_${name}");
   }
-
   if($acr) {
     push @args,"$work_dir/ideal_${name}","$work_dir/core_${name}","$work_dir/fit_${name}","$work_dir/fit_${name}";
   } else {
@@ -337,6 +333,8 @@ unless( $only_roi )
   if($use_dd)
   {
     @args=('phantomfit_DD.pl',@args,'-order',$order,'-clobber');
+  } elsif($use_ants) {
+    @args=('phantomfit_ANTS.pl',@args,'-order',$order,'-clobber');
   } else {
     @args=('phantomfit.pl',@args,'-order',$order,'-clobber');
 
@@ -385,8 +383,6 @@ if($out_roi)
 }
 
 #exit 0 if $only_roi;
-
-
 
 sub do_cmd {
     print STDOUT "@_\n" if $verbose;
