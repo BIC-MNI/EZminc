@@ -79,4 +79,6 @@ INSTALL(PROGRAMS
     lego_core_extract.pl
     adni_preprocess.pl    
     phantomfit.pl
+    phantomfit_ANTS.pl
+    phantomfit_DD.pl
     DESTINATION bin )

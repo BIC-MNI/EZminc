@@ -261,7 +261,7 @@ foreach $scan(@scans) {
       do_cmd('uniformize_minc.pl',"$tmpdir/core_${name}","$tmpdir/init_${name}",
              '--transform',$init,'--resample','trilinear','--clobber') unless -e "$tmpdir/init_${name}";
 
-      do_cmd('bestlinreg.pl',$model,"$tmpdir/init_${name}",
+      do_cmd('bestlinreg_s',$model,"$tmpdir/init_${name}",'-nmi',
              "$work_dir/align_${name}.xfm",'-lsq6') unless -e "$work_dir/align_${name}.xfm";
 
     } else {
@@ -269,13 +269,13 @@ foreach $scan(@scans) {
      if(-e "$work_dir/mv_${name}.xfm") # allow specifiying initial transformation
      {
        print "Using manual xfm\n";
-       do_cmd('bestlinreg_s',
+       do_cmd('bestlinreg_s','-nmi',
               $model,"$work_dir/core_${name}",
               "$work_dir/align_${name}.xfm",'-lsq6',
               '-init_xfm',"$work_dir/mv_${name}.xfm") 
 				unless -e "$work_dir/align_${name}.xfm";
      } else {
-        do_cmd('bestlinreg.pl',$model,"$work_dir/core_${name}",
+        do_cmd('bestlinreg_s',$model,"$work_dir/core_${name}",'-nmi',
                "$work_dir/align_${name}.xfm",'-lsq6') 
         unless -e "$work_dir/align_${name}.xfm";
      }
