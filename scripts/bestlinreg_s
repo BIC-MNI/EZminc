@@ -27,7 +27,7 @@ use File::Temp qw/ tempdir /;
 my @conf = (
 
    { type        => "blur",
-     trans       => [qw/-est_translations/],
+     trans       => qw/-est_translations/,
      blur_fwhm   => 16,
      steps       => [qw/8 8 8/],
      tolerance   => 0.01,
@@ -85,6 +85,7 @@ $me = &basename($0);
    'norot'       => 0,
    'noshift'     => 0,
    'close'       => 0,
+   'notrans'     => 0,
    );
 
 $Help = <<HELP;
@@ -139,6 +140,8 @@ $Usage = "Usage: $me [options] source.mnc target.mnc output.xfm [output.mnc]\n".
       "lsq12 w/o rotations" ],
    ["-noshift", "boolean", 1, \$opt{noshift},
       "lsq12 w/o shifts" ],
+   ["-notrans", "boolean", 1, \$opt{notrans},
+      "Disable initial translation estimation" ],
    ["-close", "boolean", 1, \$opt{close},
       "Samples are close" ],
    );
@@ -227,6 +230,7 @@ for ($i=0; $i<=$#conf; $i++){
      $conf[$i]{simplex}=1;
      $conf[$i]{steps}=[qw/2 2 2/];
    }
+   next if $opt{notrans} && ($conf[$i]{trans} eq "-est_translations");
 
    print STDOUT "-+-------------------------[$i]-------------------------\n".
                 " | steps:          @{$conf[$i]{steps}}\n".

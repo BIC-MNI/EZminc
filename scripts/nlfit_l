@@ -185,7 +185,6 @@ $t_base = 't_'.$t_base;
 my $first=1;
 for ($i=0; $i<=$#conf; $i++)
 {
-   
    next if $conf[$i]{step}<$opt{level} || $conf[$i]{step}>$opt{level}; # skip unneeded steps
    # set up intermediate files
    $tmp_xfm = "$tmpdir/$s_base\_$i.xfm";
