@@ -27,7 +27,7 @@ use File::Temp qw/ tempdir /;
 my @conf = (
 
    { type        => "blur",
-     trans       => qw/-est_translations/,
+     trans       => [qw/-est_translations/],
      blur_fwhm   => 16,
      steps       => [qw/8 8 8/],
      tolerance   => 0.01,
@@ -40,27 +40,26 @@ my @conf = (
      tolerance   => 0.004,
      simplex     => 16 },
 
+   { type        => "blur",       
+     trans       => undef,
+     blur_fwhm   => 8,
+     steps       => [qw/4 4 4/],
+     tolerance   => 0.0001,
+     simplex     => 16 },
+
    { type        => "blur",
      trans       => undef,
      blur_fwhm   => 4,
      steps       => [qw/4 4 4/],
-     tolerance   => 0.004,
+     tolerance   => 0.0001,
      simplex     => 8 },
 
-   { type        => "dxyz",
+   { type        => "blur",
      trans       => undef,
-     blur_fwhm   => 8,
-     steps       => [qw/4 4 4/],
-     tolerance   => 0.004,
+     blur_fwhm   => 2,
+     steps       => [qw/2 2 2/],
+     tolerance   => 0.0005,
      simplex     => 4 },
-
-   { type        => "dxyz",
-     trans       => undef,
-     blur_fwhm   => 4,
-     steps       => [qw/4 4 4/],
-     tolerance   => 0.004,
-     simplex     => 2 }
-     
    );
 
 
@@ -124,6 +123,8 @@ $Usage = "Usage: $me [options] source.mnc target.mnc output.xfm [output.mnc]\n".
       "use quaternion transformation" ],
    ["-mi","const",'-mi', \$opt{cost_function},
       "Mutual information cost function" ],
+   ["-nmi", "const", "-nmi", \$opt{cost_function},
+      "Normalized Mutual information cost function" ],
    ["-xcorr","const",'-xcorr', \$opt{cost_function},
       "Cross-correlation cost function" ],
    ["-work_dir", "string", 1, \$opt{work_dir},
@@ -195,7 +196,7 @@ if( defined $opt{init_xfm} ) {
   my $source_resampled = "${tmpdir}/${s_base}_resampled.mnc";
   &do_cmd( 'mincresample', 
            '-clobber', 
-           '-like', $target_masked, 
+           '-tfm_input_sampling', 
            '-transform', $opt{init_xfm}, 
            $source_masked, $source_resampled );
   $source_masked = $source_resampled;
@@ -204,7 +205,7 @@ if( defined $opt{init_xfm} ) {
   if(defined($opt{source_mask}))
   {
     my $mask_resampled = "${tmpdir}/${s_base}_mask_resampled.mnc";
-    &do_cmd( 'mincresample', '-clobber', '-like', $target_masked,
+    &do_cmd( 'mincresample', '-clobber', '-like', $source_masked,
              '-nearest_neighbour', '-transform', $opt{init_xfm}, 
              $opt{source_mask}, $mask_resampled );
     $opt{source_mask} = $mask_resampled;
@@ -231,6 +232,7 @@ for ($i=0; $i<=$#conf; $i++){
      $conf[$i]{steps}=[qw/2 2 2/];
    }
    next if $opt{notrans} && ($conf[$i]{trans} eq "-est_translations");
+   next if $opt{init_xfm} && ($conf[$i]{trans} eq "-est_translations");
 
    print STDOUT "-+-------------------------[$i]-------------------------\n".
                 " | steps:          @{$conf[$i]{steps}}\n".
@@ -337,7 +339,7 @@ for ($i=0; $i<=$#conf; $i++){
 # Concatenate transformations if an initial transformation was given.
 
 if( defined $opt{init_xfm} ) { 
-  &do_cmd( 'xfmconcat', $prev_xfm, $opt{init_xfm}, $outxfm );
+  &do_cmd( 'xfmconcat', $prev_xfm, $opt{init_xfm}, $outxfm ,'-clobber');
 } else {
   &do_cmd( 'mv', '-f', $prev_xfm, $outxfm );
 }
