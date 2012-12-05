@@ -269,7 +269,7 @@ foreach $scan(@scans) {
      if(-e "$work_dir/mv_${name}.xfm") # allow specifiying initial transformation
      {
        print "Using manual xfm\n";
-       do_cmd('bestlinreg_s','-nmi',
+       do_cmd('bestlinreg_s','-nmi','-close',
               $model,"$work_dir/core_${name}",
               "$work_dir/align_${name}.xfm",'-lsq6',
               '-init_xfm',"$work_dir/mv_${name}.xfm") 
