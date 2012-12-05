@@ -231,8 +231,8 @@ for ($i=0; $i<=$#conf; $i++){
      $conf[$i]{simplex}=1;
      $conf[$i]{steps}=[qw/2 2 2/];
    }
-   next if $opt{notrans} && (@{$conf[$i]{trans}} eq "-est_translations");
-   next if defined($opt{init_xfm}) && (@{$conf[$i]{trans}} eq "-est_translations");
+   next if $opt{notrans} && defined($conf[$i]{trans}) && (@{$conf[$i]{trans}} eq "-est_translations");
+   next if defined($opt{init_xfm})&& defined($conf[$i]{trans}) && (@{$conf[$i]{trans}} eq "-est_translations");
 
    print STDOUT "-+-------------------------[$i]-------------------------\n".
                 " | steps:          @{$conf[$i]{steps}}\n".
