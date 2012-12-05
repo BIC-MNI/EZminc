@@ -192,7 +192,7 @@ my $target_masked = $target;
 # initial transformation supplied by the user, applied to both the 
 # source image and its mask.
 
-if( defined $opt{init_xfm} ) { 
+if( defined($opt{init_xfm}) ) { 
   my $source_resampled = "${tmpdir}/${s_base}_resampled.mnc";
   &do_cmd( 'mincresample', 
            '-clobber', 
@@ -231,8 +231,8 @@ for ($i=0; $i<=$#conf; $i++){
      $conf[$i]{simplex}=1;
      $conf[$i]{steps}=[qw/2 2 2/];
    }
-   next if $opt{notrans} && ($conf[$i]{trans} eq "-est_translations");
-   next if $opt{init_xfm} && ($conf[$i]{trans} eq "-est_translations");
+   next if $opt{notrans} && (@{$conf[$i]{trans}} eq "-est_translations");
+   next if defined($opt{init_xfm}) && (@{$conf[$i]{trans}} eq "-est_translations");
 
    print STDOUT "-+-------------------------[$i]-------------------------\n".
                 " | steps:          @{$conf[$i]{steps}}\n".
