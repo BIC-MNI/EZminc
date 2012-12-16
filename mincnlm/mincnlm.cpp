@@ -48,6 +48,7 @@
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <minc_1_simple.h> // simple minc reading & writing
 #include <time_stamp.h>    // for creating minc style history entry

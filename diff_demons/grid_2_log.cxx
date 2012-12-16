@@ -12,6 +12,7 @@
 #include <iostream>
 #include "mincUtils.h"
 #include <getopt.h>
+#include <unistd.h>
 
 template < class TPixel = float, unsigned int VImageDimension = 3 >
 

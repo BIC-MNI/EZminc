@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <getopt.h>
+#include <unistd.h>
 
 #include "dwt.h"
 #include "dwt_utils.h"

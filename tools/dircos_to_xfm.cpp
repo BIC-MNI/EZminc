@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <getopt.h>
+#include <unistd.h>
 #include <time_stamp.h>    // for creating minc style history entry
 
 

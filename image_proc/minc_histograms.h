@@ -396,12 +396,12 @@ namespace minc
 	
 		T& operator()(T x, T y)
 		{
-			return _joint[idx(x)][y];
+			return _joint[this->idx(x)][y];
 		}
 	
 		const T& operator()(T x, T y) const
 		{
-			return _joint[idx(x)][y];
+			return _joint[this->idx(x)][y];
 		}
 	
 		T& operator()(int x, int y)

@@ -16,6 +16,7 @@
 
 #include <time_stamp.h>    // for creating minc style history entry
 #include <getopt.h>
+#include <unistd.h>
 
 #include <vector>
 #include <algorithm>

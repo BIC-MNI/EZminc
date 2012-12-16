@@ -19,7 +19,9 @@
 
 
 #include <getopt.h>
-#include  <bicpl.h>
+#include <unistd.h>
+
+#include <bicpl.h>
 #include <fstream>
 
 using namespace  std;

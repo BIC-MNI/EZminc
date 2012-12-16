@@ -7,6 +7,7 @@
 // for get_opt_long
 #include <getopt.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 using namespace  std;
 using namespace  minc;
