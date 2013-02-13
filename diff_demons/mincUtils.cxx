@@ -2,6 +2,7 @@
 
 std::string minc_history;
 
+#ifdef HAVE_MINC1
 void mincify ( itk::Object* image, nc_type datatype  )
 {
   minc::set_minc_storage_type ( image, datatype, true );
@@ -9,6 +10,7 @@ void mincify ( itk::Object* image, nc_type datatype  )
   if(!minc_history.empty())
     minc::append_history ( image, minc_history );
 }
+#endif 
 
 //! check if the filename is XFM file, and generate required additional file names (doesn't read xfm file)
 bool parse_xfm_file_name(const std::string & fname,std::string &def_field,std::string &def_field_base)

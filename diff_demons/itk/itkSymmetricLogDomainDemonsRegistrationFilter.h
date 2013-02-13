@@ -3,7 +3,12 @@
 
 #include "itkLogDomainDeformableRegistrationFilter.h"
 #include "itkESMDemonsRegistrationFunctionM.h"
-#include "itkMultiplyByConstantImageFilter.h"
+
+#if ( ITK_VERSION_MAJOR > 3 ) 
+#include <itkMultiplyImageFilter.h>
+#else
+#include <itkMultiplyByConstantImageFilter.h>
+#endif
 
 
 namespace itk {
@@ -189,10 +194,15 @@ private:
   const DemonsRegistrationFunctionType *  GetBackwardRegistrationFunctionType() const;
 
   /** Exp and composition typedefs */
+#if ITK_VERSION_MAJOR >= 4
+    typedef itk::MultiplyImageFilter<VelocityFieldType, VelocityFieldType, VelocityFieldType> MultiplyByConstantType;
+#else
   typedef MultiplyByConstantImageFilter<
     VelocityFieldType, 
     TimeStepType, VelocityFieldType >                   MultiplyByConstantType;
+#endif    
 
+    
   typedef AddImageFilter<
    VelocityFieldType, VelocityFieldType>                AdderType;
 

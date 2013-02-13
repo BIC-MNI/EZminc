@@ -24,26 +24,30 @@
 #include <itkResampleImageFilter.h>
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkBSplineInterpolateImageFunction.h>
-#include <itkMincGeneralTransform.h>
 #include <itkWarpImageFilter.h>
+
+#if ITK_VERSION_MAJOR >= 4
+#include <itkExponentialDisplacementFieldImageFilter.h>
+#include <itkMultiplyImageFilter.h>
+#else
+#include <itkMincGeneralTransform.h>
 #include <itkExponentialDeformationFieldImageFilter.h>
 #include <itkMultiplyByConstantImageFilter.h>
+#include <time_stamp.h>    // for creating minc style history entry
+#include <itkMincImageIOFactory.h>
+#include <itkMincImageIO.h>
+#include <itkMincHelpers.h>
+#endif
 
 #include <unistd.h>
 #include <getopt.h>
-#include <time_stamp.h>    // for creating minc style history entry
 
 
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
-
 #include <itkImageIOBase.h>
-#include <itkMincImageIOFactory.h>
-#include <itkMincImageIO.h>
-#include <itkMincHelpers.h>
 
-//typedef itk::MincImageIO ImageIOType;
 typedef itk::Vector< double, 3 >    VectorType;
 typedef itk::Image< VectorType, 3 > VectorImageType;
 
@@ -64,8 +68,16 @@ typedef itk::ImageFileReader< VectorImageType >  VectorReaderType;
 
 typedef itk::ImageFileReader< Float3DImage > ReaderType;
 typedef itk::ImageFileWriter< Float3DImage > WriterType;
+
+#if ITK_VERSION_MAJOR >= 4
+typedef itk::ExponentialDisplacementFieldImageFilter< VectorImageType, VectorImageType > ExponentiatorFilterType;
+typedef itk::MultiplyImageFilter<VectorImageType, VectorImageType, VectorImageType> MultiplicatorFilterType;
+#else    
 typedef itk::ExponentialDeformationFieldImageFilter< VectorImageType, VectorImageType > ExponentiatorFilterType;
 typedef itk::MultiplyByConstantImageFilter< VectorImageType, double, VectorImageType > MultiplicatorFilterType;
+#endif
+
+
 
 using namespace  std;
 
@@ -190,12 +202,14 @@ void resample_image(
   //copy the metadate information, for some reason it is not preserved
   //filter->GetOutput()->SetMetaDataDictionary(reader->GetOutput()->GetMetaDataDictionary());
   typename ImageOut::Pointer out=filter->GetOutput();
-  minc::copy_metadata(out,in);
-  minc::append_history(out,history);
-  free((void*)history);
   
   //generic file writer
   typename WriterType::Pointer writer = WriterType::New();
+  
+#if ITK_VERSION_MAJOR < 4  
+  minc::copy_metadata(out,in);
+  minc::append_history(out,history);
+  free((void*)history);
   
   if(store_float)
   {
@@ -205,7 +219,8 @@ void resample_image(
   } else if(store_byte) {
     minc::set_minc_storage_type(out,NC_BYTE,false);
   }
-  
+#endif
+
   writer->SetFileName(output_f.c_str());
   writer->SetInput( out );
   writer->Update();
@@ -226,7 +241,11 @@ int main (int argc, char **argv)
   int invert=0;
   int labels=0;
   double factor=1.0;
+#ifdef HAVE_MINC1  
   char *history = time_stamp(argc, argv); 
+#else
+  char *history = "";
+#endif 
   
   static struct option long_options[] = {
     {"verbose", no_argument,       &verbose, 1},
@@ -300,9 +319,10 @@ int main (int argc, char **argv)
   
 	try
   {
+#if ITK_VERSION_MAJOR < 4
     itk::RegisterMincIO();
-		
-		
+#endif
+
     IOBasePointer io = itk::ImageIOFactory::CreateImageIO(input_f.c_str(), itk::ImageIOFactory::ReadMode );
     
     if(!io)
@@ -368,8 +388,7 @@ int main (int argc, char **argv)
        else if(store_short)
          resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
        else
-          resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
-
+         resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
       //resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
     } else { 
       InterpolatorType::Pointer interpolator = InterpolatorType::New();
@@ -378,10 +397,13 @@ int main (int argc, char **argv)
     }
     
     return 0;
-  } catch (const minc::generic_error & err) {
+  } 
+#if ITK_VERSION_MAJOR < 4
+  catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;
   }
+#endif
   catch( itk::ExceptionObject & err )
   {
     std::cerr << "ExceptionObject caught !" << std::endl;

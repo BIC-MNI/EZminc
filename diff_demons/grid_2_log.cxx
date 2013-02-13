@@ -3,11 +3,18 @@
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
 #include "itkDisplacementToVelocityFieldLogFilter.h"
-#include "itkExponentialDeformationFieldImageFilter.h"
+
+#if ITK_VERSION_MAJOR >= 4
+#include <itkExponentialDisplacementFieldImageFilter.h>
+#include <itkMultiplyImageFilter.h>
+#else
+#include <itkExponentialDeformationFieldImageFilter.h>
+#include <itkMultiplyByConstantImageFilter.h>
+#endif
+
 #include "itkDisplacementFieldCompositionFilter.h"
 #include "itkImageRegionIterator.h"
 #include "itkImageRegionConstIterator.h"
-#include <itkMultiplyByConstantImageFilter.h>
 
 #include <iostream>
 #include "mincUtils.h"
@@ -33,9 +40,14 @@ class CommandIterationUpdate: public itk::Command
     typedef itk::DisplacementToVelocityFieldLogFilter< DeformationFieldType, VelocityFieldType >
     VelocitorFilterType;
 
+#if ITK_VERSION_MAJOR >= 4
+    typedef itk::ExponentialDisplacementFieldImageFilter< VelocityFieldType, DeformationFieldType >
+    ExponentiatorFilterType;
+#else    
     typedef itk::ExponentialDeformationFieldImageFilter< VelocityFieldType, DeformationFieldType >
     ExponentiatorFilterType;
-
+#endif
+    
     itkNewMacro ( Self );
 
     void Execute ( itk::Object *caller, const itk::EventObject & event )
@@ -152,10 +164,14 @@ int main ( int argc, char *argv[] )
   double sigma=2.0;
   double factor=1.0;
 
+#ifdef HAVE_MINC1
   char *_history = time_stamp(argc, argv); 
   std::string minc_history=_history;
   free ( _history );
-
+#else
+  std::string minc_history;
+#endif
+  
   static struct option long_options[] =
   {
     {"verbose", no_argument, &verbose, 1},
@@ -221,8 +237,10 @@ int main ( int argc, char *argv[] )
   std::string input_f=argv[optind];
   std::string output_f=argv[optind+1];
   //Add Minc support
+#if ITK_VERSION_MAJOR < 4
   itk::RegisterMincIO();
-
+#endif
+  
   if (!clobber && !access (output_f.c_str (), F_OK))
   {
     std::cerr << output_f.c_str () << " Exists!" << std::endl;
@@ -238,9 +256,17 @@ int main ( int argc, char *argv[] )
   typedef itk::ImageFileReader< ImageType >                                   ReaderType;
   typedef itk::ImageFileWriter< ImageType >                                   WriterType;
   typedef itk::DisplacementToVelocityFieldLogFilter< ImageType, ImageType >   VelocitorFilterType;
+
+#if ITK_VERSION_MAJOR >= 4
+  typedef itk::ExponentialDisplacementFieldImageFilter< ImageType, ImageType > ExponentiatorFilterType;
+  typedef itk::MultiplyImageFilter<ImageType, ImageType, ImageType> MultiplicatorFilterType;
+#else    
   typedef itk::ExponentialDeformationFieldImageFilter< ImageType, ImageType > ExponentiatorFilterType;
-  typedef itk::DisplacementFieldCompositionFilter< ImageType, ImageType >     CompositionFilterType;
   typedef itk::MultiplyByConstantImageFilter< ImageType, double, ImageType > MultiplicatorFilterType;
+#endif
+  
+  
+  typedef itk::DisplacementFieldCompositionFilter< ImageType, ImageType >     CompositionFilterType;
 
   if(verbose) 
     std::cout << "Reading...";
@@ -317,6 +343,7 @@ int main ( int argc, char *argv[] )
   if(verbose)
     std::cout << "Done." << std::endl;
 
+#if ITK_VERSION_MAJOR < 4
   minc::copy_metadata(output_field,input_field);	
   if(!minc_history.empty())
     minc::append_history ( output_field, minc_history );
@@ -327,6 +354,7 @@ int main ( int argc, char *argv[] )
     minc::set_minc_storage_type ( output_field, NC_SHORT, false );
   if(store_float)
     minc::set_minc_storage_type ( output_field, NC_FLOAT, true );
+#endif
 
   if(verbose)
     std::cout << "Saving...";

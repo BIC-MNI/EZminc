@@ -817,128 +817,132 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
       std::string dumb1,dumb2;
       if(parse_xfm_file_name(args.inputTransformFile,dumb1,dumb2) ) //we are deling with .XFM filename
       {
-	if( args.verbosity>0 )
-	  std::cout<<"Reading Deformations from XFM file..."<<std::endl;
-	
-	typedef typename minc::XfmTransform<double,Dimension,Dimension>  XfmTransformType;
+#ifdef HAVE_MINC1 
+        if( args.verbosity>0 )
+          std::cout<<"Reading Deformations from XFM file..."<<std::endl;
+        
+        typedef typename minc::XfmTransform<double,Dimension,Dimension>  XfmTransformType;
 
-	typename XfmTransformType::Pointer transform=XfmTransformType::New();
-	
-	transform->OpenXfm(args.inputTransformFile.c_str());
-	
-	SimpleCommandProgressUpdate::Pointer observer=SimpleCommandProgressUpdate::New();
+        typename XfmTransformType::Pointer transform=XfmTransformType::New();
+        
+        transform->OpenXfm(args.inputTransformFile.c_str());
+        
+        SimpleCommandProgressUpdate::Pointer observer=SimpleCommandProgressUpdate::New();
 	
   
-#if ( ITK_VERSION_MAJOR > 3 ) 
-  typedef typename itk::TransformToDisplacementFieldSource<DeformationFieldType,double> TransformToDeformationSource;
-#else  
-	typedef typename itk::TransformToDeformationFieldSource<DeformationFieldType,double> TransformToDeformationSource;
+      #if ( ITK_VERSION_MAJOR > 3 ) 
+        typedef typename itk::TransformToDisplacementFieldSource<DeformationFieldType,double> TransformToDeformationSource;
+      #else  
+        typedef typename itk::TransformToDeformationFieldSource<DeformationFieldType,double> TransformToDeformationSource;
+      #endif
+        
+        typename TransformToDeformationSource::Pointer transform_to_def=TransformToDeformationSource::New();
+        transform_to_def->SetOutputParametersFromImage ( fixedImageReader->GetOutput() );
+        transform_to_def->SetTransform(transform);
+        transform_to_def->SetNumberOfThreads(1);
+        
+        if(args.verbosity>0)
+        {
+          transform_to_def->AddObserver ( itk::IterationEvent(), observer );
+        }
+        transform_to_def->Update();
+        
+        typedef typename itk::DisplacementToVelocityFieldLogFilter<DeformationFieldType,VelocityFieldType> DisplacementToVelocityFilter;
+        typename DisplacementToVelocityFilter::Pointer displacement_to_velocity=DisplacementToVelocityFilter::New();
+        displacement_to_velocity->SetInput(transform_to_def->GetOutput());
+        
+        if(args.verbosity>0)
+        {
+          displacement_to_velocity->AddObserver ( itk::IterationEvent(), observer );
+        }
+        
+        displacement_to_velocity->Update();
+        
+        inputVelField = displacement_to_velocity->GetOutput();
+        inputVelField->DisconnectPipeline();
+        
+        if( args.verbosity>0 )
+          std::cout<<"Done..."<<std::endl;
+#else
+          std::cerr<<"Warning, XFM reader is not implemented in ITK4 yet!"<<std::endl;
 #endif
-  
-	typename TransformToDeformationSource::Pointer transform_to_def=TransformToDeformationSource::New();
-	transform_to_def->SetOutputParametersFromImage ( fixedImageReader->GetOutput() );
-	transform_to_def->SetTransform(transform);
-	transform_to_def->SetNumberOfThreads(1);
-	
-	if(args.verbosity>0)
-	{
-	  transform_to_def->AddObserver ( itk::IterationEvent(), observer );
-	}
-	transform_to_def->Update();
-	
-	typedef typename itk::DisplacementToVelocityFieldLogFilter<DeformationFieldType,VelocityFieldType> DisplacementToVelocityFilter;
-	typename DisplacementToVelocityFilter::Pointer displacement_to_velocity=DisplacementToVelocityFilter::New();
-	displacement_to_velocity->SetInput(transform_to_def->GetOutput());
-	
-	if(args.verbosity>0)
-	{
-	  displacement_to_velocity->AddObserver ( itk::IterationEvent(), observer );
-	}
-	
-	displacement_to_velocity->Update();
-	
-	inputVelField = displacement_to_velocity->GetOutput();
-	inputVelField->DisconnectPipeline();
-	
-	if( args.verbosity>0 )
-	  std::cout<<"Done..."<<std::endl;
-
+          
       } else {
-	typedef typename TransformReaderType::TransformType BaseTransformType;
-	typename TransformReaderType::Pointer transformReader= TransformReaderType::New();
-	BaseTransformType* baseTrsf ( 0 );
-	// Set up the transform reader
-	transformReader->SetFileName ( args.inputTransformFile.c_str() );
+        typedef typename TransformReaderType::TransformType BaseTransformType;
+        typename TransformReaderType::Pointer transformReader= TransformReaderType::New();
+        BaseTransformType* baseTrsf ( 0 );
+        // Set up the transform reader
+        transformReader->SetFileName ( args.inputTransformFile.c_str() );
 
-	// Update the reader
+        // Update the reader
 
-	try
-	{
-	  transformReader->Update();
-	}
-	catch ( itk::ExceptionObject& err )
-	{
-	  std::cout << "Could not read the input transform." << std::endl;
-	  std::cout << err << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
-	
+        try
+        {
+          transformReader->Update();
+        }
+        catch ( itk::ExceptionObject& err )
+        {
+          std::cout << "Could not read the input transform." << std::endl;
+          std::cout << err << std::endl;
+          exit ( EXIT_FAILURE );
+        }
+        
 
-	const typename TransformReaderType::TransformListType* trsflistptr
-	= transformReader->GetTransformList();
+        const typename TransformReaderType::TransformListType* trsflistptr
+        = transformReader->GetTransformList();
 
-	if ( trsflistptr->empty() )
-	{
-	  std::cout << "Could not read the input transform." << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
-	else if ( trsflistptr->size() > 1 )
-	{
-	  std::cout << "The input transform file contains more than one transform." << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
+        if ( trsflistptr->empty() )
+        {
+          std::cout << "Could not read the input transform." << std::endl;
+          exit ( EXIT_FAILURE );
+        }
+        else if ( trsflistptr->size() > 1 )
+        {
+          std::cout << "The input transform file contains more than one transform." << std::endl;
+          exit ( EXIT_FAILURE );
+        }
 
-	baseTrsf = trsflistptr->front();
+        baseTrsf = trsflistptr->front();
 
-	if ( !baseTrsf )
-	{
-	  std::cout << "Could not read the input transform." << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
-	// Set up the TransformToDeformationFieldFilter
-	typedef itk::TransformToVelocityFieldSource  <VelocityFieldType>  FieldGeneratorType;
+        if ( !baseTrsf )
+        {
+          std::cout << "Could not read the input transform." << std::endl;
+          exit ( EXIT_FAILURE );
+        }
+        // Set up the TransformToDeformationFieldFilter
+        typedef itk::TransformToVelocityFieldSource  <VelocityFieldType>  FieldGeneratorType;
 
-	typedef typename FieldGeneratorType::TransformType TransformType;
+        typedef typename FieldGeneratorType::TransformType TransformType;
 
-	TransformType* trsf = dynamic_cast<TransformType*> ( baseTrsf );
+        TransformType* trsf = dynamic_cast<TransformType*> ( baseTrsf );
 
-	if ( !trsf )
-	{
-	  std::cout << "Could not cast input transform to a usable transform." << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
+        if ( !trsf )
+        {
+          std::cout << "Could not cast input transform to a usable transform." << std::endl;
+          exit ( EXIT_FAILURE );
+        }
 
-	typename FieldGeneratorType::Pointer fieldGenerator = FieldGeneratorType::New();
+        typename FieldGeneratorType::Pointer fieldGenerator = FieldGeneratorType::New();
 
-	fieldGenerator->SetTransform ( trsf );
-	fieldGenerator->SetOutputParametersFromImage ( fixedImageReader->GetOutput() );
+        fieldGenerator->SetTransform ( trsf );
+        fieldGenerator->SetOutputParametersFromImage ( fixedImageReader->GetOutput() );
 
-	// Update the fieldGenerator
+        // Update the fieldGenerator
 
-	try
-	{
-	  fieldGenerator->Update();
-	}
-	catch ( itk::ExceptionObject& err )
-	{
-	  std::cout << "Could not generate the input field." << std::endl;
-	  std::cout << err << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
+        try
+        {
+          fieldGenerator->Update();
+        }
+        catch ( itk::ExceptionObject& err )
+        {
+          std::cout << "Could not generate the input field." << std::endl;
+          std::cout << err << std::endl;
+          exit ( EXIT_FAILURE );
+        }
 
-	inputVelField = fieldGenerator->GetOutput();
+        inputVelField = fieldGenerator->GetOutput();
 
-	inputVelField->DisconnectPipeline();
+        inputVelField->DisconnectPipeline();
       }
     }
 
@@ -1215,7 +1219,9 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
     // Write warped image out to file
     writer->SetFileName ( args.outputImageFile.c_str() );
     caster->SetInput ( warper->GetOutput() );
+#ifdef HAVE_MINC1    
     mincify ( caster->GetOutput(), NC_SHORT );
+#endif
     writer->SetInput ( caster->GetOutput() );
     writer->SetUseCompression ( true );
 
@@ -1264,8 +1270,9 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
 
     fieldWriter->SetFileName ( output_def_field.c_str() );
 
+#ifdef HAVE_MINC1    
     mincify ( defField, NC_SHORT );
-
+#endif
     fieldWriter->SetInput ( defField );
 
     fieldWriter->SetUseCompression ( true );
@@ -1292,8 +1299,9 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
     typedef itk::ImageFileWriter< DeformationFieldType > FieldWriterType;
     typename FieldWriterType::Pointer fieldWriter = FieldWriterType::New();
     fieldWriter->SetFileName ( args.outputInverseDeformationFieldFile.c_str() );
+#ifdef HAVE_MINC1    
     mincify ( invDefField, NC_SHORT );
-
+#endif
     fieldWriter->SetInput ( invDefField );
     fieldWriter->SetUseCompression ( true );
 
@@ -1319,7 +1327,9 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
     typedef itk::ImageFileWriter< VelocityFieldType > FieldWriterType;
     typename FieldWriterType::Pointer fieldWriter = FieldWriterType::New();
     fieldWriter->SetFileName ( args.outputVelocityFieldFile.c_str() );
+#ifdef HAVE_MINC1    
     mincify ( velField, NC_SHORT );
+#endif    
     fieldWriter->SetInput ( velField );
     fieldWriter->SetUseCompression ( true );
 
@@ -1400,7 +1410,9 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
 
     typename GridWriterType::Pointer      gridwriter =  GridWriterType::New();
     gridwriter->SetFileName ( "WarpedGridImage.mnc" );
+#ifdef HAVE_MINC1    
     mincify ( gridwarper->GetOutput(), NC_BYTE );
+#endif    
     gridwriter->SetInput ( gridwarper->GetOutput() );
     gridwriter->SetUseCompression ( true );
 
@@ -1433,7 +1445,9 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
     typename GridWriterType::Pointer      gridwriter =  GridWriterType::New();
     gridwriter->SetFileName ( "ForwardWarpedGridImage.mnc" );
     fwWarper->Update();
+#ifdef HAVE_MINC1    
     mincify ( fwWarper->GetOutput(), NC_BYTE );
+#endif 
     gridwriter->SetInput ( fwWarper->GetOutput() );
     gridwriter->SetUseCompression ( true );
 
@@ -1509,7 +1523,9 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
     {
       writer->SetFileName ( args.outputJacobianFile.c_str() );
       caster->SetInput ( jacobianFilter->GetOutput() );
+#ifdef HAVE_MINC1    
       mincify ( jacobianFilter->GetOutput(), NC_SHORT );
+#endif      
       writer->SetInput ( caster->GetOutput() );
       writer->SetUseCompression ( true );
 
@@ -1544,18 +1560,22 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
 
 int main ( int argc, char *argv[] )
 {
+#ifdef HAVE_MINC1    
   char *_history = time_stamp ( argc, argv );
   minc_history = _history;
   free ( _history );
-
+#endif
+  
   struct arguments args;
   parseOpts ( argc, argv, args );
 
   std::cout << "Starting demons registration with the following arguments:" << std::endl;
   std::cout << args << std::endl << std::endl;
 
+#if ITK_VERSION_MAJOR < 4 
   //Add Minc support
   itk::RegisterMincIO();
+#endif  
 
 
   // FIXME uncomment for debug only
