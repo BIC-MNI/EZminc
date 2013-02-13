@@ -17,12 +17,17 @@
 #include <iostream>
 #include <itkDanielssonDistanceMapImageFilter.h>
 #include <itkSignedDanielssonDistanceMapImageFilter.h>
+#include <itkImageFileReader.h>
+#include <itkImageFileWriter.h>
+
+#if ( ITK_VERSION_MAJOR < 4 )
 #include <time_stamp.h>    // for creating minc style history entry
 #include "itkMincImageIOFactory.h"
 #include "itkMincImageIO.h"
 #include "itkMincHelpers.h"
-
 using namespace minc;
+#endif 
+
 using namespace std;
 void show_usage(const char *name)
 {
@@ -43,8 +48,10 @@ int main (int argc, char **argv)
   int approx=0;
   int ss=0;
   int clobber=0;
+#if ( ITK_VERSION_MAJOR < 4 )
   char *history = time_stamp(argc, argv); 
-
+#endif
+  
   //int voxel_neibourhood=5;
   static struct option long_options[] = { 
     {"clobber", no_argument, &clobber, 1},
@@ -91,20 +98,23 @@ int main (int argc, char **argv)
     
   try
   {
+    typedef itk::Image<unsigned char,3> mask3d;
+    typedef itk::Image<float,3> image3d;
+#if ( ITK_VERSION_MAJOR < 4 ) 
     itk::RegisterMincIO();
-
-    itk::ImageFileReader<minc::mask3d >::Pointer reader = itk::ImageFileReader<minc::mask3d >::New();
+#endif
+    itk::ImageFileReader<mask3d >::Pointer reader = itk::ImageFileReader< mask3d >::New();
     
     //initializing the reader
     reader->SetFileName(input_f.c_str());
     reader->Update();
     
-    minc::mask3d::Pointer input=reader->GetOutput();
-    minc::image3d::Pointer output;
+    mask3d::Pointer input=reader->GetOutput();
+    image3d::Pointer output;
     
-    typedef itk::DanielssonDistanceMapImageFilter< minc::mask3d, minc::image3d >
+    typedef itk::DanielssonDistanceMapImageFilter< mask3d, image3d >
             DistanceMapFilter;
-    typedef itk::SignedDanielssonDistanceMapImageFilter< minc::mask3d, minc::image3d >
+    typedef itk::SignedDanielssonDistanceMapImageFilter< mask3d, image3d >
         SignedDistanceMapFilter;
     
     if(ss)
@@ -120,19 +130,31 @@ int main (int argc, char **argv)
       output=dist->GetOutput();
     }
     
-    minc::copy_metadata(output,input);
-    minc::append_history(output,history);
+#if ( ITK_VERSION_MAJOR < 4 ) 
+    copy_metadata(output,input);
+    append_history(output,history);
     free(history);
+#endif 
     
-    itk::ImageFileWriter< minc::image3d >::Pointer writer = itk::ImageFileWriter<minc::image3d >::New();
+    itk::ImageFileWriter< image3d >::Pointer writer = itk::ImageFileWriter<image3d >::New();
     writer->SetFileName(out_f.c_str());
     writer->SetInput( output );
     writer->Update();
     
-  } catch (const minc::generic_error & err) {
+  } 
+#if ( ITK_VERSION_MAJOR < 4 )
+  catch (const generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     cerr << err.msg()<<endl;
     return 1;
   }
+#endif
+  catch( itk::ExceptionObject & err )
+  {
+    std::cerr << "ExceptionObject caught !" << std::endl;
+    std::cerr << err << std::endl;
+    return 2;
+  }
+
   return 0;
 }

@@ -11,10 +11,15 @@
 #include <itkCastImageFilter.h>
 #include <itkDiffusionTensor3D.h>
 
-#include "itkMincImageIOFactory.h"
-#include "itkMincImageIO.h"
+#if ( ITK_VERSION_MAJOR > 3 ) 
+//TODO: what here?
+#else
+  #include "itkMincImageIOFactory.h"
+  #include "itkMincImageIO.h"
+  #include <time_stamp.h>    // for creating minc style history entry
+  #include "itkMincHelpers.h"
+#endif
 
-#include <time_stamp.h>    // for creating minc style history entry
 #include <getopt.h>
 #include <unistd.h>
 
@@ -23,7 +28,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include "itkMincHelpers.h"
 
 typedef std::vector<double> double_vector;
 
@@ -294,6 +298,9 @@ public:
         }
       }
     }
+    
+    
+#if ( ITK_VERSION_MAJOR < 4 ) 
     // force time to be fastes varying dimension to simplify using xdisp
     std::vector<std::string> dimorder;
 
@@ -304,7 +311,7 @@ public:
     dimorder.push_back(MIxspace);
     
     itk::EncapsulateMetaData(dict,"dimorder", dimorder);
-    
+#endif    
 
   }
 
@@ -518,9 +525,11 @@ public:
       img->SetOrigin(org);
     }
     
+#if ( ITK_VERSION_MAJOR < 4 ) 
     if(!history.empty())
       minc::append_history(img,history);
-    
+#endif
+      
     typename itk::CastImageFilter< TInputImage, TOutputImage >::Pointer cast=itk::CastImageFilter< TInputImage, TOutputImage >::New();
     
     cast->SetInput(img);
@@ -534,9 +543,11 @@ public:
     
     cast->GetOutput()->SetMetaDataDictionary(thisDic);
     
+#if ( ITK_VERSION_MAJOR < 4 ) 
     if(minc_type!=-1) 
       minc::set_minc_storage_type(cast->GetOutput(),(nc_type)minc_type,minc_type!=NC_BYTE); //store byte as unsigned only
-    
+#endif
+      
     writer->SetInput( cast->GetOutput() );
     writer->Update();
   }
@@ -653,8 +664,10 @@ public:
       img->SetOrigin(org);
     }
     
+    #if ( ITK_VERSION_MAJOR < 4 ) 
     if(!history.empty())
-      minc::append_history(img,history);
+        minc::append_history(img,history);
+    #endif 
     
     typename itk::CastImageFilter< TInputImage, TOutputImage >::Pointer cast=itk::CastImageFilter< TInputImage, TOutputImage >::New();
     
@@ -669,9 +682,11 @@ public:
     
     cast->GetOutput()->SetMetaDataDictionary(thisDic);
     
+#if ( ITK_VERSION_MAJOR < 4 ) 
     if(minc_type!=-1) 
       minc::set_minc_storage_type(cast->GetOutput(),(nc_type)minc_type,minc_type!=NC_BYTE); //store byte as unsigned only
-    
+#endif
+
     writer->SetInput( cast->GetOutput() );
     writer->Update();
   }
@@ -699,7 +714,11 @@ int main(int argc,char **argv)
   int show_meta=0;
   int inv_x=0,inv_y=0,inv_z=0,center=0;
   int assume_dti=0;
+#if ( ITK_VERSION_MAJOR < 4 ) 
   char *_history = time_stamp(argc, argv);
+#else
+  char *_history = "";
+#endif
   std::string history=_history;
   int use_b_matrix=0;
   int dwi_flip_z=0;
@@ -709,7 +728,9 @@ int main(int argc,char **argv)
   
   int store_char=0,store_uchar=0,store_short=0,store_ushort=0,store_float=0,store_int=0,store_uint=0,store_double=0;
   
+#if ( ITK_VERSION_MAJOR < 4 ) 
   free(_history);
+#endif
 
   static struct option long_options[] = { 
     {"verbose", no_argument, &verbose, 1},
@@ -734,13 +755,15 @@ int main(int argc,char **argv)
     {"ushort", no_argument, &store_ushort, 1},
     {"int", no_argument, &store_int, 1},
     {"uint", no_argument, &store_uint, 1},
+    
+#if ( ITK_VERSION_MAJOR < 4 )  //for now 
 
     {"mfloat",  no_argument, &minc_type, NC_FLOAT},
     {"mdouble", no_argument, &minc_type, NC_DOUBLE},
     {"mbyte",   no_argument, &minc_type, NC_BYTE},
     {"mshort",  no_argument, &minc_type, NC_SHORT},
     {"mint",    no_argument, &minc_type, NC_INT},
- 
+#endif 
     {0, 0, 0, 0}
   };
     
@@ -786,7 +809,9 @@ int main(int argc,char **argv)
   
   try
   {
+#if ( ITK_VERSION_MAJOR <4 ) 
     itk::RegisterMincIO();
+#endif
     
     if(use_b_matrix) assume_dti=1;
     

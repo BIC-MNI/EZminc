@@ -13,12 +13,12 @@
               express or implied warranty.
 ---------------------------------------------------------------------------- */
 
-
+#if ( ITK_VERSION_MAJOR < 4 )
 #include <itkMincHelpers.h>
+#endif
 
 #include <unistd.h>
 #include <getopt.h>
-//#include "data_proc.h"
 
 #include "mincVectorBSplineInterpolate.h"
 #include <vnl/vnl_matrix_fixed.h>
@@ -174,6 +174,7 @@ int main (int argc, char **argv)
       it.Value()[2]=_out[2];
       
     }
+    
     delete_general_transform(&xfm);
 
     save_minc<def3d>(output_f.c_str(),out_grid);

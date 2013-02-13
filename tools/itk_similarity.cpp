@@ -1,6 +1,3 @@
-#include "minc_wrappers.h"
-#include <itkMincHelpers.h>
-
 #include <iostream>
 #include <itkImageMaskSpatialObject.h>
 // cost functions
@@ -19,11 +16,19 @@
 //#include <itkIdentityTransform.h>
 #include <itkAffineTransform.h>
 
+#include <itkImageFileReader.h>
+
+#if ( ITK_VERSION_MAJOR < 4 )
+#include "minc_wrappers.h"
+#include <itkMincHelpers.h>
+using namespace  minc;
+#endif
+
+
 #include <unistd.h>
 #include <getopt.h>
 
 using namespace  std;
-using namespace  minc;
 
 //! a helper function for file reading
 template <class T> typename T::Pointer load_file(const char *file)
@@ -234,19 +239,19 @@ int main (int argc, char **argv)
   //    cerr<<metric<<endl;
     }
       
-	} catch (const minc::generic_error & err) {
+  } 
+#if ( ITK_VERSION_MAJOR < 4 )
+  catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;
   }
+#endif  
   catch( itk::ExceptionObject & err ) 
   { 
     std::cerr << "ExceptionObject caught !" << std::endl; 
     std::cerr << err << std::endl; 
     return 2;
   } 
-
-  
-  
   return 0;
 }  
 

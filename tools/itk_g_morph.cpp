@@ -1,13 +1,12 @@
-//#include "minc_io.h"
 #include <stdlib.h>
 #include <iostream>
 #include <getopt.h>
 #include <unistd.h>
-#include <time_stamp.h>    // for creating minc style history entry
+
 #include "strtok.h"
 
+#include <itkImage.h>
 #include <itkBinaryBallStructuringElement.h>
-
 #include <itkMedianImageFilter.h>
 #include <itkGrayscaleDilateImageFilter.h>
 #include <itkGrayscaleErodeImageFilter.h>
@@ -16,34 +15,40 @@
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
 
+#if ( ITK_VERSION_MAJOR < 4 )
+#include <time_stamp.h>    // for creating minc style history entry
 #include "itkMincImageIOFactory.h"
 #include "itkMincImageIO.h"
 #include "itkMincHelpers.h"
+using namespace  minc;
+#endif
 
 using namespace  std;
-using namespace  minc;
 
+
+typedef itk::Image<unsigned char,3> mask3d;
+typedef itk::Image<float,3> image3d;
 
 typedef itk::ImageToImageFilter<
-                    minc::image3d,
-                    minc::image3d > ImageFilter;
+                   image3d,
+                   image3d > ImageFilter;
 
 typedef itk::BinaryBallStructuringElement<
-                    minc::mask3d::PixelType,
+                   mask3d::PixelType,
                     3  >  BallStructuringElementType;
 
 typedef itk::MedianImageFilter<
-               minc::image3d, minc::image3d >  MedianFilterType;
+              image3d,image3d >  MedianFilterType;
 
 
 typedef itk::GrayscaleErodeImageFilter<
-                            minc::image3d,
-                            minc::image3d,
+                           image3d,
+                           image3d,
                             BallStructuringElementType >  ErodeFilterType;
 
 typedef itk::GrayscaleDilateImageFilter<
-                            minc::image3d,
-                            minc::image3d,
+                           image3d,
+                           image3d,
                             BallStructuringElementType >  DilateFilterType;
 
                     
@@ -130,7 +135,7 @@ ImageFilter::Pointer construct(image3d::Pointer input, const std::string& par)
         else arg1=args[0];
         cout<<"Median "<<arg1<<endl;
         MedianFilterType::Pointer flt=MedianFilterType::New();
-        minc::image3d::SizeType sz;
+       image3d::SizeType sz;
         sz.Fill(arg1);
         flt->SetRadius(sz);
         flt->SetInput(input);
@@ -158,7 +163,9 @@ int main (int argc, char **argv)
   double threshold=1e10;
   int bimodal=0;
   std::string operations;
+#if ( ITK_VERSION_MAJOR < 4 )
   char *history = time_stamp(argc, argv); 
+#endif
   
   static struct option long_options[] = { 
     {"verbose", no_argument, &verbose, 1},
@@ -218,16 +225,18 @@ int main (int argc, char **argv)
   
 	try
   {
+#if ( ITK_VERSION_MAJOR < 4 )
     itk::RegisterMincIO();
-
-    itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
+#endif
+    
+    itk::ImageFileReader<image3d >::Pointer reader = itk::ImageFileReader<image3d >::New();
     
     image3d::Pointer output_img;
     
     reader->SetFileName(input.c_str());
     reader->Update();
     
-    minc::image3d::Pointer img=reader->GetOutput();
+    image3d::Pointer img=reader->GetOutput();
     
     //parse through operations
     if(operations.empty())
@@ -266,11 +275,13 @@ int main (int argc, char **argv)
         output_img=last->GetOutput();
       }
     }
+#if ( ITK_VERSION_MAJOR < 4 )
     minc::copy_metadata(output_img,img);
     minc::append_history(output_img,history);
     free(history);
-
-    itk::ImageFileWriter< minc::image3d >::Pointer writer = itk::ImageFileWriter<minc::image3d >::New();
+#endif 
+    
+    itk::ImageFileWriter< image3d >::Pointer writer = itk::ImageFileWriter<image3d >::New();
     writer->SetFileName(output.c_str());
     
     writer->SetInput( output_img );
@@ -278,10 +289,13 @@ int main (int argc, char **argv)
     
     writer->Update();
     
-	} catch (const minc::generic_error & err) {
+  } 
+#if ( ITK_VERSION_MAJOR < 4 )
+  catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;
   }
+#endif
   catch( itk::ExceptionObject & err ) 
   { 
     std::cerr << "ExceptionObject caught !" << std::endl; 

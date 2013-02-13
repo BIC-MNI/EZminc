@@ -18,12 +18,39 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
-#include <itkMincHelpers.h>
+
 #include <getopt.h>
 #include <map>
 
+
+#if ( ITK_VERSION_MAJOR < 4 )
 #include <time_stamp.h>    // for creating minc style history entry
+#include <itkMincHelpers.h>
 #include <itkMincImageIOFactory.h>
+using namespace minc;
+#else
+//! allocate volume of the same dimension,spacing and origin
+template<class T,class S> void allocate_same(typename T::Pointer &image,const typename S::ConstPointer &sample)
+{
+  image->SetLargestPossibleRegion(sample->GetLargestPossibleRegion());
+  image->SetBufferedRegion(sample->GetLargestPossibleRegion());
+  image->SetRequestedRegion(sample->GetLargestPossibleRegion());
+  image->SetSpacing( sample->GetSpacing() );
+  image->SetOrigin ( sample->GetOrigin() );
+  image->SetDirection(sample->GetDirection());
+  image->Allocate();
+}
+template<class T,class S> void allocate_same(typename T::Pointer &image,const typename S::Pointer &sample)
+{
+  image->SetLargestPossibleRegion(sample->GetLargestPossibleRegion());
+  image->SetBufferedRegion(sample->GetLargestPossibleRegion());
+  image->SetRequestedRegion(sample->GetLargestPossibleRegion());
+  image->SetSpacing( sample->GetSpacing() );
+  image->SetOrigin ( sample->GetOrigin() );
+  image->SetDirection(sample->GetDirection());
+  image->Allocate();
+}
+#endif
 
 typedef itk::Image<unsigned char, 3>  LabelImageType;
 typedef itk::Image<float, 3>  RealImageType;
@@ -39,7 +66,7 @@ typedef itk::ImageRegionIterator<LabelImageType> LabelImageIterator;
 typedef itk::ImageRegionIterator<VectorImageType> VectorImageIterator;
 typedef itk::ImageRegionIterator<RealImageType> RealImageIterator;
 
-using namespace minc;
+
 
 void show_usage (const char * prog)
 {
@@ -57,10 +84,14 @@ void show_usage (const char * prog)
 int main(int argc,char **argv)
 {
 	
+#if ( ITK_VERSION_MAJOR < 4 )
 	char *history = time_stamp(argc, argv); 
 	std::string minc_history=history;
 	free(history);
-
+#else
+  std::string minc_history="";
+#endif
+  
   int verbose=0;
   std::string mask_f,list_f,majority_f,overlap_f;
 	int classes=3;
@@ -153,7 +184,9 @@ int main(int argc,char **argv)
       }
     }
     
+#if ( ITK_VERSION_MAJOR < 4 )
     itk::RegisterMincIO();
+#endif    
 		int nfiles=argc-optind;
 		
 		if(verbose)
@@ -256,6 +289,7 @@ int main(int argc,char **argv)
 		}
 		
 		LabelImageType::Pointer majority=LabelImageType::New();
+    
 		allocate_same<LabelImageType,VectorImageType>(majority,distribution);
 		majority->FillBuffer(0);
 		
@@ -318,12 +352,14 @@ int main(int argc,char **argv)
 			std::cout<<"Global overlap:";
 		std::cout<<a/b<<std::endl;
 		
+#if ( ITK_VERSION_MAJOR < 4 )
 		minc::set_minc_storage_type ( majority, NC_BYTE, false );
 		minc::append_history ( majority, minc_history );
 		
 		minc::set_minc_storage_type ( overlap, NC_SHORT, false );
 		minc::append_history ( overlap, minc_history );
-		
+#endif
+
 		if(!majority_f.empty())
 		{
 			WriterType::Pointer writer=WriterType::New();
@@ -340,10 +376,19 @@ int main(int argc,char **argv)
 			writer->Update();
 		}
     
-  } catch (const minc::generic_error & err) {
+  } 
+#if ( ITK_VERSION_MAJOR < 4 )
+  catch (const minc::generic_error & err) {
     std::cerr << "Got an error at:" << err.file () << ":" << err.line () << std::endl;
     std::cerr << err.msg()<<std::endl;
     return 1;
   }
+#endif  
+  catch( itk::ExceptionObject & err ) 
+  { 
+    std::cerr << "ExceptionObject caught !" << std::endl; 
+    std::cerr << err << std::endl; 
+    return 2;
+  } 
   return 0;
 }

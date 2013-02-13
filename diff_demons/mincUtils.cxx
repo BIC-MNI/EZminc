@@ -28,7 +28,7 @@ bool parse_xfm_file_name(const std::string & fname,std::string &def_field,std::s
 
         if ( pos2 != std::string::npos )
           def_field_base = def_field.substr ( pos2+1 );
-	return true;
+        return true;
       }
     }
     return false;

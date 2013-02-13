@@ -1,12 +1,9 @@
-#include "minc_wrappers.h"
-//#include "minc_io.h"
 #include <stdlib.h>
 #include <iostream>
 #include <getopt.h>
 #include <unistd.h>
 
 #include "strtok.h"
-#include <time_stamp.h>    // for creating minc style history entry
 
 #include <itkBinaryBallStructuringElement.h>
 
@@ -28,69 +25,81 @@
 #include <itkUnaryFunctorImageFilter.h>
 #include <itkBinaryMedianImageFilter.h>
 
-using namespace  std;
+#include <itkImageFileReader.h>
+#include <itkImageFileWriter.h>
+#include <itkImageIOFactory.h>
+
+#if ( ITK_VERSION_MAJOR < 4 )
+#include "minc_wrappers.h"
+#include <time_stamp.h>    // for creating minc style history entry
 using namespace  minc;
+#endif
+
+using namespace  std;
+
+typedef itk::Image<unsigned char,3> mask3d;
+typedef itk::Image<float,3> image3d;
 
 
 typedef itk::ImageToImageFilter<
-                    minc::mask3d,
-                    minc::mask3d > ImageFilter;
+                    mask3d,
+                    mask3d > ImageFilter;
 
 typedef itk::BinaryBallStructuringElement<
-                    minc::mask3d::PixelType,
+                    mask3d::PixelType,
                     3  >  BallStructuringElementType;
                     
 typedef itk::BinaryDilateImageFilter<
-                    minc::mask3d,
-                    minc::mask3d,
+                    mask3d,
+                    mask3d,
                     BallStructuringElementType >  DilateFilterType;
 
 typedef itk::BinaryErodeImageFilter<
-                    minc::mask3d,
-                    minc::mask3d,
+                    mask3d,
+                    mask3d,
                     BallStructuringElementType >  ErodeFilterType;
                     
 typedef itk::OtsuThresholdImageFilter< 
-                    minc::image3d, 
-                    minc::mask3d >            OtsuThresholdFilter;
+                    image3d, 
+                    mask3d >            OtsuThresholdFilter;
 
 typedef itk::BinaryThresholdImageFilter< 
-                    minc::image3d, 
-                    minc::mask3d >            BinaryThresholdFilter;
+                    image3d, 
+                    mask3d >            BinaryThresholdFilter;
                     
 typedef itk::BinaryPruningImageFilter <
-                    minc::mask3d,
-                    minc::mask3d>    BinaryPruningFilter;              
+                    mask3d,
+                    mask3d>    BinaryPruningFilter;              
 
 typedef itk::BinaryThinningImageFilter<
-                    minc::mask3d,
-                    minc::mask3d>    BinaryThiningFilter;
+                    mask3d,
+                    mask3d>    BinaryThiningFilter;
 
 typedef itk::ConnectedComponentImageFilter< 
-                    minc::mask3d,
-                    minc::mask3d>    BinaryConnectedFilter;                  
+                    mask3d,
+                    mask3d>    BinaryConnectedFilter;                  
 
 typedef itk::RelabelComponentImageFilter<
-                    minc::mask3d,
-                    minc::mask3d>    BinaryRelabelFilter;
+                    mask3d,
+                    mask3d>    BinaryRelabelFilter;
 
 typedef itk::BinaryThresholdImageFilter< 
-                    minc::mask3d, 
-                    minc::mask3d >     BinaryThresholdMaskFilter;
+                    mask3d, 
+                    mask3d >     BinaryThresholdMaskFilter;
 
 typedef itk::BinaryMedianImageFilter<                  
-                    minc::mask3d, 
-                    minc::mask3d > BinaryMedianFilter;
+                    mask3d, 
+                    mask3d > BinaryMedianFilter;
                     
 typedef itk::InvertIntensityImageFilter< 
-                    minc::mask3d, 
-                    minc::mask3d > BinaryInvertFilter;
+                    mask3d, 
+                    mask3d > BinaryInvertFilter;
                     
 class op_add {
   public:
-  minc_mask_voxel _v;
+  unsigned char _v;
 
-  op_add(minc_mask_voxel v=0):_v(v)
+  op_add(unsigned char v=0):_v(v)
   {
   }
   
@@ -104,15 +113,15 @@ class op_add {
     return a._v==_v;
   }
   
-  minc_mask_voxel operator()(minc_mask_voxel l)
+  unsigned char operator()(unsigned char l)
   {
     return _v+l;
   }
 };                      
                     
 typedef itk::UnaryFunctorImageFilter< 
-                    minc::mask3d,
-                    minc::mask3d,
+                    mask3d,
+                    mask3d,
                     op_add>     BinaryAddFilter;
                     
 void show_usage (const char *name)
@@ -284,7 +293,7 @@ ImageFilter::Pointer construct(mask3d::Pointer input, const std::string& par)
         else arg1=args[0];
         cout<<"Median "<<arg1<<endl;
         BinaryMedianFilter::Pointer flt=BinaryMedianFilter::New();
-        minc::image3d::SizeType sz;
+        image3d::SizeType sz;
         sz.Fill(arg1);
         flt->SetRadius(sz);
         flt->SetBackgroundValue(0);
@@ -317,7 +326,9 @@ int main (int argc, char **argv)
   double threshold=1e10;
   int bimodal=0;
   std::string operations;
+#if ( ITK_VERSION_MAJOR < 4 )
   char *history = time_stamp(argc, argv); 
+#endif
   
   static struct option long_options[] = { 
     {"verbose", no_argument, &verbose, 1},
@@ -377,16 +388,18 @@ int main (int argc, char **argv)
   
 	try
   {
+#if ( ITK_VERSION_MAJOR < 4 )
     itk::RegisterMincIO();
-
+#endif
+    
     mask3d::Pointer mask_img( mask3d::New() ),
                     output_img;
     if(bimodal)
     {
-      itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
+      itk::ImageFileReader<image3d >::Pointer reader = itk::ImageFileReader<image3d >::New();
       reader->SetFileName(input.c_str());
       reader->Update();
-      minc::image3d::Pointer img=reader->GetOutput();
+      image3d::Pointer img=reader->GetOutput();
       
       OtsuThresholdFilter::Pointer flt=OtsuThresholdFilter::New();
       //flt->SetLowerThreshold(threshold);
@@ -398,10 +411,10 @@ int main (int argc, char **argv)
         cout<<"BimodalT threshold:"<<flt->GetThreshold()<<endl;
       mask_img=flt->GetOutput();
     } else if(threshold!=1e10) {
-      itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
+      itk::ImageFileReader<image3d >::Pointer reader = itk::ImageFileReader<image3d >::New();
       reader->SetFileName(input.c_str());
       reader->Update();
-      minc::image3d::Pointer img=reader->GetOutput();
+      image3d::Pointer img=reader->GetOutput();
       
       BinaryThresholdFilter::Pointer flt=BinaryThresholdFilter::New();
       flt->SetLowerThreshold(threshold);
@@ -411,11 +424,11 @@ int main (int argc, char **argv)
       flt->Update();
       mask_img=flt->GetOutput();
     } else {
-      itk::ImageFileReader<minc::mask3d >::Pointer reader = itk::ImageFileReader<minc::mask3d >::New();
+      itk::ImageFileReader<mask3d >::Pointer reader = itk::ImageFileReader<mask3d >::New();
       reader->SetFileName(input.c_str());
       reader->Update();
       mask_img=reader->GetOutput();
-      normalize_mask(mask_img);
+      //normalize_mask(mask_img);
     }
     //parse through operations
     if(operations.empty())
@@ -456,11 +469,14 @@ int main (int argc, char **argv)
         output_img=last->GetOutput();
       }
     }
+    
+#if ( ITK_VERSION_MAJOR < 4 )
     minc::copy_metadata(output_img,mask_img);
     minc::append_history(output_img,history);
     free(history);
+#endif
     
-    itk::ImageFileWriter< minc::mask3d >::Pointer writer = itk::ImageFileWriter<minc::mask3d >::New();
+    itk::ImageFileWriter< mask3d >::Pointer writer = itk::ImageFileWriter<mask3d >::New();
     writer->SetFileName(output.c_str());
     
     writer->SetInput( output_img );
@@ -469,10 +485,13 @@ int main (int argc, char **argv)
     writer->Update();
 
     
-	} catch (const minc::generic_error & err) {
+  } 
+#if ( ITK_VERSION_MAJOR < 4 )
+  catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;
   }
+#endif  
   catch( itk::ExceptionObject & err ) 
   { 
     std::cerr << "ExceptionObject caught !" << std::endl; 

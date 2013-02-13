@@ -23,14 +23,12 @@
 #include <unistd.h>
 #include <algorithm>
 
-#include <vxl/core/vnl/vnl_cross.h>
 
 #include <itkVector.h>
 #include <itkResampleImageFilter.h>
 #include <itkAffineTransform.h>
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkBSplineInterpolateImageFunction.h>
-#include <itkMincGeneralTransform.h>
 #include <itkVectorImage.h>
 #include <itkBinaryThresholdImageFilter.h>
 
@@ -42,7 +40,6 @@
 
 #include <unistd.h>
 #include <getopt.h>
-#include <time_stamp.h>    // for creating minc style history entry
 
 
 #include <itkImageFileReader.h>
@@ -50,9 +47,17 @@
 #include <itkImageIOFactory.h>
 #include <itkImageIOBase.h>
 
+#if ( ITK_VERSION_MAJOR < 4 )
+#include <vxl/core/vnl/vnl_cross.h>
 #include "itkMincImageIOFactory.h"
 #include "itkMincImageIO.h"
 #include "itkMincHelpers.h"
+#include <time_stamp.h>    // for creating minc style history entry
+#include <itkMincGeneralTransform.h>
+#else
+#include <vnl/vnl_cross.h>
+#include <itkCompositeTransform.h>
+#endif
 
 typedef itk::ImageBase<3>   Image3DBase;
 typedef itk::Image<float,3> Float3DImage;
@@ -75,7 +80,11 @@ typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
 //typedef itk::VariableVectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
 typedef itk::VectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
 
+#if ( ITK_VERSION_MAJOR < 4 )
 typedef minc::XfmTransform<double,3,3>  TransformType;
+#else
+typedef itk::CompositeTransform< double, 3 > TransformType;
+#endif
 
 using namespace  std;
 
@@ -280,23 +289,26 @@ void resample_image(
   typename ResampleFilterType::Pointer filter  = ResampleFilterType::New();
   
   //creating coordinate transformation objects
-  TransformType::Pointer transform = TransformType::New();
+  TransformType::Pointer transform = TransformType::New();  
   if(!xfm_f.empty())
   {
+#if ( ITK_VERSION_MAJOR < 4 )
     //reading a minc style xfm file
     transform->OpenXfm(xfm_f.c_str());
     if(!invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
+#else
+    //TODO: implement this
+    std::cerr<<"MINC XFM IO not implemented yet"<<std::endl;
+#endif    
   }
 
   //creating the interpolator
-
   filter->SetInterpolator( interpolator );
   filter->SetDefaultPixelValue( 0 );
-  
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
-  
+
   typename Image::Pointer like=0;
   if(!like_f.empty())
   {
@@ -314,9 +326,7 @@ void resample_image(
     }
     like=reader->GetOutput();
     like->DisconnectPipeline();
-  }
-  else
-  {
+  } else {
     if(uniformize!=0.0)
     {
       generate_uniform_sampling<ResampleFilterType,Image>(filter,in,uniformize);
@@ -328,20 +338,25 @@ void resample_image(
       filter->SetOutputDirection(in->GetDirection());
     }
   }
+
   filter->SetInput(in);
   filter->Update();
   typename ImageOut::Pointer out=filter->GetOutput();
+  
+#if ( ITK_VERSION_MAJOR < 4 )  
   minc::copy_metadata(out,in);
   minc::append_history(out,history);
   
   //correct dimension order
   if(like.IsNotNull())
     minc::copy_dimorder(out,like);
-  
+#endif
+    
   //generic file writer
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());
   
+#if ( ITK_VERSION_MAJOR < 4 )  
   if(store_float)
   {
     minc::set_minc_storage_type(out,NC_FLOAT,true);
@@ -350,6 +365,8 @@ void resample_image(
   } else if(store_byte) {
     minc::set_minc_storage_type(out,NC_BYTE,false);
   }
+#endif
+
   writer->SetInput( out );
   writer->Update();
 }
@@ -396,10 +413,15 @@ void resample_label_image (
   TransformType::Pointer transform = TransformType::New();
   if(!xfm_f.empty())
   {
+#if ( ITK_VERSION_MAJOR < 4 )
     //reading a minc style xfm file
     transform->OpenXfm(xfm_f.c_str());
     if(!invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
+#else
+    //TODO: implement this
+    std::cerr<<"MINC XFM IO not implemented yet"<<std::endl;
+#endif
   }
 
   //creating the interpolator
@@ -509,17 +531,20 @@ void resample_label_image (
   
   
   //typename ImageOut::Pointer out=filter->GetOutput();
+#if ( ITK_VERSION_MAJOR < 4 )
   minc::copy_metadata(LabelImage,in);
   minc::append_history(LabelImage,history);
   
   //correct dimension order
   if(like.IsNotNull())
     minc::copy_dimorder(LabelImage,like);
-  
+#endif
+    
   //generic file writer
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());
   
+#if ( ITK_VERSION_MAJOR < 4 )  
   if(store_float)
   {
     minc::set_minc_storage_type(LabelImage,NC_FLOAT,true);
@@ -528,6 +553,8 @@ void resample_label_image (
   } else if(store_byte) {
     minc::set_minc_storage_type(LabelImage,NC_BYTE,false);
   }
+#endif
+
   writer->SetInput( LabelImage );
   writer->Update();
 }
@@ -570,9 +597,13 @@ void resample_vector_image(
   if(!xfm_f.empty())
   {
     //reading a minc style xfm file
+#if ( ITK_VERSION_MAJOR < 4 )
     transform->OpenXfm(xfm_f.c_str());
     if(!invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
+#else
+    std::cerr<<"MINC XFM IO not implemented yet!"<<std::endl;
+#endif
   }
 
   //creating the interpolator
@@ -619,6 +650,10 @@ void resample_vector_image(
   filter->SetInput(in);
   filter->Update();
   typename ImageOut::Pointer out=filter->GetOutput();
+  typename ImageWriterType::Pointer writer = ImageWriterType::New();
+  writer->SetFileName(output_f.c_str());
+  
+#if ( ITK_VERSION_MAJOR < 4 )  
   minc::copy_metadata(out,in);
   minc::append_history(out,history);
   
@@ -627,8 +662,6 @@ void resample_vector_image(
     minc::copy_dimorder(out,like);
   
   //generic file writer
-  typename ImageWriterType::Pointer writer = ImageWriterType::New();
-  writer->SetFileName(output_f.c_str());
   
   if(store_float)
   {
@@ -638,7 +671,8 @@ void resample_vector_image(
   } else if(store_byte) {
     minc::set_minc_storage_type(out,NC_BYTE,false);
   }
-  
+#endif
+
   writer->SetInput( out );
   writer->Update();
 }
@@ -657,7 +691,11 @@ int main (int argc, char **argv)
   int normalize=0;
   int invert=0;
   int labels=0;
+#if ( ITK_VERSION_MAJOR < 4 )  
   char *history = time_stamp(argc, argv); 
+#else
+  char *history = "";
+#endif  
   bool order_was_set=false;
   
   static struct option long_options[] = {
@@ -730,7 +768,9 @@ int main (int argc, char **argv)
   
 	try
   {
+#if ( ITK_VERSION_MAJOR < 4 )  
     itk::RegisterMincIO();
+#endif    
     //try to figure out what we have got
     IOBasePointer io = itk::ImageIOFactory::CreateImageIO(input_f.c_str(), itk::ImageIOFactory::ReadMode );
     
@@ -782,13 +822,18 @@ int main (int argc, char **argv)
     } else {
       throw itk::ExceptionObject("This number of dimensions is not supported currently");
     }
+#if ( ITK_VERSION_MAJOR < 4 )      
     free(history);
+#endif
 
     return 0;
-  } catch (const minc::generic_error & err) {
+  } 
+#if ( ITK_VERSION_MAJOR < 4 )  
+  catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;
   }
+#endif  
   catch( itk::ExceptionObject & err )
   {
     std::cerr << "ExceptionObject caught !" << std::endl;
