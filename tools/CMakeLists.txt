@@ -81,7 +81,7 @@ IF(ITK_FOUND)
     ADD_EXECUTABLE( resample_grid
                   resample_grid.cpp )
 
-    TARGET_LINK_LIBRARIES(resample_grid ITKIOMINC ${ITK_LIBRARIES} ${VOLUME_IO_LIBRARIES} )
+    TARGET_LINK_LIBRARIES(resample_grid ITKIOMINC ${ITK_LIBRARIES} ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES} )
     
     ADD_EXECUTABLE( dircos_to_xfm
                     dircos_to_xfm.cpp )
@@ -117,7 +117,7 @@ IF(HAVE_MINC1)
   TARGET_LINK_LIBRARIES(minc_rank minc_image_proc ${EZMINC_LIBRARIES})
 
   ADD_EXECUTABLE( xfm2def xfm2def.c)
-  TARGET_LINK_LIBRARIES(xfm2def ${VOLUME_IO_LIBRARIES} )
+  TARGET_LINK_LIBRARIES(xfm2def ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES} )
   
   ADD_EXECUTABLE( tag2csv  tag2csv.cpp)
   TARGET_LINK_LIBRARIES(tag2csv ITKIOMINC ${ITK_LIBRARIES})

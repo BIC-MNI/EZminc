@@ -37,63 +37,63 @@ using namespace  minc;
 
 using namespace  std;
 
-typedef itk::Image<unsigned char,3> mask3d;
-typedef itk::Image<float,3> image3d;
+typedef itk::Image<unsigned char,3> MaskType;
+typedef itk::Image<float,3> ImageType;
 
 
 typedef itk::ImageToImageFilter<
-                    mask3d,
-                    mask3d > ImageFilter;
+                    MaskType,
+                    MaskType > ImageFilter;
 
 typedef itk::BinaryBallStructuringElement<
-                    mask3d::PixelType,
+                    MaskType::PixelType,
                     3  >  BallStructuringElementType;
                     
 typedef itk::BinaryDilateImageFilter<
-                    mask3d,
-                    mask3d,
+                    MaskType,
+                    MaskType,
                     BallStructuringElementType >  DilateFilterType;
 
 typedef itk::BinaryErodeImageFilter<
-                    mask3d,
-                    mask3d,
+                    MaskType,
+                    MaskType,
                     BallStructuringElementType >  ErodeFilterType;
                     
 typedef itk::OtsuThresholdImageFilter< 
-                    image3d, 
-                    mask3d >            OtsuThresholdFilter;
+                    ImageType, 
+                    MaskType >            OtsuThresholdFilter;
 
 typedef itk::BinaryThresholdImageFilter< 
-                    image3d, 
-                    mask3d >            BinaryThresholdFilter;
+                    ImageType, 
+                    MaskType >            BinaryThresholdFilter;
                     
 typedef itk::BinaryPruningImageFilter <
-                    mask3d,
-                    mask3d>    BinaryPruningFilter;              
+                    MaskType,
+                    MaskType>    BinaryPruningFilter;              
 
 typedef itk::BinaryThinningImageFilter<
-                    mask3d,
-                    mask3d>    BinaryThiningFilter;
+                    MaskType,
+                    MaskType>    BinaryThiningFilter;
 
 typedef itk::ConnectedComponentImageFilter< 
-                    mask3d,
-                    mask3d>    BinaryConnectedFilter;                  
+                    MaskType,
+                    MaskType>    BinaryConnectedFilter;                  
 
 typedef itk::RelabelComponentImageFilter<
-                    mask3d,
-                    mask3d>    BinaryRelabelFilter;
+                    MaskType,
+                    MaskType>    BinaryRelabelFilter;
 
 typedef itk::BinaryThresholdImageFilter< 
-                    mask3d, 
-                    mask3d >     BinaryThresholdMaskFilter;
+                    MaskType, 
+                    MaskType >     BinaryThresholdMaskFilter;
 
 typedef itk::BinaryMedianImageFilter<                  
-                    mask3d, 
-                    mask3d > BinaryMedianFilter;
+                    MaskType, 
+                    MaskType > BinaryMedianFilter;
                     
 typedef itk::InvertIntensityImageFilter< 
-                    mask3d, 
-                    mask3d > BinaryInvertFilter;
+                    MaskType, 
+                    MaskType > BinaryInvertFilter;
                     
 class op_add {
   public:
@@ -120,8 +120,8 @@ class op_add {
 };                      
                     
 typedef itk::UnaryFunctorImageFilter< 
-                    mask3d,
-                    mask3d,
+                    MaskType,
+                    MaskType,
                     op_add>     BinaryAddFilter;
                     
 void show_usage (const char *name)
@@ -139,7 +139,7 @@ void show_usage (const char *name)
     << "--bimodal"<<endl;
 }
 
-ImageFilter::Pointer construct(mask3d::Pointer input, const std::string& par)
+ImageFilter::Pointer construct(MaskType::Pointer input, const std::string& par)
 {
   if(par.empty()) return ImageFilter::Pointer();
   //try 
@@ -293,7 +293,7 @@ ImageFilter::Pointer construct(mask3d::Pointer input, const std::string& par)
         else arg1=args[0];
         cout<<"Median "<<arg1<<endl;
         BinaryMedianFilter::Pointer flt=BinaryMedianFilter::New();
-        image3d::SizeType sz;
+        ImageType::SizeType sz;
         sz.Fill(arg1);
         flt->SetRadius(sz);
         flt->SetBackgroundValue(0);
@@ -392,14 +392,14 @@ int main (int argc, char **argv)
     itk::RegisterMincIO();
 #endif
     
-    mask3d::Pointer mask_img( mask3d::New() ),
+    MaskType::Pointer mask_img( MaskType::New() ),
                     output_img;
     if(bimodal)
     {
-      itk::ImageFileReader<image3d >::Pointer reader = itk::ImageFileReader<image3d >::New();
+      itk::ImageFileReader<ImageType >::Pointer reader = itk::ImageFileReader<ImageType >::New();
       reader->SetFileName(input.c_str());
       reader->Update();
-      image3d::Pointer img=reader->GetOutput();
+      ImageType::Pointer img=reader->GetOutput();
       
       OtsuThresholdFilter::Pointer flt=OtsuThresholdFilter::New();
       //flt->SetLowerThreshold(threshold);
@@ -411,10 +411,10 @@ int main (int argc, char **argv)
         cout<<"BimodalT threshold:"<<flt->GetThreshold()<<endl;
       mask_img=flt->GetOutput();
     } else if(threshold!=1e10) {
-      itk::ImageFileReader<image3d >::Pointer reader = itk::ImageFileReader<image3d >::New();
+      itk::ImageFileReader<ImageType >::Pointer reader = itk::ImageFileReader<ImageType >::New();
       reader->SetFileName(input.c_str());
       reader->Update();
-      image3d::Pointer img=reader->GetOutput();
+      ImageType::Pointer img=reader->GetOutput();
       
       BinaryThresholdFilter::Pointer flt=BinaryThresholdFilter::New();
       flt->SetLowerThreshold(threshold);
@@ -424,7 +424,7 @@ int main (int argc, char **argv)
       flt->Update();
       mask_img=flt->GetOutput();
     } else {
-      itk::ImageFileReader<mask3d >::Pointer reader = itk::ImageFileReader<mask3d >::New();
+      itk::ImageFileReader<MaskType >::Pointer reader = itk::ImageFileReader<MaskType >::New();
       reader->SetFileName(input.c_str());
       reader->Update();
       mask_img=reader->GetOutput();
@@ -476,7 +476,7 @@ int main (int argc, char **argv)
     free(history);
 #endif
     
-    itk::ImageFileWriter< mask3d >::Pointer writer = itk::ImageFileWriter<mask3d >::New();
+    itk::ImageFileWriter< MaskType >::Pointer writer = itk::ImageFileWriter<MaskType >::New();
     writer->SetFileName(output.c_str());
     
     writer->SetInput( output_img );

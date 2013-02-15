@@ -26,29 +26,29 @@ using namespace  minc;
 using namespace  std;
 
 
-typedef itk::Image<unsigned char,3> mask3d;
-typedef itk::Image<float,3> image3d;
+typedef itk::Image<unsigned char,3> MaskType;
+typedef itk::Image<float,3> ImageType;
 
 typedef itk::ImageToImageFilter<
-                   image3d,
-                   image3d > ImageFilter;
+                   ImageType,
+                   ImageType > ImageFilter;
 
 typedef itk::BinaryBallStructuringElement<
-                   mask3d::PixelType,
+                   MaskType::PixelType,
                     3  >  BallStructuringElementType;
 
 typedef itk::MedianImageFilter<
-              image3d,image3d >  MedianFilterType;
+              ImageType,ImageType >  MedianFilterType;
 
 
 typedef itk::GrayscaleErodeImageFilter<
-                           image3d,
-                           image3d,
+                           ImageType,
+                           ImageType,
                             BallStructuringElementType >  ErodeFilterType;
 
 typedef itk::GrayscaleDilateImageFilter<
-                           image3d,
-                           image3d,
+                           ImageType,
+                           ImageType,
                             BallStructuringElementType >  DilateFilterType;
 
                     
@@ -65,7 +65,7 @@ void show_usage (const char *name)
     << "\tM[<n>] median"<<endl;
 }
 
-ImageFilter::Pointer construct(image3d::Pointer input, const std::string& par)
+ImageFilter::Pointer construct(ImageType::Pointer input, const std::string& par)
 {
   if(par.empty()) return ImageFilter::Pointer();
   //try 
@@ -135,7 +135,7 @@ ImageFilter::Pointer construct(image3d::Pointer input, const std::string& par)
         else arg1=args[0];
         cout<<"Median "<<arg1<<endl;
         MedianFilterType::Pointer flt=MedianFilterType::New();
-       image3d::SizeType sz;
+       ImageType::SizeType sz;
         sz.Fill(arg1);
         flt->SetRadius(sz);
         flt->SetInput(input);
@@ -229,14 +229,14 @@ int main (int argc, char **argv)
     itk::RegisterMincIO();
 #endif
     
-    itk::ImageFileReader<image3d >::Pointer reader = itk::ImageFileReader<image3d >::New();
+    itk::ImageFileReader<ImageType >::Pointer reader = itk::ImageFileReader<ImageType >::New();
     
-    image3d::Pointer output_img;
+    ImageType::Pointer output_img;
     
     reader->SetFileName(input.c_str());
     reader->Update();
     
-    image3d::Pointer img=reader->GetOutput();
+    ImageType::Pointer img=reader->GetOutput();
     
     //parse through operations
     if(operations.empty())
@@ -281,7 +281,7 @@ int main (int argc, char **argv)
     free(history);
 #endif 
     
-    itk::ImageFileWriter< image3d >::Pointer writer = itk::ImageFileWriter<image3d >::New();
+    itk::ImageFileWriter< ImageType >::Pointer writer = itk::ImageFileWriter<ImageType >::New();
     writer->SetFileName(output.c_str());
     
     writer->SetInput( output_img );
