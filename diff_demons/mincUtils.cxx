@@ -1,16 +1,24 @@
 #include "mincUtils.h"
+#include <time.h>
 
 std::string minc_history;
 
-#ifdef HAVE_MINC1
-void mincify ( itk::Object* image, nc_type datatype  )
-{
-  minc::set_minc_storage_type ( image, datatype, true );
-  
-  if(!minc_history.empty())
-    minc::append_history ( image, minc_history );
+void mincify ( itk::Object* image, const std::string & history,const char * store_datatype,itk::Object* metadata  )
+ {
+  if(metadata)
+    image->SetMetaDataDictionary(metadata->GetMetaDataDictionary());
+
+  if(store_datatype)
+    itk::EncapsulateMetaData<std::string>(image,"storage_data_type",minc_storage_type);
+  if(!history.empty())
+  {
+    std::string old_history;
+    itk::ExposeMetaData<std::string >(image,"history",old_history);
+    old_history+="\n";
+    old_history+=history;
+    itk::EncapsulateMetaData<std::string>(image,"history",old_history);
+  }
 }
-#endif 
 
 //! check if the filename is XFM file, and generate required additional file names (doesn't read xfm file)
 bool parse_xfm_file_name(const std::string & fname,std::string &def_field,std::string &def_field_base)
@@ -36,3 +44,26 @@ bool parse_xfm_file_name(const std::string & fname,std::string &def_field,std::s
     return false;
 }
 
+
+std::string minc_timestamp(char **argv,int argc)
+{
+  std::string timestamp;
+  
+  char cur_time[200];
+  time_t t;
+  struct tm *tmp;
+
+  t = time(NULL);
+  tmp = localtime(&t);
+  
+  strftime(cur_time, sizeof(cur_time), "%a, %d %b %Y %T %z>>>", tmp)
+  /* Get the time, overwriting newline */
+  timestamp=cur_time;
+  
+  /* Copy the program name and arguments */
+  for (i=0; i<argc; i++) {
+    timestamp+=argv[i];
+    timestamp+=" ";
+  }
+  timestamp+="\n";
+}
