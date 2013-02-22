@@ -1,3 +1,4 @@
+
 #include "mincUtils.h"
 #include <time.h>
 
@@ -9,14 +10,15 @@ void mincify ( itk::Object* image, const std::string & history,const char * stor
     image->SetMetaDataDictionary(metadata->GetMetaDataDictionary());
 
   if(store_datatype)
-    itk::EncapsulateMetaData<std::string>(image,"storage_data_type",minc_storage_type);
+    itk::EncapsulateMetaData<std::string>(image->GetMetaDataDictionary(),"storage_data_type",store_datatype);
+  
   if(!history.empty())
   {
     std::string old_history;
-    itk::ExposeMetaData<std::string >(image,"history",old_history);
+    itk::ExposeMetaData<std::string >(image->GetMetaDataDictionary(),"history",old_history);
     old_history+="\n";
     old_history+=history;
-    itk::EncapsulateMetaData<std::string>(image,"history",old_history);
+    itk::EncapsulateMetaData<std::string>(image->GetMetaDataDictionary(),"history",old_history);
   }
 }
 
@@ -45,7 +47,7 @@ bool parse_xfm_file_name(const std::string & fname,std::string &def_field,std::s
 }
 
 
-std::string minc_timestamp(char **argv,int argc)
+std::string minc_timestamp(int argc,char **argv)
 {
   std::string timestamp;
   
@@ -56,14 +58,16 @@ std::string minc_timestamp(char **argv,int argc)
   t = time(NULL);
   tmp = localtime(&t);
   
-  strftime(cur_time, sizeof(cur_time), "%a, %d %b %Y %T %z>>>", tmp)
+  strftime(cur_time, sizeof(cur_time), "%a %b %d %T %Y>>>", tmp);
   /* Get the time, overwriting newline */
   timestamp=cur_time;
   
   /* Copy the program name and arguments */
-  for (i=0; i<argc; i++) {
+  for (int i=0; i<argc; i++) {
     timestamp+=argv[i];
     timestamp+=" ";
   }
   timestamp+="\n";
+  
+  return timestamp;
 }
