@@ -31,7 +31,7 @@
 #include <itkBSplineInterpolateImageFunction.h>
 #include <itkVectorImage.h>
 #include <itkBinaryThresholdImageFilter.h>
-
+#include <itkVectorResampleImageFilter.h>
 //#include "mincVariableVectorResampleImageFilter.h"
 //#include "mincVariableVectorBSplineInterpolate.h"
 #include <itkVectorResampleImageFilter.h>
