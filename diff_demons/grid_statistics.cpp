@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "itkImage.h"
 #include "itkVector.h"
 #include "itkImageFileReader.h"
@@ -43,13 +47,7 @@ int main ( int argc, char *argv[] )
   
   
   std::string mask_f;
-#ifdef HAVE_MINC1  
-  char *_history = time_stamp(argc, argv); 
-  std::string minc_history=_history;
-  free ( _history );
-#else
-  std::string minc_history="";
-#endif
+  std::string minc_history=minc_timestamp(argc,argv);
   
   static struct option long_options[] =
   {

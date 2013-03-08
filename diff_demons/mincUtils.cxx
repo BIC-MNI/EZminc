@@ -1,17 +1,29 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif //HAVE_CONFIG_H
 
 #include "mincUtils.h"
 #include <time.h>
 
 std::string minc_history;
 
+#ifdef HAVE_MINC4ITK
+void mincify( itk::Object* image, const std::string & history,nc_type store_datatype,itk::Object* metadata)
+#else
 void mincify ( itk::Object* image, const std::string & history,const char * store_datatype,itk::Object* metadata  )
+#endif
  {
   if(metadata)
     image->SetMetaDataDictionary(metadata->GetMetaDataDictionary());
 
+#ifdef HAVE_MINC4ITK
+  itk::EncapsulateMetaData( image->GetMetaDataDictionary(),"datatype",store_datatype);
+  itk::EncapsulateMetaData( image->GetMetaDataDictionary(),"signed",store_datatype!=NC_BYTE);
+#else    
   if(store_datatype)
     itk::EncapsulateMetaData<std::string>(image->GetMetaDataDictionary(),"storage_data_type",store_datatype);
-  
+#endif
+    
   if(!history.empty())
   {
     std::string old_history;

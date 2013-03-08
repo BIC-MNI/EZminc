@@ -6,6 +6,9 @@
  * \author Tom Vercauteren, INRIA & Mauna Kea Technologies
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif 
 
 #include <itkCommand.h>
 #include <itkDiffeomorphicDemonsRegistrationFilterM.h>
@@ -38,6 +41,7 @@
 
 #include "mincUtils.h"
 
+extern std::string minc_history;
 
 struct arguments
 {
@@ -763,7 +767,7 @@ void DemonsRegistrationFunction ( arguments args )
       
       if(parse_xfm_file_name(args.inputTransformFile,dumb1,dumb2) ) //we are deling with .XFM filename
       {
-#if ( ITK_VERSION_MAJOR < 4 ) 
+#ifdef HAVE_MINC4ITK
         
         if( args.verbosity>0 )
           std::cout<<"Reading Deformations from XFM file..."<<std::endl;
@@ -772,11 +776,11 @@ void DemonsRegistrationFunction ( arguments args )
         typename XfmTransformType::Pointer transform=XfmTransformType::New();
         transform->OpenXfm(args.inputTransformFile.c_str());
         
-      #if ( ITK_VERSION_MAJOR > 3 ) 
+#if ( ITK_VERSION_MAJOR > 3 ) 
         typedef typename itk::TransformToDisplacementFieldSource<DeformationFieldType,double> TransformToDeformationSource;
-      #else  
+#else  
         typedef typename itk::TransformToDeformationFieldSource<DeformationFieldType,double> TransformToDeformationSource;
-      #endif
+#endif
         
         typename TransformToDeformationSource::Pointer transform_to_def=TransformToDeformationSource::New();
         transform_to_def->SetOutputParametersFromImage ( fixedImageReader->GetOutput() );
@@ -788,7 +792,7 @@ void DemonsRegistrationFunction ( arguments args )
         
         inputDefField->DisconnectPipeline();
 #else 
-          
+        //TODO: USE ITK Transform IO here
         std::cout<<"XFM reading not implemented!"<<std::endl;
 #endif
       } else {
@@ -1179,8 +1183,10 @@ void DemonsRegistrationFunction ( arguments args )
   if ( !args.outputImageFile.empty() )
   {
     writer->SetFileName ( args.outputImageFile.c_str() );
-#if ( ITK_VERSION_MAJOR < 4 ) 
-    mincify ( caster->GetOutput(), NC_SHORT );
+#ifdef HAVE_MINC4ITK
+    mincify ( caster->GetOutput(), minc_history, NC_SHORT );
+#else    
+    mincify ( caster->GetOutput(), minc_history, typeid(short).name() );
 #endif
 
     writer->SetInput ( caster->GetOutput() );
@@ -1228,8 +1234,10 @@ void DemonsRegistrationFunction ( arguments args )
     typename FieldWriterType::Pointer fieldWriter = FieldWriterType::New();
 
     fieldWriter->SetFileName ( output_def_field.c_str() );
-#if ( ITK_VERSION_MAJOR < 4 ) 
-    mincify (defField, NC_SHORT );
+#ifdef HAVE_MINC4ITK
+    mincify (defField, minc_history, NC_SHORT );
+#else
+    mincify (defField, minc_history, typeid(short).name() );
 #endif
     
     fieldWriter->SetInput ( defField );
@@ -1314,8 +1322,10 @@ void DemonsRegistrationFunction ( arguments args )
     typename GridWriterType::Pointer      gridwriter =  GridWriterType::New();
     gridwriter->SetFileName ( "WarpedGridImage.mnc" );
     gridwarper->Update();
-#if ( ITK_VERSION_MAJOR < 4 ) 
-    mincify(gridwarper->GetOutput(),NC_BYTE);
+#if HAVE_MINC4ITK
+    mincify(gridwarper->GetOutput(),minc_history, NC_BYTE);
+#else    
+    mincify(gridwarper->GetOutput(),minc_history, typeid(unsigned char).name());
 #endif
     
     gridwriter->SetInput ( gridwarper->GetOutput() );
@@ -1349,8 +1359,10 @@ void DemonsRegistrationFunction ( arguments args )
 
     typename GridWriterType::Pointer      gridwriter =  GridWriterType::New();
     gridwriter->SetFileName ( "ForwardWarpedGridImage.mnc" );
-#if ( ITK_VERSION_MAJOR < 4 ) 
-    mincify(fwWarper->GetOutput(),NC_BYTE);
+#ifdef HAVE_MINC4ITK
+    mincify(fwWarper->GetOutput(),minc_history, NC_BYTE);
+#else
+    mincify(fwWarper->GetOutput(),minc_history, typeid(unsigned char).name());
 #endif
     
     gridwriter->SetInput ( fwWarper->GetOutput() );
@@ -1409,8 +1421,10 @@ void DemonsRegistrationFunction ( arguments args )
       writer->SetFileName ( args.outputJacobianFile.c_str() );
       caster->SetInput ( jacobianFilter->GetOutput() );
       caster->Update();
-#if ( ITK_VERSION_MAJOR < 4 ) 
-      mincify(caster->GetOutput(),NC_SHORT);
+#ifdef HAVE_MINC4ITK
+      mincify(caster->GetOutput(),minc_history, NC_SHORT);
+#else
+      mincify(caster->GetOutput(),minc_history, typeid(short).name());
 #endif
       writer->SetInput ( caster->GetOutput() );
       writer->SetUseCompression ( true );
@@ -1447,12 +1461,7 @@ void DemonsRegistrationFunction ( arguments args )
 int main ( int argc, char *argv[] )
 {
 
-#if ( ITK_VERSION_MAJOR < 4 ) 
-  char *_history = time_stamp ( argc, argv );
-  minc_history = _history;
-  free ( _history );
-#endif
-  
+  minc_history = minc_timestamp(argc,argv);
   
   struct arguments args;
   parseOpts ( argc, argv, args );
@@ -1464,7 +1473,7 @@ int main ( int argc, char *argv[] )
   // itk::MultiThreader::SetGlobalDefaultNumberOfThreads(1);
 
   //Add Minc support
-#if ( ITK_VERSION_MAJOR < 4 ) 
+#ifdef HAVE_MINC4ITK
   itk::RegisterMincIO();
 #endif  
   // Get the image dimension

@@ -13,9 +13,9 @@ ADD_EXECUTABLE(LogDomainDemonsRegistration LogDomainDemonsRegistration.cxx mincU
 
 ADD_EXECUTABLE(grid_2_log grid_2_log.cxx mincUtils.cxx)
 
-ADD_EXECUTABLE(log_resample log_resample.cpp)
+ADD_EXECUTABLE(log_resample log_resample.cpp mincUtils.cxx)
 
-ADD_EXECUTABLE(grid_statistics grid_statistics.cpp)
+ADD_EXECUTABLE(grid_statistics grid_statistics.cpp mincUtils.cxx)
 
 INSTALL(TARGETS DemonsRegistration 
                 LogDomainDemonsRegistration 

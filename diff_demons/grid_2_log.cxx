@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif //HAVE_CONFIG_H
+
 #include "itkImage.h"
 #include "itkVector.h"
 #include "itkImageFileReader.h"
@@ -17,6 +21,7 @@
 #include "itkImageRegionConstIterator.h"
 
 #include <iostream>
+
 #include "mincUtils.h"
 #include <getopt.h>
 #include <unistd.h>
@@ -164,13 +169,7 @@ int main ( int argc, char *argv[] )
   double sigma=2.0;
   double factor=1.0;
 
-#ifdef HAVE_MINC1
-  char *_history = time_stamp(argc, argv); 
-  std::string minc_history=_history;
-  free ( _history );
-#else
-  std::string minc_history;
-#endif
+  std::string minc_history=minc_timestamp(argc,argv);
   
   static struct option long_options[] =
   {
@@ -237,7 +236,7 @@ int main ( int argc, char *argv[] )
   std::string input_f=argv[optind];
   std::string output_f=argv[optind+1];
   //Add Minc support
-#if ITK_VERSION_MAJOR < 4
+#ifdef HAVE_MINC4ITK
   itk::RegisterMincIO();
 #endif
   
@@ -343,7 +342,7 @@ int main ( int argc, char *argv[] )
   if(verbose)
     std::cout << "Done." << std::endl;
 
-#if ITK_VERSION_MAJOR < 4
+#if HAVE_MINC4ITK
   minc::copy_metadata(output_field,input_field);	
   if(!minc_history.empty())
     minc::append_history ( output_field, minc_history );
@@ -354,6 +353,8 @@ int main ( int argc, char *argv[] )
     minc::set_minc_storage_type ( output_field, NC_SHORT, false );
   if(store_float)
     minc::set_minc_storage_type ( output_field, NC_FLOAT, true );
+#else
+  mincify(output_field,minc_history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),input_field);
 #endif
 
   if(verbose)

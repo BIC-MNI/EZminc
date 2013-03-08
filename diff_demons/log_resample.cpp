@@ -1,5 +1,5 @@
 /* ----------------------------- MNI Header -----------------------------------
-@NAME       :  itk_resample
+@NAME       :  log_resample
 @DESCRIPTION:  an example of using spline itnerpolation with MINC xfm transform
 @COPYRIGHT  :
               Copyright 2011 Vladimir Fonov, McConnell Brain Imaging Centre, 
@@ -12,6 +12,10 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif //HAVE_CONFIG_H
+
 #include <iostream>
 #include <fstream>
 #include <getopt.h>
@@ -47,6 +51,8 @@
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
 #include <itkImageIOBase.h>
+
+#include "mincUtils.h"
 
 typedef itk::Vector< double, 3 >    VectorType;
 typedef itk::Image< VectorType, 3 > VectorImageType;
@@ -206,10 +212,9 @@ void resample_image(
   //generic file writer
   typename WriterType::Pointer writer = WriterType::New();
   
-#if ITK_VERSION_MAJOR < 4  
+#ifdef HAVE_MINC4ITK  
   minc::copy_metadata(out,in);
   minc::append_history(out,history);
-  free((void*)history);
   
   if(store_float)
   {
@@ -219,6 +224,8 @@ void resample_image(
   } else if(store_byte) {
     minc::set_minc_storage_type(out,NC_BYTE,false);
   }
+#else
+  mincify(out,minc_history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),in);
 #endif
 
   writer->SetFileName(output_f.c_str());
@@ -241,11 +248,7 @@ int main (int argc, char **argv)
   int invert=0;
   int labels=0;
   double factor=1.0;
-#ifdef HAVE_MINC1  
-  char *history = time_stamp(argc, argv); 
-#else
-  char *history = "";
-#endif 
+  std::string history=minc_timestamp(argc,argv);
   
   static struct option long_options[] = {
     {"verbose", no_argument,       &verbose, 1},
@@ -319,7 +322,7 @@ int main (int argc, char **argv)
   
 	try
   {
-#if ITK_VERSION_MAJOR < 4
+#ifdef HAVE_MINC4ITK
     itk::RegisterMincIO();
 #endif
 
@@ -384,21 +387,21 @@ int main (int argc, char **argv)
       NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
       
        if(store_byte)
-         resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
+         resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history.c_str(),store_float,store_short,store_byte,interpolator);
        else if(store_short)
-         resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
+         resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history.c_str(),store_float,store_short,store_byte,interpolator);
        else
-         resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
+         resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history.c_str(),store_float,store_short,store_byte,interpolator);
       //resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
     } else { 
       InterpolatorType::Pointer interpolator = InterpolatorType::New();
       interpolator->SetSplineOrder(order);
-      resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history,store_float,store_short,store_byte,interpolator);
+      resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,input_def_field,like_f,uniformize,history.c_str(),store_float,store_short,store_byte,interpolator);
     }
     
     return 0;
   } 
-#if ITK_VERSION_MAJOR < 4
+#ifdef HAVE_MINC4ITK
   catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;

@@ -6,6 +6,9 @@
  * \author Florence Dru, INRIA and Tom Vercauteren, MKT
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif 
 
 #include <itkCommand.h>
 #include <itkLogDomainDemonsRegistrationFilter.h>
@@ -42,6 +45,7 @@
 //MINC support
 #include "mincUtils.h"
 
+extern std::string minc_history;
 
 struct arguments
 {
@@ -1219,8 +1223,10 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
     // Write warped image out to file
     writer->SetFileName ( args.outputImageFile.c_str() );
     caster->SetInput ( warper->GetOutput() );
-#ifdef HAVE_MINC1    
-    mincify ( caster->GetOutput(), NC_SHORT );
+#ifdef HAVE_MINC4ITK
+    mincify ( caster->GetOutput(), minc_history, NC_SHORT );
+#else
+    mincify ( caster->GetOutput(), minc_history, typeid(short).name() );
 #endif
     writer->SetInput ( caster->GetOutput() );
     writer->SetUseCompression ( true );
@@ -1270,8 +1276,10 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
 
     fieldWriter->SetFileName ( output_def_field.c_str() );
 
-#ifdef HAVE_MINC1    
-    mincify ( defField, NC_SHORT );
+#ifdef HAVE_MINC4ITK
+    mincify ( defField, minc_history, NC_SHORT );
+#else
+    mincify ( defField, minc_history, typeid(short).name() );
 #endif
     fieldWriter->SetInput ( defField );
 
@@ -1299,8 +1307,10 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
     typedef itk::ImageFileWriter< DeformationFieldType > FieldWriterType;
     typename FieldWriterType::Pointer fieldWriter = FieldWriterType::New();
     fieldWriter->SetFileName ( args.outputInverseDeformationFieldFile.c_str() );
-#ifdef HAVE_MINC1    
-    mincify ( invDefField, NC_SHORT );
+#ifdef HAVE_MINC4ITK
+    mincify ( invDefField, minc_history, NC_SHORT );
+#else    
+    mincify ( invDefField, minc_history, typeid(short).name() );
 #endif
     fieldWriter->SetInput ( invDefField );
     fieldWriter->SetUseCompression ( true );
@@ -1327,8 +1337,10 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
     typedef itk::ImageFileWriter< VelocityFieldType > FieldWriterType;
     typename FieldWriterType::Pointer fieldWriter = FieldWriterType::New();
     fieldWriter->SetFileName ( args.outputVelocityFieldFile.c_str() );
-#ifdef HAVE_MINC1    
-    mincify ( velField, NC_SHORT );
+#ifdef HAVE_MINC4ITK
+    mincify ( velField, minc_history, NC_SHORT );
+#else    
+    mincify ( velField, minc_history, typeid(short).name() );
 #endif    
     fieldWriter->SetInput ( velField );
     fieldWriter->SetUseCompression ( true );
@@ -1410,8 +1422,10 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
 
     typename GridWriterType::Pointer      gridwriter =  GridWriterType::New();
     gridwriter->SetFileName ( "WarpedGridImage.mnc" );
-#ifdef HAVE_MINC1    
-    mincify ( gridwarper->GetOutput(), NC_BYTE );
+#ifdef HAVE_MINC4ITK
+    mincify ( gridwarper->GetOutput(), minc_history,NC_BYTE );
+#else
+    mincify ( gridwarper->GetOutput(), minc_history,typeid(unsigned char).name() );
 #endif    
     gridwriter->SetInput ( gridwarper->GetOutput() );
     gridwriter->SetUseCompression ( true );
@@ -1445,8 +1459,10 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
     typename GridWriterType::Pointer      gridwriter =  GridWriterType::New();
     gridwriter->SetFileName ( "ForwardWarpedGridImage.mnc" );
     fwWarper->Update();
-#ifdef HAVE_MINC1    
-    mincify ( fwWarper->GetOutput(), NC_BYTE );
+#ifdef HAVE_MINC4ITK
+    mincify ( fwWarper->GetOutput(), minc_history, NC_BYTE );
+#else    
+    mincify ( fwWarper->GetOutput(), minc_history, typeid(unsigned char).name() );
 #endif 
     gridwriter->SetInput ( fwWarper->GetOutput() );
     gridwriter->SetUseCompression ( true );
@@ -1523,8 +1539,10 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
     {
       writer->SetFileName ( args.outputJacobianFile.c_str() );
       caster->SetInput ( jacobianFilter->GetOutput() );
-#ifdef HAVE_MINC1    
-      mincify ( jacobianFilter->GetOutput(), NC_SHORT );
+#ifdef HAVE_MINC4ITK
+      mincify ( jacobianFilter->GetOutput(), minc_history, NC_SHORT );
+#else
+      mincify ( jacobianFilter->GetOutput(), minc_history, typeid(short).name() );
 #endif      
       writer->SetInput ( caster->GetOutput() );
       writer->SetUseCompression ( true );
@@ -1560,11 +1578,7 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
 
 int main ( int argc, char *argv[] )
 {
-#ifdef HAVE_MINC1    
-  char *_history = time_stamp ( argc, argv );
-  minc_history = _history;
-  free ( _history );
-#endif
+  minc_history = minc_timestamp(argc,argv);
   
   struct arguments args;
   parseOpts ( argc, argv, args );
