@@ -529,10 +529,10 @@ namespace minc
 		//2. populate histogram
     for (int i=0; i<img1.c_buf_size(); i++) {
 			
-			if(isnan(img1.c_buf()[i]) || isinf(img1.c_buf()[i])) 
+			if(std::isnan(img1.c_buf()[i]) || std::isinf(img1.c_buf()[i]))
 				continue;
 			
-			if(isnan(img2.c_buf()[i]) || isinf(img2.c_buf()[i])) 
+			if(std::isnan(img2.c_buf()[i]) || std::isinf(img2.c_buf()[i]))
 				continue;
 			
       hist[img1.c_buf()[i]]++;
