@@ -100,3 +100,26 @@ template <typename Container>
 }
 
 
+template <typename Container>
+    void
+    stringtok_d (Container &l, std::string const &s, char const * const ws = " \t\n")
+{
+  const std::string::size_type  S = s.size();
+  std::string::size_type  i = 0;
+
+  while (i < S) {
+    // eat leading whitespace
+    while ((i < S) && (isws(s[i],ws)))  ++i;
+    if (i == S)  return;  // nothing left but WS
+
+    // find end of word
+    std::string::size_type  j = i+1;
+    while ((j < S) && (!isws(s[j],ws)))  ++j;
+
+    // add word
+    l.push_back(atof(s.substr(i,j-i).c_str()));
+
+    // set up for next loop
+    i = j+1;
+  }
+}

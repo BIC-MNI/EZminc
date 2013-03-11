@@ -6,6 +6,7 @@
 #include <minc_1_simple_rw.h>
 #include "minc_histograms.h"
 #include <time_stamp.h>    // for creating minc style history entry
+#include "strtok.h"
 
 using namespace minc;
 
@@ -60,18 +61,32 @@ void populate_chist(simple_histogram& hist,std::vector<double> &chist,std::vecto
   //provide mapping for upper range
   chist.push_back(hist.max());
   pct.push_back(1.0);
-  
 }
 
-void save_chist(const char* output,const std::vector<double> &chist,const std::vector<double> &pct)
+void save_chist(const char* output,const std::vector<double> &chist)
 {
   std::ofstream out(output);
-  for(int i=0;i<chist.size();i++)
+  
+  for(size_t i=0;i<chist.size();i++)
   {
-    out<<pct[i]<<","<<chist[i]<<std::endl;
+    out<<chist[i];
+    if(i!=(chist.size()-1))
+      out<<",";
   }
+  
+  out<<std::endl;
 }
 
+void load_chist(const char* input,std::vector<double> &chist)
+{
+  std::ifstream in(input);
+  char tmp[1024];
+
+  in>>tmp;
+  
+  chist.clear();
+  stringtok_d(chist,tmp,",");
+}
 
 
 int main(int argc,char **argv)
@@ -236,51 +251,72 @@ int main(int argc,char **argv)
     
     if(!input_trg_f.empty())
     {
-      minc_1_reader rdr2;
-      rdr2.open(input_trg_f.c_str());
-      load_simple_volume<float>(rdr2,trg);
-      
-      
-      if(!target_mask_f.empty())
-      {
-        minc_byte_volume   trg_mask;
-        
-        minc_1_reader rdr;
-        if(verbose) std::cout<<"loading mask:"<<target_mask_f.c_str()<<std::endl;
-        
-        rdr.open(target_mask_f.c_str());
-        load_simple_volume(rdr,trg_mask);
-        
-        if(trg_mask.size()!=trg.size())
-          REPORT_ERROR("Target mask size mismatch");
-        
-        trg_hist_s.build_histogram(trg,trg_mask);
-      } else {
-        //build histograms 
-        trg_hist_s.build_histogram(trg);
-      }
-
-      if(calc_ks)
-      {
-        if(verbose) std::cout<<"Kolmogorov–Smirnov distance:";
-        double significance=0.0;
-        double dist=src_hist_s.ks_distance(trg_hist_s,significance);
-        std::cout<<dist<<std::endl;
-        //if(verbose) std::cout<<"Significance:";
-        //std::cout<<significance<<std::endl;
-        return 0;
-      }
-      
-      
       std::vector<double> trg_levels_s;
       std::vector<double> trg_pct_s;
-      //provide mapping for background
+      if(chist) //load commulative histogram from a file
+      {
+        load_chist(input_trg_f.c_str(),trg_levels_s);
+
+      } else {
+        minc_1_reader rdr2;
+        rdr2.open(input_trg_f.c_str());
+        load_simple_volume<float>(rdr2,trg);
+        
+        
+        if(!target_mask_f.empty())
+        {
+          minc_byte_volume   trg_mask;
+          
+          minc_1_reader rdr;
+          if(verbose) std::cout<<"loading mask:"<<target_mask_f.c_str()<<std::endl;
+          
+          rdr.open(target_mask_f.c_str());
+          load_simple_volume(rdr,trg_mask);
+          
+          if(trg_mask.size()!=trg.size())
+            REPORT_ERROR("Target mask size mismatch");
+          
+          trg_hist_s.build_histogram(trg,trg_mask);
+        } else {
+          //build histograms 
+          trg_hist_s.build_histogram(trg);
+        }
+
+        if(calc_ks)
+        {
+          if(verbose) std::cout<<"Kolmogorov–Smirnov distance:";
+          double significance=0.0;
+          double dist=src_hist_s.ks_distance(trg_hist_s,significance);
+          std::cout<<dist<<std::endl;
+          //if(verbose) std::cout<<"Significance:";
+          //std::cout<<significance<<std::endl;
+          return 0;
+        }
+        
+        populate_chist(trg_hist_s,trg_levels_s,trg_pct_s,cut_off,steps,verbose);  
+        
+      }
       
-      populate_chist(trg_hist_s,trg_levels_s,trg_pct_s,cut_off,steps,verbose);  
+      if(trg_levels_s.size()!=src_levels_s.size())
+      {
+        std::cerr<<"Source and target histogram size mismatch:"<<std::endl;
+        std::cerr<<"Source:"<<src_levels_s.size()<<std::endl;
+        std::cerr<<"Target:"<<trg_levels_s.size()<<std::endl;
+        return 1;
+      }
       
-      if(verbose) 
+      if(verbose)
+      {
+        for(size_t i=0;i<src_levels_s.size();i++)
+        {
+          std::cout<<src_levels_s[i]<<" => "<<trg_levels_s[i]<<std::endl;
+        }
         std::cout<<"Recalculating intensities..."<<std::flush;
+      }
+        
       
+      //TODO: analyze commulative histograms for collapsing levels?
+    
       for(int i=0;i<src.c_buf_size();i++)
       {
         //use LUT to map the intensities
@@ -311,7 +347,7 @@ int main(int argc,char **argv)
 
       save_simple_volume<float>(wrt,src);
     } else {
-      save_chist(output_f.c_str(),src_levels_s,src_pct_s);
+      save_chist(output_f.c_str(),src_levels_s);
     }
   } catch (const minc::generic_error & err) {
     std::cerr << "Got an error at:" << err.file () << ":" << err.line () << std::endl;
