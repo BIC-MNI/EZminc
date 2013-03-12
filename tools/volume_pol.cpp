@@ -267,7 +267,6 @@ int main (int argc, char **argv)
 			cout << "Template min=" << hist2.min() << " max=" << hist2.max() << endl;
 
     MNK_Gauss_Polinomial_Mod pol(order);
-		//MNK_Gauss_Polinomial pol2(order);
     MNK_Gauss_Polinomial pol2(order); 
     
     if(calc_kl)

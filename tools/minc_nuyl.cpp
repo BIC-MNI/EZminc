@@ -8,6 +8,10 @@
 #include <time_stamp.h>    // for creating minc style history entry
 #include "strtok.h"
 
+#include "gsl_glue.h"
+#include "gsl_gauss.h"
+
+
 using namespace minc;
 
 
@@ -25,6 +29,7 @@ void show_usage(const char *name)
       << "Usage: "<<name<<" <source.mnc> <target.mnc> [output] or <source.mnc> <output.hist> --chist" << std::endl
       << "\t--source-mask <mask1.mnc>"<<std::endl
       << "\t--target-mask <mask2.mnc>"<<std::endl
+      << "\t--linear - perform global linear normalization (like volume_pol --order 1) instead of piece-wise linear"<<std::endl
       << "\t--steps <n> number of steps (default 10)"<<std::endl
       << "\t--fix_zero_padding fix mri volumes with lots of zeros in background"<<std::endl
       << "\t--verbose be verbose" << std::endl
@@ -101,6 +106,7 @@ int main(int argc,char **argv)
   int calc_ks=0;
   int fix_zero_padding=0;
   int chist=0;
+  int linear=0;
   
   double cut_off=0.01;
   
@@ -114,6 +120,7 @@ int main(int argc,char **argv)
   {
     {"verbose", no_argument, &verbose,      1},
     {"chist",   no_argument, &chist,        1},
+    {"linear",  no_argument, &linear,       1},
     {"clobber", no_argument, &clobber,      1},
     {"debug",   no_argument, &debug,        1},
     {"quiet",   no_argument, &verbose,      0},
@@ -313,7 +320,7 @@ int main(int argc,char **argv)
         }
         std::cout<<"Recalculating intensities..."<<std::flush;
       }
-        
+//         
       
       //TODO: analyze commulative histograms for collapsing levels?
     

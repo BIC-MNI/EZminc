@@ -1,31 +1,37 @@
 IF(GSL_FOUND AND HAVE_MINC1)
-	ADD_EXECUTABLE(volume_pol
-			volume_pol.cpp )
+  ADD_EXECUTABLE(volume_pol
+      volume_pol.cpp )
 
-	TARGET_LINK_LIBRARIES( volume_pol 
-		minc_image_proc ${EZMINC_LIBRARIES}  ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY})
-		
-	
+  TARGET_LINK_LIBRARIES( volume_pol 
+    minc_image_proc ${EZMINC_LIBRARIES}  ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY})
+    
   ADD_EXECUTABLE( random_volume
-									random_volume.cpp )
+                  random_volume.cpp )
 
 	TARGET_LINK_LIBRARIES(random_volume ${EZMINC_LIBRARIES}  ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY})
 
-	INSTALL(TARGETS 
+ 
+  ADD_EXECUTABLE( fdr_threshold
+                fdr_threshold.cpp )
+
+  TARGET_LINK_LIBRARIES(fdr_threshold ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY}  ${EZMINC_LIBRARIES} )
+
+  INSTALL(TARGETS 
         random_volume
+        fdr_threshold
         volume_pol
         RUNTIME DESTINATION bin )
 ENDIF(GSL_FOUND AND HAVE_MINC1)
 
 
 IF(FFTW3F_FOUND AND HAVE_MINC1)
-	ADD_EXECUTABLE( fast_blur
-			fast_blur.cpp )
+  ADD_EXECUTABLE( fast_blur
+      fast_blur.cpp )
 
-	TARGET_LINK_LIBRARIES( fast_blur
-		minc_image_proc ${EZMINC_LIBRARIES})
-		
-	INSTALL(TARGETS 
+  TARGET_LINK_LIBRARIES( fast_blur
+    minc_image_proc ${EZMINC_LIBRARIES})
+  
+  INSTALL(TARGETS 
         fast_blur
         RUNTIME DESTINATION bin )
 ENDIF(FFTW3F_FOUND AND HAVE_MINC1 )
@@ -40,7 +46,6 @@ IF(FFTW3F_FOUND AND GSL_FOUND AND HAVE_MINC1)
 
   TARGET_LINK_LIBRARIES(sharpness_estimate minc_image_proc ${EZMINC_LIBRARIES})
   
-  
   INSTALL(TARGETS 
         noise_estimate sharpness_estimate
         RUNTIME DESTINATION bin )
@@ -52,10 +57,8 @@ IF(ITK_FOUND)
   LINK_DIRECTORIES(${ITK_LIBRARY_DIRS} ${MINC4ITK_LIBRARY_DIRS})
   INCLUDE_DIRECTORIES(${ITK_INCLUDE_DIRS} ${MINC4ITK_INCLUDE_DIRS})  
 
-	
   ADD_EXECUTABLE( multiple_volume_similarity multiple_volume_similarity.cpp)
   TARGET_LINK_LIBRARIES( multiple_volume_similarity ITKIOMINC ${ITK_LIBRARIES}  )
-        
 
   ADD_EXECUTABLE( itk_distance itk_distance.cpp)
   TARGET_LINK_LIBRARIES(itk_distance ITKIOMINC ${ITK_LIBRARIES})
