@@ -23,17 +23,14 @@
 #include <unistd.h>
 #include <algorithm>
 
-
 #include <itkVector.h>
 #include <itkResampleImageFilter.h>
 #include <itkAffineTransform.h>
+#include <itkIdentityTransform.h>
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkBSplineInterpolateImageFunction.h>
 #include <itkVectorImage.h>
 #include <itkBinaryThresholdImageFilter.h>
-#include <itkVectorResampleImageFilter.h>
-//#include "mincVariableVectorResampleImageFilter.h"
-//#include "mincVariableVectorBSplineInterpolate.h"
 #include <itkVectorResampleImageFilter.h>
 #include "mincVectorBSplineInterpolate.h"
 #include <itkImageConstIterator.h>
@@ -46,6 +43,7 @@
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
 #include <itkImageIOBase.h>
+
 
 #if ( ITK_VERSION_MAJOR < 4 )
 #include <vxl/core/vnl/vnl_cross.h>
@@ -80,6 +78,8 @@ typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
 //typedef itk::VariableVectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
 typedef itk::VectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
 
+typedef itk::IdentityTransform<double,3> IdentityTransformType;
+  
 #if ( ITK_VERSION_MAJOR < 4 )
 typedef minc::XfmTransform<double,3,3>  TransformType;
 #else
@@ -290,6 +290,8 @@ void resample_image(
   
   //creating coordinate transformation objects
   TransformType::Pointer transform = TransformType::New();  
+  IdentityTransformType::Pointer identity_transform = IdentityTransformType::New();
+  
   if(!xfm_f.empty())
   {
 #if ( ITK_VERSION_MAJOR < 4 )
@@ -301,6 +303,8 @@ void resample_image(
     //TODO: implement this
     std::cerr<<"MINC XFM IO not implemented yet"<<std::endl;
 #endif    
+  } else {
+    filter->SetTransform( identity_transform );
   }
 
   //creating the interpolator
@@ -338,8 +342,19 @@ void resample_image(
       filter->SetOutputDirection(in->GetDirection());
     }
   }
-
+  
   filter->SetInput(in);
+
+#ifdef _DEBUG  
+  std::cout<<"Filter:"<<filter<<std::endl;
+  
+  std::cout<<"Transform:"<<transform<<std::endl;
+
+  std::cout<<"Interpolator:"<< interpolator<<std::endl;
+  
+  std::cout<<"Input:"<< in <<std::endl;
+#endif
+  
   filter->Update();
   typename ImageOut::Pointer out=filter->GetOutput();
   
