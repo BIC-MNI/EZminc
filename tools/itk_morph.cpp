@@ -1,3 +1,23 @@
+/* ----------------------------- MNI Header -----------------------------------
+@NAME       :  itk_morph
+@DESCRIPTION:  Utility to run morphological image operations
+@COPYRIGHT  :
+              Copyright 2011 Vladimir Fonov, McConnell Brain Imaging Centre, 
+              Montreal Neurological Institute, McGill University.
+              Permission to use, copy, modify, and distribute this
+              software and its documentation for any purpose and without
+              fee is hereby granted, provided that the above copyright
+              notice appear in all copies.  The author and McGill University
+              make no representations about the suitability of this
+              software for any purpose.  It is provided "as is" without
+              express or implied warranty.
+---------------------------------------------------------------------------- */
+
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif 
+
 #include <stdlib.h>
 #include <iostream>
 #include <getopt.h>
@@ -388,7 +408,7 @@ int main (int argc, char **argv)
   
 	try
   {
-#if ( ITK_VERSION_MAJOR < 4 )
+#ifdef HAVE_MINC4ITK
     itk::RegisterMincIO();
 #endif
     
@@ -470,7 +490,7 @@ int main (int argc, char **argv)
       }
     }
     
-#if ( ITK_VERSION_MAJOR < 4 )
+#ifdef HAVE_MINC4ITK
     minc::copy_metadata(output_img,mask_img);
     minc::append_history(output_img,history);
     free(history);
@@ -486,7 +506,7 @@ int main (int argc, char **argv)
 
     
   } 
-#if ( ITK_VERSION_MAJOR < 4 )
+#ifdef HAVE_MINC4ITK
   catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;

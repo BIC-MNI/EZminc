@@ -12,6 +12,11 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif 
+
 #include <iostream>
 #include <fstream>
 #include <getopt.h>
@@ -38,24 +43,25 @@
 #include <unistd.h>
 #include <getopt.h>
 
-
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
 #include <itkImageIOBase.h>
 
-
 #if ( ITK_VERSION_MAJOR < 4 )
 #include <vxl/core/vnl/vnl_cross.h>
-#include "itkMincImageIOFactory.h"
-#include "itkMincImageIO.h"
-#include "itkMincHelpers.h"
-#include <time_stamp.h>    // for creating minc style history entry
-#include <itkMincGeneralTransform.h>
 #else
 #include <vnl/vnl_cross.h>
 #include <itkCompositeTransform.h>
 #endif
+
+#ifdef HAVE_MINC4ITK
+#include <time_stamp.h>    // for creating minc style history entry
+#include "itkMincHelpers.h"
+#include "itkMincGeneralTransform.h"
+#include "itkMincImageIO.h"
+#include "itkMincHelpers.h"
+#endif //HAVE_MINC4ITK
 
 typedef itk::ImageBase<3>   Image3DBase;
 typedef itk::Image<float,3> Float3DImage;
@@ -294,7 +300,7 @@ void resample_image(
   
   if(!xfm_f.empty())
   {
-#if ( ITK_VERSION_MAJOR < 4 )
+#ifdef HAVE_MINC4ITK
     //reading a minc style xfm file
     transform->OpenXfm(xfm_f.c_str());
     if(!invert) transform->Invert(); //should be inverted by default to walk through target space
@@ -358,7 +364,7 @@ void resample_image(
   filter->Update();
   typename ImageOut::Pointer out=filter->GetOutput();
   
-#if ( ITK_VERSION_MAJOR < 4 )  
+#ifdef HAVE_MINC4ITK
   minc::copy_metadata(out,in);
   minc::append_history(out,history);
   
@@ -371,7 +377,7 @@ void resample_image(
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());
   
-#if ( ITK_VERSION_MAJOR < 4 )  
+#ifdef HAVE_MINC4ITK
   if(store_float)
   {
     minc::set_minc_storage_type(out,NC_FLOAT,true);
@@ -559,7 +565,7 @@ void resample_label_image (
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());
   
-#if ( ITK_VERSION_MAJOR < 4 )  
+#ifdef HAVE_MINC4ITK
   if(store_float)
   {
     minc::set_minc_storage_type(LabelImage,NC_FLOAT,true);
@@ -612,7 +618,7 @@ void resample_vector_image(
   if(!xfm_f.empty())
   {
     //reading a minc style xfm file
-#if ( ITK_VERSION_MAJOR < 4 )
+#ifdef HAVE_MINC4ITK
     transform->OpenXfm(xfm_f.c_str());
     if(!invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
@@ -668,7 +674,7 @@ void resample_vector_image(
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());
   
-#if ( ITK_VERSION_MAJOR < 4 )  
+#ifdef HAVE_MINC4ITK
   minc::copy_metadata(out,in);
   minc::append_history(out,history);
   
@@ -706,10 +712,12 @@ int main (int argc, char **argv)
   int normalize=0;
   int invert=0;
   int labels=0;
-#if ( ITK_VERSION_MAJOR < 4 )  
-  char *history = time_stamp(argc, argv); 
+  std::string history;
+#ifdef HAVE_MINC4ITK
+  char *_history = time_stamp(argc, argv); 
+  history=_history;
+  free(_history);
 #else
-  char *history = "";
 #endif  
   bool order_was_set=false;
   
@@ -809,41 +817,37 @@ int main (int argc, char **argv)
           //creating the interpolator
           NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
           if(store_byte)
-            resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history,store_float,store_short,store_byte,interpolator);
+            resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
           else if(store_short)
-            resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history,store_float,store_short,store_byte,interpolator);
+            resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
           else
-            resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history,store_float,store_short,store_byte,interpolator);
+            resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
         } else { //using slow algorithm
           InterpolatorType::Pointer interpolator = InterpolatorType::New();
           interpolator->SetSplineOrder(order);
           
           if(store_byte)
-            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history,store_float,store_short,store_byte,interpolator);
+            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
           else if(store_short)
-            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history,store_float,store_short,store_byte,interpolator);
+            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
           else
-            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history,store_float,store_short,store_byte,interpolator);
+            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
         }
       } else {
         InterpolatorType::Pointer interpolator = InterpolatorType::New();
         interpolator->SetSplineOrder(order);
-        resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history,store_float,store_short,store_byte,interpolator);
+        resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
       }
      } else if( nd==3 && nc==3 )  { // deal with this case as vector image 
        VectorInterpolatorType::Pointer interpolator = VectorInterpolatorType::New();
        interpolator->SetSplineOrder(order);
-       resample_vector_image<Vector3DImage,Vector3DImage,VectorInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history,store_float,store_short,store_byte,interpolator);
+       resample_vector_image<Vector3DImage,Vector3DImage,VectorInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
     } else {
       throw itk::ExceptionObject("This number of dimensions is not supported currently");
     }
-#if ( ITK_VERSION_MAJOR < 4 )      
-    free(history);
-#endif
-
     return 0;
   } 
-#if ( ITK_VERSION_MAJOR < 4 )  
+#ifdef HAVE_MINC4ITK
   catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;

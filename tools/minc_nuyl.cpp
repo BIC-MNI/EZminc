@@ -11,9 +11,7 @@
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
 
-
 using namespace minc;
-
 
 typedef minc::simple_commulative_histogram<float> simple_histogram;
 
@@ -323,7 +321,6 @@ int main(int argc,char **argv)
 //         
       
       //TODO: analyze commulative histograms for collapsing levels?
-    
       for(int i=0;i<src.c_buf_size();i++)
       {
         //use LUT to map the intensities
