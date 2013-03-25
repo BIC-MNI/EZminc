@@ -18,13 +18,13 @@ IF(NOT MINC_TOOLKIT_BUILD)
   FIND_PACKAGE(ITK REQUIRED)
   LINK_DIRECTORIES(${ITK_LIBRARY_DIRS})
   INCLUDE( ${LIBMINC_USE_FILE} )
-  
+
   OPTION(EZMINC_BUILD_MINCNLM  "Build Non-local means denoising programm,requires GSL (protected by a license IDDN.FR.001.070033.000.S.P.2007.000.21000)" OFF)
   OPTION(EZMINC_BUILD_DISTORTION_CORRECTION "Build distortion correction tools, requires GSL" OFF)
-  
-IF(HAVE_MINC1) # Right now it is needed for C++ simple minc interface
-  OPTION(EZMINC_BUILD_MRFSEG   "Build mrfseg - tissue classification program from Jussi Tohka" OFF)
-ENDIF(HAVE_MINC1)
+
+  IF(HAVE_MINC1) # Right now it is needed for C++ simple minc interface
+    OPTION(EZMINC_BUILD_MRFSEG   "Build mrfseg - tissue classification program from Jussi Tohka" OFF)
+  ENDIF(HAVE_MINC1)
 
   OPTION(EZMINC_BUILD_DD       "Build Diffeomorphic Demons (requires ITK)" OFF)
   OPTION(EZMINC_BUILD_TOOLS "Build additional tools , requires GSL" OFF)
