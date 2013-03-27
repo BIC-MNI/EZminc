@@ -96,8 +96,8 @@ int main(int argc, char *argv[])
    char    *xfm_fn;
    char    *out_fn;
    char    *history;
-   progress_struct progress;
-   Volume   def_grid;
+   VIO_progress_struct progress;
+   VIO_Volume   def_grid;
    VIO_General_transform xfm;
    int      x, y, z, v;
    double   vcoord[4], wcoord[3], wcoord_t[3];
