@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
       }
 
    /* read in  the input transformation */
-   if(input_transform_file(xfm_fn, &xfm) != OK){
+   if(input_transform_file(xfm_fn, &xfm) != VIO_OK){
       fprintf(stderr, "%s: Error reading in xfm %s\n\n", argv[0], xfm_fn);
       }
 
@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
    if(verbose){
       fprintf(stdout, "Outputting %s...\n", out_fn);
       }
-   if(output_volume(out_fn, dtype, is_signed, 0.0, 0.0, def_grid, history, NULL) != OK){
+   if(output_volume(out_fn, dtype, is_signed, 0.0, 0.0, def_grid, history, NULL) != VIO_OK){
       fprintf(stderr, "Problems outputing: %s\n\n", out_fn);
       exit(EXIT_FAILURE);
       }

@@ -116,13 +116,13 @@ int main (int argc, char **argv)
     
     std::ofstream output(out_csv.c_str());
     
-    File_formats         format;
+    VIO_File_formats         format;
     object_struct        **object_list;
     int n_objects=0;
     
     //bicpl sucks!
     if( input_graphics_file( (char*)in_obj.c_str(), &format, &n_objects,
-        &object_list ) != OK )
+        &object_list ) != VIO_OK )
     {
       std::cerr << " Error reading "<<in_obj.c_str() << std::endl;
       return 1;
@@ -150,7 +150,7 @@ int main (int argc, char **argv)
         
         for(int pnt=0;pnt< polygons->n_points;pnt++ )
         {
-          Point p_=polygons->points[pnt];//seeding point 
+          VIO_Point p_=polygons->points[pnt];//seeding point 
           minc::tag_point p_orig,p;
           p_orig[0]=p_.coords[0];p_orig[1]=p_.coords[1];p_orig[2]=p_.coords[2];
           //line_index.push_back(lines.size());

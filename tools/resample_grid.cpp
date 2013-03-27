@@ -115,7 +115,7 @@ int main (int argc, char **argv)
     
     interpolator->SetInputImage(in_grid);
     
-    General_transform xfm;
+    VIO_General_transform xfm;
    /* read in  the input transformation */
     if(input_transform_file((char*)xfm_f.c_str(), &xfm)){
       std::cerr<<"Error reading in xfm"<<xfm_f.c_str()<< std::endl;
