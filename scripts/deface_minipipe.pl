@@ -45,7 +45,7 @@ my $t2w_xfm;
 my $pdw_xfm;
 my $brain_mask;
 my $keep_real_range;
-
+my $beastlib;
 GetOptions (
   "verbose"       => \$verbose,
   "clobber"       => \$clobber,
@@ -60,7 +60,8 @@ GetOptions (
   'pdw-xfm=s'     => \$pdw_xfm,
   'brain-mask=s'  => \$brain_mask,
   'keep-tmp'      => \$keep_tmp,
-  'keep-real-range' => \$keep_real_range
+  'keep-real-range' => \$keep_real_range,
+  'beastlib=s' => \$beastlib,
 ); 
 
 die <<HELP
@@ -76,10 +77,11 @@ Usage: $me <T1w> [T2w] [PDw] <output_base>
   --t1w-xfm <t1w.xfm>
   --t2w-xfm <t2w.xfm>
   --pdw-xfm <pdw.xfm>
-  --keep-real-range - keep the real range of the data the same 
+  --keep-real-range - keep the real range of the data the same
+  --beastlib <dir> - location of BEaST library, mondatory
   ]
 HELP
-if $#ARGV<1;
+if $#ARGV<1 || !$beastlib;
 
 my $output_base=pop @ARGV;
 
@@ -160,7 +162,7 @@ unless($brain_mask)
 {
   do_cmd('itk_resample',"$tmpdir/clp_t1w.mnc","$tmpdir/stx_t1w.mnc",'--transform',$t1w_xfm,'--like',$model_t1w);
   #do_cmd('mincbet',"$tmpdir/stx_t1w.mnc","$tmpdir/stx_brain",'-m','-n');
-  do_cmd('mincbeast', "$tmpdir/stx_t1w.mnc", "$tmpdir/stx_brain_mask.mnc");
+  do_cmd('mincbeast', $beastlib, "$tmpdir/stx_t1w.mnc", "$tmpdir/stx_brain_mask.mnc",'-fill','-same_resolution','-median','-configuration',"$beastlib/default.2mm.conf");
   $brain_mask="$tmpdir/stx_brain_mask.mnc";
 }
 
