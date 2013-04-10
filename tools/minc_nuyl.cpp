@@ -31,7 +31,7 @@ void show_usage(const char *name)
       << "\t--steps <n> number of steps (default 10)"<<std::endl
       << "\t--fix_zero_padding fix mri volumes with lots of zeros in background"<<std::endl
       << "\t--verbose be verbose" << std::endl
-      << "\t--ks calculate Kolmogorov–Smirnov difference, no output is produced"<< std::endl
+      << "\t--ks calculate Kolmogorov-Smirnov difference, no output is produced"<< std::endl
       << "\t--chist output or target are comulative histograms" << std::endl;
 }
 
@@ -53,13 +53,13 @@ void populate_chist(simple_histogram& hist,std::vector<double> &chist,std::vecto
     
     double lev_s=hist.find_percentile(_pct);
     
-    if(lev_s-chist[chist.size()-1]<(hist.max()-hist.min())/1.0e5)
+/*    if(lev_s-chist[chist.size()-1]<(hist.max()-hist.min())/1.0e5)
     {
       std::cerr<<"Warning: "<<_pct*100.0<<" percentile collapses in source, skipping"<<std::endl;
-    } else {
+    } else {*/
       chist.push_back(lev_s);
       pct.push_back(_pct);
-    }
+//    }
   }
   //provide mapping for upper range
   chist.push_back(hist.max());
