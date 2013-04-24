@@ -6,3 +6,9 @@
 
 /* do we have MINC1 API */
 #cmakedefine HAVE_MINC1 1
+
+/* Define to 1 if you have the `finite' function. */
+#cmakedefine HAVE_FINITE 1
+
+/* Define to 1 if you have the `isfinite' function. */
+#cmakedefine HAVE_ISFINITE 1
