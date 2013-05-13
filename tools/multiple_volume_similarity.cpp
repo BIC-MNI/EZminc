@@ -21,6 +21,7 @@
 
 #include <getopt.h>
 #include <map>
+#include <set>
 
 
 #if ( ITK_VERSION_MAJOR < 4 )
@@ -52,7 +53,8 @@ template<class T,class S> void allocate_same(typename T::Pointer &image,const ty
 }
 #endif
 
-typedef itk::Image<unsigned char, 3>  LabelImageType;
+typedef unsigned char LabelPixelType;
+typedef itk::Image<LabelPixelType, 3>  LabelImageType;
 typedef itk::Image<float, 3>  RealImageType;
 typedef itk::VectorImage<float, 3>  VectorImageType;
 
@@ -162,6 +164,8 @@ int main(int argc,char **argv)
   try
   {
     std::map<int,int> label_map;
+    std::map<int,int> label_map2;
+    
     if(!map_f.empty())
     {
       if(verbose)
@@ -208,7 +212,10 @@ int main(int argc,char **argv)
 			itm=new LabelImageConstIterator(mask,mask->GetLargestPossibleRegion());
 			itm->GoToBegin();
 		}
+
 		
+    std::set<LabelPixelType> labels_set;
+  
 		for(int i=0;i<nfiles;i++)
 		{
 			const char* fname=argv[i+optind];
@@ -228,13 +235,41 @@ int main(int argc,char **argv)
 				distribution->SetSpacing( img->GetSpacing() );
 				distribution->SetOrigin ( img->GetOrigin() );
 				distribution->SetDirection(img->GetDirection());
-				distribution->SetNumberOfComponentsPerPixel(classes);
-				distribution->Allocate();
-				itk::VariableLengthVector<float> zero(classes);
-				zero.Fill(0);
-				distribution->FillBuffer(zero);
-				
-			}else {
+
+        for(LabelImageConstIterator it(img, img->GetBufferedRegion()); !it.IsAtEnd(); ++it)
+        {
+          LabelPixelType val = it.Get();
+          
+          if(!label_map.empty())
+          {
+            std::map<int,int>::const_iterator f=label_map.find(val);
+            if(f!=label_map.end())
+              val=(*f).second;
+            //TODO: if not found unchanged?
+          }
+          
+          if(val>0) //we are only doing non-zero labels
+            labels_set.insert(val);
+        }
+        if(verbose)
+        {
+          std::cout<<"Found:"<<labels_set.size()<<" labels"<<std::endl;
+        }
+        classes=labels_set.size();
+        int j=0;
+        
+        for(std::set<LabelPixelType>::iterator it=labels_set.begin();it!=labels_set.end();++it)
+        {
+          label_map2[*it]=j;
+          j++;
+        }
+        
+        distribution->SetNumberOfComponentsPerPixel(classes);
+        itk::VariableLengthVector<float> zero(classes);
+        zero.Fill(0);
+        distribution->Allocate();
+        distribution->FillBuffer(zero);
+      } else {  
 				if(distribution->GetSpacing()!=img->GetSpacing())
 				{
 					std::cerr<<fname<<" spacing mismatch!"<<std::endl;return 1;
@@ -248,6 +283,7 @@ int main(int argc,char **argv)
 					std::cerr<<fname<<" direction cosines mismatch!"<<std::endl;return 1;
 				}
 			}
+			
 			LabelImageConstIterator it1(img,img->GetLargestPossibleRegion());
 			VectorImageIterator it2(distribution,distribution->GetLargestPossibleRegion());
 			
@@ -262,9 +298,8 @@ int main(int argc,char **argv)
 					continue;
 				}
 				if(mask) ++(*itm);
-				unsigned char label=it1.Get();
+				LabelPixelType label=it1.Get();
         
-				
 				if(!label_map.empty())
         {
           std::map<int,int>::const_iterator f=label_map.find(label);
@@ -272,19 +307,16 @@ int main(int argc,char **argv)
             label=(*f).second;
           //TODO: if not found unchanged?
         }
-        if(!label) { //ignore zero label
-          continue; 
+        
+        if(label>0)
+        {
+          label=label_map2[label];
+          
+          itk::VariableLengthVector<float> val=it2.Get();
+          
+          val[label]+=1;
+          it2.Set(val);
         }
-        label--;
-        
-        
-				if(label>=classes) { //ignore label  with value that is too high
-					continue; 
-				}
-				itk::VariableLengthVector<float> val=it2.Get();
-        
-				val[label]+=1;
-				it2.Set(val);
 			}
 		}
 		
@@ -340,11 +372,20 @@ int main(int argc,char **argv)
 			}
 			b+=U;//TODO add label weights
 			a+=I;
-			it1.Set(mclass+1);
+      
+      std::set<LabelPixelType>::iterator ls;
+      for(ls=labels_set.begin();ls!=labels_set.end()&&mclass>0;++ls)
+      {
+        mclass--;
+      }
+      
+      if(ls!=labels_set.end())
+        it1.Set(*ls);
+      else
+        it1.Set(0); //ERROR?
 			
 			if(U>0.0)
 				it3.Set(I/U);
-			
 		}
 		
 		std::cout.precision(10);
