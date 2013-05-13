@@ -80,12 +80,18 @@ void show_usage (const char * prog)
            <<"http://dx.doi.org/10.1109/TMI.2006.880587"<<std::endl<<std::endl
            <<"WARNING: Program will use a lot of memory , proportional to the number of classes"<<std::endl
            <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> ... <inputN.mnc>  "<<std::endl
-           <<"[--verbose --mask <mask.mnc> --classes <n> --list <file.list> --majority <output> --overlap <output> --relabel map.txt]"<<std::endl;
+           <<"[--verbose "<<std::endl
+           <<" --bg include background in overlap "<<std::endl
+           <<" --mask <mask.mnc>"<<std::endl
+           <<" --classes <n>"<<std::endl
+           <<" --list <file.list>"<<std::endl
+           <<" --majority <output>"<<std::endl
+           <<" --overlap <output>"<<std::endl
+           <<" --relabel map.txt ]"<<std::endl;
 }
 
 int main(int argc,char **argv)
 {
-	
 #if ( ITK_VERSION_MAJOR < 4 )
 	char *history = time_stamp(argc, argv); 
 	std::string minc_history=history;
@@ -98,15 +104,17 @@ int main(int argc,char **argv)
   std::string mask_f,list_f,majority_f,overlap_f;
 	int classes=3;
   std::string map_f;
+  int with_bg=0;
 	
   static struct option long_options[] = {
     {"verbose", no_argument,             &verbose, 1},
     {"quiet",   no_argument,             &verbose, 0},
+    {"bg",      no_argument,             &with_bg, 1},
     {"mask",    required_argument,       0,'m'},
-		{"classes", required_argument,       0,'c'},
-		{"list",    required_argument,       0,'l'},
-		{"majority", required_argument,      0,'a'},
-		{"overlap", required_argument,      0,'o'},
+    {"classes", required_argument,       0,'c'},
+    {"list",    required_argument,       0,'l'},
+    {"majority", required_argument,      0,'a'},
+    {"overlap", required_argument,      0,'o'},
     {"relabel", required_argument,      0,'r'},
     {0, 0, 0, 0}
   };
@@ -248,7 +256,7 @@ int main(int argc,char **argv)
             //TODO: if not found unchanged?
           }
           
-          if(val>0) //we are only doing non-zero labels
+          if(val>0 || with_bg) //we are only doing non-zero labels
             labels_set.insert(val);
         }
         if(verbose)
@@ -308,7 +316,7 @@ int main(int argc,char **argv)
           //TODO: if not found unchanged?
         }
         
-        if(label>0)
+        if(label>0 || with_bg )
         {
           label=label_map2[label];
           
