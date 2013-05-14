@@ -155,6 +155,8 @@ void show_usage (const char *name)
     << "\tE[<n>] erode"<<endl
     << "\tM[<n>] median"<<endl
     << "\tI[0] invert"<<endl
+    << "\tT[0] thinning "<<endl
+    << "\tP[<n>] pruning "<<endl
     << "--threshold <threshold>"<<endl
     << "--bimodal"<<endl;
 }
