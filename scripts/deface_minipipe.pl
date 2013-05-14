@@ -46,6 +46,8 @@ my $pdw_xfm;
 my $brain_mask;
 my $keep_real_range;
 my $beastlib;
+my $mri_3t;
+
 GetOptions (
   "verbose"       => \$verbose,
   "clobber"       => \$clobber,
@@ -61,7 +63,8 @@ GetOptions (
   'brain-mask=s'  => \$brain_mask,
   'keep-tmp'      => \$keep_tmp,
   'keep-real-range' => \$keep_real_range,
-  'beastlib=s' => \$beastlib,
+  'beastlib=s'    => \$beastlib,
+  '3t'            => \$mri_3t,
 ); 
 
 die <<HELP
@@ -79,6 +82,7 @@ Usage: $me <T1w> [T2w] [PDw] <output_base>
   --pdw-xfm <pdw.xfm>
   --keep-real-range - keep the real range of the data the same
   --beastlib <dir> - location of BEaST library, mondatory
+  --3t for 3T scans
   ]
 HELP
 if $#ARGV<1 || !$beastlib;
@@ -401,7 +405,12 @@ sub resample_like {
 
 sub correct {
   my ($in,$model,$out)=@_;
-  do_cmd("nu_correct", "-clobber", "-iter", 100, "-stop", 0.0001, "-fwhm", 0.1,$in, "$tmpdir/nuc.mnc",'-clobber');
+  if($mri_3t)
+  {
+    do_cmd("nu_correct", "-clobber", "-iter", 100, "-stop", 0.0001, "-fwhm", 0.1,$in, "$tmpdir/nuc.mnc",'-clobber');
+  } else {
+    do_cmd("nu_correct", "-clobber", "-iter", 100, "-stop", 0.0001, "-fwhm", 0.1,$in, "$tmpdir/nuc.mnc",'-clobber','-distance',50);
+  }
   do_cmd('volume_pol',"$tmpdir/nuc.mnc",$model,'--order',1,'--expfile',"$tmpdir/pol.exp",'--clobber');
   do_cmd('minccalc','-expfile',"$tmpdir/pol.exp","$tmpdir/nuc.mnc",$out,'-clobber');
 }
