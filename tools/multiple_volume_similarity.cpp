@@ -53,17 +53,24 @@ template<class T,class S> void allocate_same(typename T::Pointer &image,const ty
 }
 #endif
 
+typedef unsigned short  IOPixelType;
 typedef unsigned char LabelPixelType;
+typedef itk::Image<IOPixelType, 3>  IOImageType;
 typedef itk::Image<LabelPixelType, 3>  LabelImageType;
 typedef itk::Image<float, 3>  RealImageType;
 typedef itk::VectorImage<float, 3>  VectorImageType;
 
-typedef itk::ImageFileReader<LabelImageType> ReaderType;
-typedef itk::ImageFileWriter<LabelImageType> WriterType;
+
+typedef itk::ImageFileReader<LabelImageType>    LabelReaderType;
+typedef itk::ImageFileReader<IOImageType>    ReaderType;
+typedef itk::ImageFileWriter<IOImageType>    WriterType;
 typedef itk::ImageFileWriter<RealImageType>  RealWriterType;
 
+typedef itk::ImageRegionConstIterator<IOImageType>    IOImageConstIterator;
 typedef itk::ImageRegionConstIterator<LabelImageType> LabelImageConstIterator;
 typedef itk::ImageRegionConstIterator<VectorImageType> VectorImageConstIterator;
+
+typedef itk::ImageRegionIterator<IOImageType> IOImageIterator;
 typedef itk::ImageRegionIterator<LabelImageType> LabelImageIterator;
 typedef itk::ImageRegionIterator<VectorImageType> VectorImageIterator;
 typedef itk::ImageRegionIterator<RealImageType> RealImageIterator;
@@ -105,15 +112,16 @@ int main(int argc,char **argv)
 	int classes=3;
   std::string map_f;
   int with_bg=0;
+  int max_label=0;
 	
   static struct option long_options[] = {
-    {"verbose", no_argument,             &verbose, 1},
-    {"quiet",   no_argument,             &verbose, 0},
-    {"bg",      no_argument,             &with_bg, 1},
-    {"mask",    required_argument,       0,'m'},
-    {"classes", required_argument,       0,'c'},
-    {"list",    required_argument,       0,'l'},
-    {"majority", required_argument,      0,'a'},
+    {"verbose", no_argument,            &verbose, 1},
+    {"quiet",   no_argument,            &verbose, 0},
+    {"bg",      no_argument,            &with_bg, 1},
+    {"mask",    required_argument,      0,'m'},
+    {"classes", required_argument,      0,'c'},
+    {"list",    required_argument,      0,'l'},
+    {"majority", required_argument,     0,'a'},
     {"overlap", required_argument,      0,'o'},
     {"relabel", required_argument,      0,'r'},
     {0, 0, 0, 0}
@@ -141,20 +149,20 @@ int main(int argc,char **argv)
       case 'm':
         mask_f=optarg;
         break;
-			case 'l':
-				list_f=optarg;
-				std::cerr<<"Sorry, not implemented yet!"<<std::endl;
-				return 1;
-				break;
-			case 'c':
-				classes=atoi(optarg);
-				break;
-			case 'a':
-				majority_f=optarg;
-				break;
-			case 'o':
-				overlap_f=optarg;
-				break;
+      case 'l':
+        list_f=optarg;
+        std::cerr<<"Sorry, not implemented yet!"<<std::endl;
+        return 1;
+        break;
+      case 'c':
+        classes=atoi(optarg);
+        break;
+      case 'a':
+        majority_f=optarg;
+        break;
+      case 'o':
+        overlap_f=optarg;
+        break;
       case '?':
         /* getopt_long already printed an error message. */
       default:
@@ -198,55 +206,56 @@ int main(int argc,char **argv)
     
 #if ( ITK_VERSION_MAJOR < 4 )
     itk::RegisterMincIO();
-#endif    
-		int nfiles=argc-optind;
-		
-		if(verbose)
-			std::cout<<"Processing:"<<nfiles<< " files"<<std::endl;
-		
-		VectorImageType::Pointer distribution=VectorImageType::New();
-		ReaderType::Pointer reader=ReaderType::New();
-		LabelImageType::Pointer mask=0;
-		LabelImageConstIterator* itm=0;
-		
-		if(!mask_f.empty())
-		{
-			
-			reader->SetFileName(mask_f);
-			reader->Update();
-			mask=reader->GetOutput();
-			mask->DisconnectPipeline();
-			
-			itm=new LabelImageConstIterator(mask,mask->GetLargestPossibleRegion());
-			itm->GoToBegin();
-		}
+#endif
+    int nfiles=argc-optind;
+    
+    if(verbose)
+      std::cout<<"Processing:"<<nfiles<< " files"<<std::endl;
+    
+    VectorImageType::Pointer distribution=VectorImageType::New();
+    ReaderType::Pointer reader=ReaderType::New();
+    LabelReaderType::Pointer label_reader=LabelReaderType::New();
+    
+    LabelImageType::Pointer mask=0;
+    LabelImageConstIterator* itm=0;
+    
+    if(!mask_f.empty())
+    {
+      
+      label_reader->SetFileName(mask_f);
+      label_reader->Update();
+      mask=label_reader->GetOutput();
+      mask->DisconnectPipeline();
+      
+      itm=new LabelImageConstIterator(mask,mask->GetLargestPossibleRegion());
+      itm->GoToBegin();
+    }
 
-		
-    std::set<LabelPixelType> labels_set;
+    std::set<IOPixelType> labels_set;
   
-		for(int i=0;i<nfiles;i++)
-		{
-			const char* fname=argv[i+optind];
-			if(verbose)
-				std::cout<<fname<<"\t"<<std::flush;
-			
-			reader->SetFileName(fname);
-			reader->Update();
-			LabelImageType::Pointer img=reader->GetOutput();
-			//store information from the image in the db
-			
-			if(!i)
-			{
-				distribution->SetLargestPossibleRegion(img->GetLargestPossibleRegion());
-				distribution->SetBufferedRegion(img->GetLargestPossibleRegion());
-				distribution->SetRequestedRegion(img->GetLargestPossibleRegion());
-				distribution->SetSpacing( img->GetSpacing() );
-				distribution->SetOrigin ( img->GetOrigin() );
-				distribution->SetDirection(img->GetDirection());
+    for(int i=0;i<nfiles;i++)
+    {
+      const char* fname=argv[i+optind];
+      if(verbose)
+        std::cout<<fname<<"\t"<<std::flush;
+      
+      reader->SetFileName(fname);
+      reader->Update();
+      IOImageType::Pointer img=reader->GetOutput();
+      //store information from the image in the db
+      
+      if(!i)
+      {
+        distribution->SetLargestPossibleRegion(img->GetLargestPossibleRegion());
+        distribution->SetBufferedRegion(img->GetLargestPossibleRegion());
+        distribution->SetRequestedRegion(img->GetLargestPossibleRegion());
+        distribution->SetSpacing( img->GetSpacing() );
+        distribution->SetOrigin ( img->GetOrigin() );
+        distribution->SetDirection(img->GetDirection());
 
-        for(LabelImageConstIterator it(img, img->GetBufferedRegion()); !it.IsAtEnd(); ++it)
+        for(IOImageConstIterator it(img, img->GetBufferedRegion()); !it.IsAtEnd(); ++it)
         {
-          LabelPixelType val = it.Get();
+          IOPixelType val = it.Get();
           
           if(!label_map.empty())
           {
@@ -258,15 +267,21 @@ int main(int argc,char **argv)
           
           if(val>0 || with_bg) //we are only doing non-zero labels
             labels_set.insert(val);
+          
+          if(val>max_label) max_label=val;
         }
         if(verbose)
         {
           std::cout<<"Found:"<<labels_set.size()<<" labels"<<std::endl;
+          for(std::set<IOPixelType>::iterator ls=labels_set.begin();ls!=labels_set.end() ;++ls)
+            std::cout<<(*ls)<<"\t";
+          std::cout<<std::endl;
+          std::cout<<"Max label="<<max_label<<std::endl;
         }
         classes=labels_set.size();
         int j=0;
         
-        for(std::set<LabelPixelType>::iterator it=labels_set.begin();it!=labels_set.end();++it)
+        for(std::set<IOPixelType>::iterator it=labels_set.begin();it!=labels_set.end();++it)
         {
           label_map2[*it]=j;
           j++;
@@ -292,8 +307,8 @@ int main(int argc,char **argv)
 				}
 			}
 			
-			LabelImageConstIterator it1(img,img->GetLargestPossibleRegion());
-			VectorImageIterator it2(distribution,distribution->GetLargestPossibleRegion());
+			IOImageConstIterator it1(img,img->GetLargestPossibleRegion());
+			VectorImageIterator  it2(distribution,distribution->GetLargestPossibleRegion());
 			
 			if(mask) {
 				itm->GoToBegin();
@@ -306,7 +321,7 @@ int main(int argc,char **argv)
 					continue;
 				}
 				if(mask) ++(*itm);
-				LabelPixelType label=it1.Get();
+				IOPixelType label=it1.Get();
         
 				if(!label_map.empty())
         {
@@ -328,9 +343,9 @@ int main(int argc,char **argv)
 			}
 		}
 		
-		LabelImageType::Pointer majority=LabelImageType::New();
+		IOImageType::Pointer majority=IOImageType::New();
     
-		allocate_same<LabelImageType,VectorImageType>(majority,distribution);
+		allocate_same<IOImageType,VectorImageType>(majority,distribution);
 		majority->FillBuffer(0);
 		
 		RealImageType::Pointer overlap=RealImageType::New();
@@ -338,7 +353,7 @@ int main(int argc,char **argv)
 		overlap->FillBuffer(0.0);
 		
 		//now, let's see what we collected
-		LabelImageIterator it1(majority,majority->GetLargestPossibleRegion());
+		IOImageIterator it1(majority,majority->GetLargestPossibleRegion());
 		VectorImageConstIterator it2(distribution,distribution->GetLargestPossibleRegion());
 		
 		RealImageIterator it3(overlap,overlap->GetLargestPossibleRegion());
@@ -381,49 +396,60 @@ int main(int argc,char **argv)
 			b+=U;//TODO add label weights
 			a+=I;
       
-      std::set<LabelPixelType>::iterator ls;
-      for(ls=labels_set.begin();ls!=labels_set.end()&&mclass>0;++ls)
+      std::set<IOPixelType>::iterator ls;
+      if(mclass>0)
       {
-        mclass--;
+        for(ls=labels_set.begin();ls!=labels_set.end() && mclass>0;++ls)
+        {
+          mclass--;
+        }
+        
+        if(ls!=labels_set.end())
+          it1.Set(*ls);
+        else
+          it1.Set(0); //ERROR?
+      } else {
+        it1.Set(0); //background!
       }
       
-      if(ls!=labels_set.end())
-        it1.Set(*ls);
-      else
-        it1.Set(0); //ERROR?
-			
-			if(U>0.0)
-				it3.Set(I/U);
-		}
-		
-		std::cout.precision(10);
-		if(verbose)
-			std::cout<<"Global overlap:";
-		std::cout<<a/b<<std::endl;
-		
+      if(U>0.0)
+        it3.Set(I/U);
+    }
+    
+    std::cout.precision(10);
+    if(verbose)
+      std::cout<<"Global overlap:";
+    std::cout<<a/b<<std::endl;
+
 #if ( ITK_VERSION_MAJOR < 4 )
-		minc::set_minc_storage_type ( majority, NC_BYTE, false );
-		minc::append_history ( majority, minc_history );
-		
-		minc::set_minc_storage_type ( overlap, NC_SHORT, false );
-		minc::append_history ( overlap, minc_history );
+    if( max_label<=255 )
+      minc::set_minc_storage_type ( majority, NC_BYTE, false );
+    else //if( max_label<=65535 )
+      minc::set_minc_storage_type ( majority, NC_SHORT, false );
+//     else
+//       minc::set_minc_storage_type ( majority, NC_INT, false );
+
+    minc::append_history ( majority, minc_history );
+
+    minc::set_minc_storage_type ( overlap, NC_SHORT, false );
+    minc::append_history ( overlap, minc_history );
 #endif
 
-		if(!majority_f.empty())
-		{
-			WriterType::Pointer writer=WriterType::New();
-			writer->SetFileName(majority_f.c_str());
-			writer->SetInput(majority);
-			writer->Update();
-		}
-		
-		if(!overlap_f.empty())
-		{
-			RealWriterType::Pointer writer=RealWriterType::New();
-			writer->SetFileName(overlap_f.c_str());
-			writer->SetInput(overlap);
-			writer->Update();
-		}
+    if(!majority_f.empty())
+    {
+      WriterType::Pointer writer=WriterType::New();
+      writer->SetFileName(majority_f.c_str());
+      writer->SetInput(majority);
+      writer->Update();
+    }
+    
+    if(!overlap_f.empty())
+    {
+      RealWriterType::Pointer writer=RealWriterType::New();
+      writer->SetFileName(overlap_f.c_str());
+      writer->SetInput(overlap);
+      writer->Update();
+    }
     
   } 
 #if ( ITK_VERSION_MAJOR < 4 )
