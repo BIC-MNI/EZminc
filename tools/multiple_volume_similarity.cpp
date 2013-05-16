@@ -340,64 +340,65 @@ int main(int argc,char **argv)
           val[label]+=1;
           it2.Set(val);
         }
-			}
-		}
-		
-		IOImageType::Pointer majority=IOImageType::New();
+      }
+    }
     
-		allocate_same<IOImageType,VectorImageType>(majority,distribution);
-		majority->FillBuffer(0);
-		
-		RealImageType::Pointer overlap=RealImageType::New();
-		allocate_same<RealImageType,VectorImageType>(overlap,distribution);
-		overlap->FillBuffer(0.0);
-		
-		//now, let's see what we collected
-		IOImageIterator it1(majority,majority->GetLargestPossibleRegion());
-		VectorImageConstIterator it2(distribution,distribution->GetLargestPossibleRegion());
-		
-		RealImageIterator it3(overlap,overlap->GetLargestPossibleRegion());
-		
-		if(mask) 
-			itm->GoToBegin();
-		
-		double a=0;
-		double b=0;
-		
-		for(it1.GoToBegin(),it2.GoToBegin(),it3.GoToBegin();!it1.IsAtEnd()&&!it2.IsAtEnd();++it1,++it2,++it3)
-		{
-			if(mask && !itm->Get()) {
-				++(*itm);
-				continue;
-			}
-			
-			if(mask) ++(*itm);
-			
-			itk::VariableLengthVector<float> val=it2.Get();
-			int mclass=-1;
-			float mcount=0;
-			double I=0.0;
-			double U=0.0;
-			for(int j=0;j<classes;j++)
-			{
-				if(val[j]>mcount)
-				{
-					mcount=val[j];
-					mclass=j;
-				}
-				//discrete version of the formula from http://dx.doi.org/10.1109/TMI.2006.880587
-				
-				//group-wise union (nfiles-1)+ ...+(nfiles-val[j])
-				U+=nfiles*(nfiles-1)/2-(nfiles-val[j])*(nfiles-val[j]-1)/2;
-				//group-wise intersection: val[j]+val[j]-1+.....1 
-				I+=val[j]*(val[j]-1)/2;
-				
-			}
-			b+=U;//TODO add label weights
-			a+=I;
+    IOImageType::Pointer majority=IOImageType::New();
+    
+    allocate_same<IOImageType,VectorImageType>(majority,distribution);
+    majority->FillBuffer(0);
+    
+    RealImageType::Pointer overlap=RealImageType::New();
+    allocate_same<RealImageType,VectorImageType>(overlap,distribution);
+    overlap->FillBuffer(0.0);
+    
+    //now, let's see what we collected
+    IOImageIterator it1(majority,majority->GetLargestPossibleRegion());
+    VectorImageConstIterator it2(distribution,distribution->GetLargestPossibleRegion());
+    
+    RealImageIterator it3(overlap,overlap->GetLargestPossibleRegion());
+    
+    if(mask) 
+      itm->GoToBegin();
+    
+    double a=0;
+    double b=0;
+    
+    for(it1.GoToBegin(),it2.GoToBegin(),it3.GoToBegin();!it1.IsAtEnd()&&!it2.IsAtEnd();++it1,++it2,++it3)
+    {
+      if(mask && !itm->Get()) {
+        ++(*itm);
+        continue;
+      }
+      
+      if(mask) ++(*itm);
+      
+      itk::VariableLengthVector<float> val=it2.Get();
+      int mclass=-1;
+      float mcount=0;
+      double I=0.0;
+      double U=0.0;
+      for(int j=0;j<classes;j++)
+      {
+        if(val[j]>mcount)
+        {
+          mcount=val[j];
+          mclass=j;
+        }
+        //discrete version of the formula from http://dx.doi.org/10.1109/TMI.2006.880587
+        
+        //group-wise union (nfiles-1)+ ...+(nfiles-val[j])
+        U+=nfiles*(nfiles-1)/2-(nfiles-val[j])*(nfiles-val[j]-1)/2;
+        //group-wise intersection: val[j]+val[j]-1+.....1 
+        I+=val[j]*(val[j]-1)/2;
+        
+      }
+      b+=U;//TODO add label weights
+      a+=I;
       
       std::set<IOPixelType>::iterator ls;
-      if(mclass>0)
+      
+      if(mclass>=0)
       {
         for(ls=labels_set.begin();ls!=labels_set.end() && mclass>0;++ls)
         {
@@ -411,7 +412,6 @@ int main(int argc,char **argv)
       } else {
         it1.Set(0); //background!
       }
-      
       if(U>0.0)
         it3.Set(I/U);
     }
