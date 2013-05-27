@@ -18,60 +18,23 @@
 #include <getopt.h>
 #include <algorithm>
 #include <string.h>
-#include <map>
+//#include <map>
+#include <set>
 
 using namespace minc;
 
 void show_usage (const char * prog)
 {
-  
   std::cout<<"Program calculates multiple volume similarity metrics for discrete labels "<<std::endl
            <<"or Generalized Tanimoto coefficient (GTC)" <<std::endl
            <<"based on :  William R. Crum, Oscar Camara, and Derek L. G. Hill"
            <<"\"Generalized Overlap Measures for Evaluation and Validation in Medical Image Analysis \""
            <<" IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 25, NO. 11, NOVEMBER 2006"<<std::endl
            <<"http://dx.doi.org/10.1109/TMI.2006.880587"<<std::endl<<std::endl
-           <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> [--gkappa]  [--akappa] [--gtc] [--csv] [--exclude l1[,l2[,l3]]] "<<std::endl;
+           <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> [--background] [--gkappa]  [--akappa] [--gtc] [--csv] [--exclude l1[,l2[,l3]]] "<<std::endl;
 }
 
-template<class T>class find_min_max
-{
-  public:
-  T _min;
-  T _max;
-  bool _initialized;
-  int _count;
-  
-  find_min_max():_initialized(false),_min(0),_max(0),_count(0)
-  {
-  }
-  
-  void operator()(const T& v)
-  {
-    if(_initialized)
-    {
-      if(v<_min) _min=v;
-      if(v>_max) _max=v;
-    } else {
-      _initialized=true;
-      _min=v;
-      _max=v;
-    }
-    _count++;
-  }
-  
-  const T& min(void) const {
-    return _min;
-  }
-  
-  const T& max(void) const{
-    return _max;
-  }
-  
-  int count(void) const {
-    return _count;
-  }
-};
+typedef unsigned short voxel_type;
 
 int main(int argc,char **argv)
 {
@@ -80,6 +43,7 @@ int main(int argc,char **argv)
   int gkappa=0;
   int gtc=0;
   int akappa=0;
+  int background=0;
   
   static struct option long_options[] = {
     {"verbose", no_argument,             &verbose, 1},
@@ -88,12 +52,14 @@ int main(int argc,char **argv)
     {"akappa",   no_argument,            &akappa, 1},
     {"gtc",      no_argument,            &gtc, 1},
     {"csv",      no_argument,            &csv, 1},
+    {"bg",       no_argument,            &background, 1},
+    {"background",no_argument,            &background, 1},
     {"exclude",  required_argument,      0,      'e'},
    
     {0, 0, 0, 0}
   };
   
-  std::vector<int> exclude;
+  std::set<voxel_type> exclude;
   
   for (;;) {
     /* getopt_long stores the option index here. */
@@ -118,7 +84,7 @@ int main(int argc,char **argv)
           const char* delim=", ";
           
           for(char *tok=strtok(optarg,delim);tok;tok=strtok(NULL,delim))
-            exclude.push_back(atoi(tok));
+            exclude.insert(static_cast<voxel_type>(atoi(tok)));
         }
         break;
         
@@ -156,7 +122,8 @@ int main(int argc,char **argv)
       std::cerr<<"Different number of dimensions!"<<std::endl;
       return 1;
     }
-    unsigned long size=1;
+    
+    size_t size=1;
     
     for(int i=0;i<5;i++)
     {
@@ -172,30 +139,34 @@ int main(int argc,char **argv)
         std::cerr<<"Different step size! "<<std::endl;
     }
     
-    rdr1.setup_read_byte();
-    rdr2.setup_read_byte();
+    rdr1.setup_read_ushort();
+    rdr2.setup_read_ushort();
     
-    std::vector<unsigned char> buffer1(size),buffer2(size);
+    std::vector<voxel_type> buffer1(size),buffer2(size);
     
-    load_standard_volume<unsigned char>(rdr1,&buffer1[0]);
-    load_standard_volume<unsigned char>(rdr2,&buffer2[0]);
+    load_standard_volume<voxel_type>(rdr1,&buffer1[0]);
+    load_standard_volume<voxel_type>(rdr2,&buffer2[0]);
     
-    find_min_max<unsigned char> f1,f2;
-    
-    //get min and max
-    f1=std::for_each(buffer1.begin(), buffer1.end(), f1);
-    f2=std::for_each(buffer2.begin(), buffer2.end(), f2);
+    // Let's find all the unique labels in both volumes!
+    std::set<voxel_type> label_set;
+    for(size_t i=0; i<size ; i++ )
+    {
+      voxel_type vx=buffer1[i];
+      if(!background && vx==0)
+        continue;
+
+      if( exclude.find(vx) != exclude.end() )
+        continue; //skip this label
+
+      label_set.insert(vx);
+    }
     
     if( verbose && !csv)
     {
-      std::cout<<"Volume 1 min="<<(int)f1.min()<<" max="<<(int)f1.max()<<" count="<<f1.count()<<std::endl;
-      std::cout<<"Volume 2 min="<<(int)f2.min()<<" max="<<(int)f2.max()<<" count="<<f2.count()<<std::endl;
+      std::cout<<"Number of unique labels:"<<label_set.size()<<std::endl;
+      if(background)
+        std::cout<<"Including background!"<<std::endl;
     }
-
-    unsigned char low= std::min<unsigned char>(f1.min(), f2.min());
-    unsigned char hi = std::max<unsigned char>(f1.max(), f2.max());
-
-    if(low==0) low=1; //assume 0 is background
 
     double intersect=0.0;
     double overlap=0.0;
@@ -208,16 +179,15 @@ int main(int argc,char **argv)
     double count_ref,count_res;
 
     //TODO: add mask ? or different weighting
-    for(unsigned char label=low; label<=hi; label++)
+    for(std::set<voxel_type>::iterator it=label_set.begin();it!=label_set.end();++it)
     {
-      if( !exclude.empty() && std::find<std::vector<int>::iterator,int>(exclude.begin(),exclude.end(),label)!=exclude.end() )
-        continue; //skip this label
-        
+      voxel_type label=*it;
+  
       count_intersect=0.0;
       count_ref=0.0;
       count_res=0.0;
 
-      for(int i=0; i<size ; i++ )
+      for(size_t i=0; i<size ; i++ )
       {
         if( buffer1[i]==label ) {volume+=1.0;count_ref+=1.0;}
         if( buffer2[i]==label ) {volume+=1.0;count_res+=1.0;}
