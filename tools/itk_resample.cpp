@@ -22,6 +22,7 @@
 #include <getopt.h>
 #include <vector>
 #include <set>
+#include <map>
 #include <valarray>
 #include <math.h>
 #include <limits>
@@ -108,7 +109,11 @@ void show_usage (const char * prog)
     << "--labels - assume that input data is discrete labels, will use Nearest-Neighbour interpolator"<<std::endl
     << "--byte  - store image in byte  voxels minc file"<<std::endl
     << "--short - store image in short voxels minc file"<<std::endl
-    << "--float - store image in float voxels minc file"<<std::endl;
+    << "--float - store image in float voxels minc file"<<std::endl
+    << "--relabel map.txt apply relabeling map"<<std::endl
+    << "--lut map.txt  apply relabeling map"<<std::endl
+    << "--lut-string \"a b;c d;....\" apply lut string in command line"<<std::endl;
+    
 }
 
 template<class T,class I> void generate_uniform_sampling(T* flt, const I* img,double step)
@@ -277,12 +282,14 @@ void resample_image(
    bool store_float,
    bool store_short,
    bool store_byte,
-   Interpolator* interpolator)
+   Interpolator* interpolator,
+   const std::map<int,int>& label_map=std::map<int,int>()
+                   )
 {
   typedef typename itk::ResampleImageFilter<Image, ImageOut> ResampleFilterType;
   typedef typename itk::ImageFileReader<Image >   ImageReaderType;
   typedef typename itk::ImageFileWriter<ImageOut >   ImageWriterType;
-  
+  typedef typename Image::PixelType InputPixelType;
   typename ImageReaderType::Pointer reader = ImageReaderType::New();
   
   //initializing the reader
@@ -291,6 +298,18 @@ void resample_image(
   reader->Update();
   
   typename Image::Pointer in=reader->GetOutput();
+  
+  if(!label_map.empty())
+  {
+    for(itk::ImageRegionIterator<Image> it(in, in->GetBufferedRegion()); !it.IsAtEnd(); ++it)
+    {
+      std::map<int,int>::const_iterator pos=label_map.find(static_cast<int>(it.Get()));
+      if(pos==label_map.end())
+        it.Set(0); //set to BG
+      else
+        it.Set(static_cast<InputPixelType>((*pos).second));
+    }
+  }
 
   typename ResampleFilterType::Pointer filter  = ResampleFilterType::New();
   
@@ -405,7 +424,8 @@ void resample_label_image (
    bool store_float,
    bool store_short,
    bool store_byte,
-   Interpolator* interpolator)
+   Interpolator* interpolator,
+   const std::map<int,int>& label_map=std::map<int,int>() )
 {
   typedef typename itk::ResampleImageFilter<TmpImage, TmpImage> ResampleFilterType;
   typedef typename itk::ImageFileReader<Image >      ImageReaderType;
@@ -426,6 +446,18 @@ void resample_label_image (
   reader->Update();
 
   typename Image::Pointer in=reader->GetOutput();
+  
+  if(!label_map.empty())
+  {
+    for(itk::ImageRegionIterator<Image> it(in, in->GetBufferedRegion()); !it.IsAtEnd(); ++it)
+    {
+      std::map<int,int>::const_iterator pos=label_map.find(static_cast<int>(it.Get()));
+      if(pos==label_map.end())
+        it.Set(0); //set to BG
+      else
+        it.Set(static_cast<InputPixelType>((*pos).second));
+    }
+  }
 
   typename ResampleFilterType::Pointer  filter           = ResampleFilterType::New();
   typename ThresholdFilterType::Pointer threshold_filter = ThresholdFilterType::New();
@@ -713,6 +745,10 @@ int main (int argc, char **argv)
   int invert=0;
   int labels=0;
   std::string history;
+  std::string map_f,map_str;
+  std::map<int,int> label_map;
+  
+  
 #ifdef HAVE_MINC4ITK
   char *_history = time_stamp(argc, argv); 
   history=_history;
@@ -735,7 +771,9 @@ int main (int argc, char **argv)
     {"float",   no_argument, &store_float, 1},
     {"short",   no_argument, &store_short, 1},
     {"byte",    no_argument, &store_byte,  1},
-    
+    {"relabel", required_argument,      0,'L'},
+    {"lut", required_argument,      0,'L'},
+    {"lut-string", required_argument,      0,'s'},
     {0, 0, 0, 0}
     };
   
@@ -743,7 +781,7 @@ int main (int argc, char **argv)
       /* getopt_long stores the option index here. */
       int option_index = 0;
 
-      int c = getopt_long (argc, argv, "vqcl:t:o:u:", long_options, &option_index);
+      int c = getopt_long (argc, argv, "vqcl:t:o:u:L:l:s:", long_options, &option_index);
 
       /* Detect the end of the options. */
       if (c == -1) break;
@@ -765,6 +803,12 @@ int main (int argc, char **argv)
         break;
       case 'u':
         uniformize=atof(optarg);break;
+      case 'L':
+        map_f=optarg;
+        break;
+      case 's':
+        map_str=optarg;
+        break;
 			case '?':
 				/* getopt_long already printed an error message. */
 			default:
@@ -788,7 +832,57 @@ int main (int argc, char **argv)
     std::cerr << output_f.c_str () << " Exists!" << std::endl;
     return 1;
   }
+
+  if(!map_f.empty())
+  {
+    if(verbose)
+      std::cout<<"Going to relabel input according to:"<<map_f.c_str()<<std::endl;
+    std::ifstream in_map(map_f.c_str());
+    
+    while(!in_map.eof() && in_map.good())
+    {
+      int l1,l2;
+      in_map>>l1>>l2;
+      std::map<int,int>::iterator pos=label_map.find(l1);
+      if(pos==label_map.end())
+        label_map[l1]=l2;
+      else if(label_map[l1]!=l2 and verbose)
+      {
+        std::cerr<<"Warning: label "<<l1<<" mapped more then once!"<<std::endl;
+        std::cerr<<"Previous map:"<<(*pos).second<<" New map:"<<l2<<std::endl;
+      }
+    }
+  }
   
+  if(!map_str.empty())
+  {
+    if(verbose)
+      std::cout<<"Going to relabel input according to:"<<map_str.c_str()<<std::endl;
+
+    const char* delim1=";";
+    char *saveptr1;
+    char *_str=strdup(map_str.c_str());
+    
+    for(char *tok1=strtok_r(_str,delim1,&saveptr1);tok1;tok1=strtok_r(NULL,delim1,&saveptr1))
+    {
+      int l1,l2;
+      if(sscanf(tok1,"%d %d",&l1,&l2)!=2)
+      {
+        std::cerr<<"Unrecognized lut string:"<<tok1<<std::endl;
+      } else {
+        std::map<int,int>::iterator pos=label_map.find(l1);
+        if(pos==label_map.end())
+          label_map[l1]=l2;
+        else if(label_map[l1]!=l2 and verbose)
+        {
+          std::cerr<<"Warning: label "<<l1<<" mapped more then once!"<<std::endl;
+          std::cerr<<"Previous map:"<<(*pos).second<<" New map:"<<l2<<std::endl;
+        }
+      }
+    }
+    free(_str);
+  }
+
 	try
   {
 #if ( ITK_VERSION_MAJOR < 4 )  
@@ -817,21 +911,21 @@ int main (int argc, char **argv)
           //creating the interpolator
           NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
           if(store_byte)
-            resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+            resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
           else if(store_short)
-            resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+            resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
           else
-            resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+            resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
         } else { //using slow algorithm
           InterpolatorType::Pointer interpolator = InterpolatorType::New();
           interpolator->SetSplineOrder(order);
           
           if(store_byte)
-            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
           else if(store_short)
-            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
           else
-            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
         }
       } else {
         InterpolatorType::Pointer interpolator = InterpolatorType::New();

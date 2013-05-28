@@ -23,7 +23,6 @@
 #include <map>
 #include <set>
 
-
 #if ( ITK_VERSION_MAJOR < 4 )
 #include <time_stamp.h>    // for creating minc style history entry
 #include <itkMincHelpers.h>
