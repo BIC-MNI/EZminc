@@ -3,6 +3,13 @@
 #endif //HAVE_CONFIG_H
 
 #include <iostream>
+#include <cstdlib>
+
+#include <math.h>
+#include <float.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 #include <getopt.h>
 #include <minc_io_simple_volume.h>
 #include <minc_1_simple.h>
