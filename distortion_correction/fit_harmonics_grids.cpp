@@ -165,28 +165,28 @@ class Tag_fit
       
       for(; i!=ideal.end(); i++, j++, m++)
       {
-        if(*m) continue;
-          //this is a quick hack
-        
-        if(cache_basis)
+        if(!*m)
         {
-          bas_x=*bx;
-        } else {
-          fun_x.generate_basis(bas_x,order,*i);
+          if(cache_basis)
+          {
+            bas_x=*bx;
+          } else {
+            fun_x.generate_basis(bas_x,order,*i);
+          }
+          
+          if(limit_linear)
+          { 
+            //TODO: fix indexing
+            pol_x.accumulate(bas_x, (*j)[0]-(*i)[0]);
+            pol_y.accumulate(bas_x, (*j)[1]-(*i)[1]);
+            pol_z.accumulate(bas_x, (*j)[2]-(*i)[2]);
+          } else {
+            pol_x.accumulate(bas_x, (*j)[0]);
+            pol_y.accumulate(bas_x, (*j)[1]);
+            pol_z.accumulate(bas_x, (*j)[2]);
+          }
         }
-        
-        if(limit_linear)
-        { 
-          //TODO: fix indexing
-          pol_x.accumulate(bas_x, (*j)[0]-(*i)[0]);
-          pol_y.accumulate(bas_x, (*j)[1]-(*i)[1]);
-          pol_z.accumulate(bas_x, (*j)[2]-(*i)[2]);
-        } else {
-          pol_x.accumulate(bas_x, (*j)[0]);
-          pol_y.accumulate(bas_x, (*j)[1]);
-          pol_z.accumulate(bas_x, (*j)[2]);
-        }
-        
+
         if(cache_basis)
         {
           bx++; 

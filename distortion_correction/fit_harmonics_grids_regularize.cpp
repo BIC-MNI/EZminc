@@ -1,6 +1,6 @@
 /* ----------------------------- MNI Header -----------------------------------
-@NAME       :  fit_harmonics_grids
-@DESCRIPTION:  spherical harminic LSQ approximation programm
+@NAME       :  fit_harmonics_grids_regularize
+@DESCRIPTION:  spherical harminic LSQ approximation programm with legendre regularization
 @COPYRIGHT  :
               Copyright 2006 Vladimir Fonov, McConnell Brain Imaging Centre, 
               Montreal Neurological Institute, McGill University.
