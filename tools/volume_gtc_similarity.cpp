@@ -31,7 +31,7 @@ void show_usage (const char * prog)
            <<"\"Generalized Overlap Measures for Evaluation and Validation in Medical Image Analysis \""
            <<" IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 25, NO. 11, NOVEMBER 2006"<<std::endl
            <<"http://dx.doi.org/10.1109/TMI.2006.880587"<<std::endl<<std::endl
-           <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> [--background] [--gkappa]  [--akappa] [--gtc] [--csv] [--exclude l1[,l2[,l3]]] "<<std::endl;
+           <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> [--background] [--gkappa] [--gtc] [--akappa] [--csv] [--exclude l1[,l2[,l3]]] "<<std::endl;
 }
 
 typedef unsigned short voxel_type;
