@@ -177,9 +177,11 @@ class Tag_fit
           if(limit_linear)
           { 
             //TODO: fix indexing
-            pol_x.accumulate(bas_x, (*j)[0]-(*i)[0]);
-            pol_y.accumulate(bas_x, (*j)[1]-(*i)[1]);
-            pol_z.accumulate(bas_x, (*j)[2]-(*i)[2]);
+            basis_vector _bas(bas_x.begin()+3,bas_x.end());
+            
+            pol_x.accumulate(_bas, (*j)[0]-(*i)[0]);
+            pol_y.accumulate(_bas, (*j)[1]-(*i)[1]);
+            pol_z.accumulate(_bas, (*j)[2]-(*i)[2]);
           } else {
             pol_x.accumulate(bas_x, (*j)[0]);
             pol_y.accumulate(bas_x, (*j)[1]);
@@ -196,14 +198,26 @@ class Tag_fit
       double cond_x,cond_y,cond_z;
       if(limit_linear)
       {
-        cond_x=pol_x.solve_unstable(coeff[0],0.01,verbose);
-        cond_y=pol_y.solve_unstable(coeff[1],0.01,verbose);
-        cond_z=pol_z.solve_unstable(coeff[2],0.01,verbose);
+        fittings  _coeff(3);
+        
+        _coeff[0].resize(order-3);
+        _coeff[1].resize(order-3);
+        _coeff[2].resize(order-3);
+        
+        cond_x=pol_x.solve_unstable(_coeff[0],0.01,verbose);
+        cond_y=pol_y.solve_unstable(_coeff[1],0.01,verbose);
+        cond_z=pol_z.solve_unstable(_coeff[2],0.01,verbose);
         
         coeff[0][1]=coeff[1][2]=coeff[2][0]=1.0;
         coeff[0][0]=coeff[0][2]=0;
         coeff[1][0]=coeff[1][1]=0;
         coeff[2][1]=coeff[2][2]=0;
+        
+        for(size_t _j=3; _j<order; _j++) {
+          for(size_t _k=0;_k<3;_k++)
+            coeff[_k][_j]=_coeff[_k][_j-3];
+        }
+        
       } else {
         cond_x=pol_x.solve_unstable(coeff[0],0.01,verbose);
         cond_y=pol_y.solve_unstable(coeff[1],0.01,verbose);

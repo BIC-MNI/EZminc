@@ -202,7 +202,8 @@ foreach $scan(@scans) {
   {
     if($no_core_extract) # core was already extracted
     {
-      do_cmd('minccalc','-express','A[0]>20?A[0]:0',$scan,"$work_dir/core_${name}");
+      do_cmd('minccalc','-express','A[0]>20?A[0]:0',$scan,"$tmpdir/core_${name}");
+      do_cmd('autocrop','-isoexpand',30,"$tmpdir/core_${name}","$work_dir/core_${name}");
     } else {
       if($acr)
       {
