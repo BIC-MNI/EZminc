@@ -25,7 +25,7 @@
 #include "dwt_utils.h"
 
 
-typedef minc::fixed_vec<3,int> idx;
+typedef minc::fixed_vec<3,size_t> idx;
 
 
 using namespace minc;
