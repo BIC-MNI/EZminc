@@ -40,6 +40,7 @@
 #include <itkVectorResampleImageFilter.h>
 #include "mincVectorBSplineInterpolate.h"
 #include <itkImageConstIterator.h>
+#include <itkSmoothingRecursiveGaussianImageFilter.h>
 
 #include <unistd.h>
 #include <getopt.h>
@@ -64,10 +65,10 @@
 #include "itkMincHelpers.h"
 #endif //HAVE_MINC4ITK
 
-typedef itk::ImageBase<3>   Image3DBase;
-typedef itk::Image<float,3> Float3DImage;
-typedef itk::Image<int,3>   Int3DImage;
-typedef itk::Image<short,3> Short3DImage;
+typedef itk::ImageBase<3>           Image3DBase;
+typedef itk::Image<float,3>         Float3DImage;
+typedef itk::Image<int,3>           Int3DImage;
+typedef itk::Image<short,3>         Short3DImage;
 typedef itk::Image<unsigned char,3> Byte3DImage;
 typedef itk::Image<itk::Vector<float,3>, 3>  Vector3DImage;
 //typedef itk::VectorImage<float, 3>  Vector3DImage;
@@ -84,7 +85,6 @@ typedef itk::ResampleImageFilter<Float3DImage, Float3DImage> FloatFilterType;
 typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
 //typedef itk::VariableVectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
 typedef itk::VectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
-
 typedef itk::IdentityTransform<double,3> IdentityTransformType;
   
 #if ( ITK_VERSION_MAJOR < 4 )
@@ -112,7 +112,8 @@ void show_usage (const char * prog)
     << "--float - store image in float voxels minc file"<<std::endl
     << "--relabel map.txt apply relabeling map"<<std::endl
     << "--lut map.txt  apply relabeling map"<<std::endl
-    << "--lut-string \"a b;c d;....\" apply lut string in command line"<<std::endl;
+    << "--lut-string \"a b;c d;....\" apply lut string in command line"<<std::endl
+    << "--aa <fwhm> apply anti-aliasing filter to labels before resampling (only usable for order > 0 )"<<std::endl;
     
 }
 
@@ -425,21 +426,25 @@ void resample_label_image (
    bool store_short,
    bool store_byte,
    Interpolator* interpolator,
-   const std::map<int,int>& label_map=std::map<int,int>() )
+   const std::map<int,int>& label_map=std::map<int,int>(),
+   double aa_fwhm=0.0 )
 {
   typedef typename itk::ResampleImageFilter<TmpImage, TmpImage> ResampleFilterType;
-  typedef typename itk::ImageFileReader<Image >      ImageReaderType;
-  typedef typename itk::ImageFileWriter<ImageOut >   ImageWriterType;
-  typedef itk::ImageRegionConstIterator<Image>    ConstInputImageIteratorType;
-  typedef itk::ImageRegionConstIterator<TmpImage> ConstTmpImageIteratorType;
-  typedef itk::ImageRegionIterator<TmpImage>       TmpImageIteratorType;
+  typedef typename itk::ImageFileReader<Image >                 ImageReaderType;
+  typedef typename itk::ImageFileWriter<ImageOut >              ImageWriterType;
+  typedef itk::ImageRegionConstIterator<Image>                  ConstInputImageIteratorType;
+  typedef itk::ImageRegionConstIterator<TmpImage>               ConstTmpImageIteratorType;
+  typedef itk::ImageRegionIterator<TmpImage>                    TmpImageIteratorType;
   
-  typedef itk::ImageRegionIterator<ImageOut>              ImageOutIteratorType;
-  typedef itk::BinaryThresholdImageFilter<Image,TmpImage> ThresholdFilterType;
+  typedef itk::ImageRegionIterator<ImageOut>                    ImageOutIteratorType;
+  typedef itk::BinaryThresholdImageFilter<Image,TmpImage>       ThresholdFilterType;
+  typedef itk::SmoothingRecursiveGaussianImageFilter<TmpImage,TmpImage>  BlurFilterType;
 
   typedef typename Image::PixelType InputPixelType;
   typename ImageReaderType::Pointer reader = ImageReaderType::New();
 
+  double aa_sigma=aa_fwhm/(2.0*sqrt(2*log(2.0)));
+  
   //initializing the reader
   reader->SetImageIO(base);
   reader->SetFileName(base->GetFileName());
@@ -461,6 +466,7 @@ void resample_label_image (
 
   typename ResampleFilterType::Pointer  filter           = ResampleFilterType::New();
   typename ThresholdFilterType::Pointer threshold_filter = ThresholdFilterType::New();
+  typename BlurFilterType::Pointer      blur_filter     = BlurFilterType::New();
 
   //creating coordinate transformation objects
   TransformType::Pointer transform = TransformType::New();
@@ -542,7 +548,6 @@ void resample_label_image (
   LabelImage->SetBufferedRegion(region);
   LabelImage->SetRequestedRegion(region);
   LabelImage->Allocate();
-  LabelImage->FillBuffer(0);
   
   //split the input image
   std::set<InputPixelType> sval;
@@ -554,6 +559,9 @@ void resample_label_image (
       sval.insert(val);
   }
   
+  // use default label 
+  LabelImage->FillBuffer(*sval.begin());
+  
   //std::vector<typename TmpImage::Pointer> list_of_labels;
   // Generate a bunch of binary copies (unfortunately, we store them as double)
   for(typename set<InputPixelType>::iterator label_it = sval.begin(); label_it != sval.end(); ++label_it)
@@ -564,12 +572,22 @@ void resample_label_image (
     threshold_filter->SetOutsideValue(0.0);
     threshold_filter->SetInput(in);
     
-    filter->SetInput(threshold_filter->GetOutput());
+    if(aa_fwhm>0.0)
+    {
+      //blur_filter->SetUseImageSpacing(true);
+      blur_filter->SetSigma(aa_sigma);
+      blur_filter->SetInput(threshold_filter->GetOutput());
+      filter->SetInput(blur_filter->GetOutput());
+    } else {
+      filter->SetInput(threshold_filter->GetOutput());
+    }
+    
     filter->Update();
     
     ConstTmpImageIteratorType it_filter(filter->GetOutput(), filter->GetOutput()->GetBufferedRegion());
     TmpImageIteratorType      it_max(MaxImage, MaxImage->GetBufferedRegion());
     ImageOutIteratorType      it_out(LabelImage, LabelImage->GetBufferedRegion());
+    
     for(; !it_filter.IsAtEnd(); ++it_filter,++it_max,++it_out)
     {
       typename TmpImage::PixelType val = it_filter.Get();
@@ -747,6 +765,7 @@ int main (int argc, char **argv)
   std::string history;
   std::string map_f,map_str;
   std::map<int,int> label_map;
+  double aa_fwhm=0.0;
   
   
 #ifdef HAVE_MINC4ITK
@@ -774,6 +793,7 @@ int main (int argc, char **argv)
     {"relabel", required_argument,      0,'L'},
     {"lut", required_argument,      0,'L'},
     {"lut-string", required_argument,      0,'s'},
+    {"aa", required_argument,      0,'a'},
     {0, 0, 0, 0}
     };
   
@@ -781,7 +801,7 @@ int main (int argc, char **argv)
       /* getopt_long stores the option index here. */
       int option_index = 0;
 
-      int c = getopt_long (argc, argv, "vqcl:t:o:u:L:l:s:", long_options, &option_index);
+      int c = getopt_long (argc, argv, "vqcl:t:o:u:L:l:s:a:", long_options, &option_index);
 
       /* Detect the end of the options. */
       if (c == -1) break;
@@ -793,6 +813,8 @@ int main (int argc, char **argv)
 			case 'v':
 				cout << "Version: 0.8" << endl;
 				return 0;
+      case 'a':
+        aa_fwhm=atof(optarg);break;
       case 'l':
         like_f=optarg; break;
       case 't':
@@ -921,11 +943,11 @@ int main (int argc, char **argv)
           interpolator->SetSplineOrder(order);
           
           if(store_byte)
-            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
+            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
           else if(store_short)
-            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
+            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
           else
-            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
+            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
         }
       } else {
         InterpolatorType::Pointer interpolator = InterpolatorType::New();
