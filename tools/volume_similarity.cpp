@@ -17,6 +17,7 @@
 #include "minc_1_simple.h"
 #include <getopt.h>
 #include <algorithm>
+#include <set>
 
 using namespace minc;
 
@@ -71,6 +72,8 @@ template<class T>class find_min_max
   }
 };
 
+typedef unsigned short label_type;
+
 int main(int argc,char **argv)
 {
   int verbose=0;
@@ -78,9 +81,9 @@ int main(int argc,char **argv)
   int kappa=0,specificity=0,sensitivity=0;
   int jaccard=0;
   static struct option long_options[] = {
-    {"verbose", no_argument,             &verbose, 1},
-    {"quiet",   no_argument,             &verbose, 0},
-    {"kappa",   no_argument,             &kappa, 1},
+    {"verbose",       no_argument,       &verbose, 1},
+    {"quiet",         no_argument,       &verbose, 0},
+    {"kappa",         no_argument,       &kappa, 1},
     {"sensitivity",   no_argument,       &sensitivity, 1},
     {"specificity",   no_argument,       &specificity, 1},
     {"jaccard",       no_argument,       &jaccard, 1},
@@ -155,15 +158,15 @@ int main(int argc,char **argv)
         std::cerr<<"Different step size! "<<std::endl;
     }
     
-    rdr1.setup_read_byte();
-    rdr2.setup_read_byte();
+    rdr1.setup_read_ushort();
+    rdr2.setup_read_ushort();
     
-    std::vector<unsigned char> buffer1(size),buffer2(size);
+    std::vector<label_type> buffer1(size),buffer2(size);
     
-    load_standard_volume<unsigned char>(rdr1,&buffer1[0]);
-    load_standard_volume<unsigned char>(rdr2,&buffer2[0]);
+    load_standard_volume<label_type>(rdr1,&buffer1[0]);
+    load_standard_volume<label_type>(rdr2,&buffer2[0]);
     
-    find_min_max<unsigned char> f1,f2;
+    find_min_max<label_type> f1,f2;
     
     //get min and max
     f1=std::for_each(buffer1.begin(), buffer1.end(), f1);
@@ -178,14 +181,25 @@ int main(int argc,char **argv)
       std::cout<<"Volume 2 min="<<(int)f2.min()<<" max="<<(int)f2.max()<<" count="<<f2.count()<<std::endl;
     }
 
-    unsigned char low= std::min<unsigned char>(f1.min(), f2.min());
-    unsigned char hi = std::max<unsigned char>(f1.max(), f2.max());
+    label_type low= std::min<label_type>(f1.min(), f2.min());
+    label_type hi = std::max<label_type>(f1.max(), f2.max());
+    
+    
+    std::set<label_type> labels_set;
+    for(int i=0; i<size ; i++ )
+    {
+      labels_set.insert(buffer1[i]);
+      labels_set.insert(buffer2[i]);
+    }
+    
 
     if(low==0) low=1; //assume 0 is background
 
-    
-    for(unsigned char label=low; label<=hi; label++)
+    for(std::set<label_type>::iterator it=labels_set.begin();it!=labels_set.end();++it)
     {
+      label_type label=*it;
+      if(label==0) continue;
+      
       int v1=0,v2=0;
       double a=0.0,b=0.0,c=0.0,d=0.0;
       for(int i=0; i<size ; i++ )
@@ -231,6 +245,8 @@ int main(int argc,char **argv)
           std::cout<<_jaccard<<std::endl;
         }
       } else {
+        if(low!=hi)
+          std::cout<<(int)label<<",";
         if( kappa ){
           if(verbose) std::cout<<"Kappa ";
           std::cout<<_kappa<<std::endl;

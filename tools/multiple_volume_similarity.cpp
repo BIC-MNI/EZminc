@@ -263,10 +263,10 @@ int main(int argc,char **argv)
               val=(*f).second;
             //TODO: if not found unchanged?
           }
-          
+
           if(val>0 || with_bg) //we are only doing non-zero labels
             labels_set.insert(val);
-          
+
           if(val>max_label) max_label=val;
         }
         if(verbose)
