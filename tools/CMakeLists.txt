@@ -15,11 +15,17 @@ IF(GSL_FOUND AND HAVE_MINC1)
                 fdr_threshold.cpp )
 
   TARGET_LINK_LIBRARIES(fdr_threshold ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY}  ${EZMINC_LIBRARIES} )
+  
+  ADD_EXECUTABLE(t2_fit
+      t2_fit.cpp )
+
+  TARGET_LINK_LIBRARIES(t2_fit ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY}  ${EZMINC_LIBRARIES} )
 
   INSTALL(TARGETS 
         random_volume
         fdr_threshold
         volume_pol
+        t2_fit
         RUNTIME DESTINATION bin )
 ENDIF(GSL_FOUND AND HAVE_MINC1)
 
