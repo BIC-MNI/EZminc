@@ -104,6 +104,7 @@ void show_usage (const char * prog)
     << "--transform <xfm_transform> "<<std::endl
     << "--order <n> spline order, default 2 "<<std::endl
     << "--uniformize <step> - will make a volume with uniform step size and no direction cosines" << std::endl
+    << "--unistep <step> - will make a volume with the same step size and preserve direction cosines" << std::endl
     << "--normalize - outputs volume with right-hand direction cosines and positive step-sizes, uses NN interpolation" << std::endl
     << "--invert_transform  - apply inverted transform"<<std::endl
     << "--labels - assume that input data is discrete labels, will use Nearest-Neighbour interpolator"<<std::endl
@@ -153,6 +154,46 @@ template<class T,class I> void generate_uniform_sampling(T* flt, const I* img,do
   flt->SetOutputOrigin(org);
   flt->SetOutputSpacing(spc);
 }
+
+template<class T,class I> void generate_unistep_sampling(T* flt, const I* img,double step)
+{
+  //obtain physical coordinats of all image corners
+  typename I::RegionType r=img->GetLargestPossibleRegion();
+  std::vector<double> corner[3];
+  for(int i=0;i<8;i++)
+  {
+    typename I::IndexType idx;
+    typename I::PointType c;
+    idx[0]=r.GetIndex()[0]+r.GetSize()[0]*(i%2);
+    idx[1]=r.GetIndex()[1]+r.GetSize()[1]*((i/2)%2);
+    idx[2]=r.GetIndex()[2]+r.GetSize()[2]*((i/4)%2);
+    
+    img->TransformIndexToPhysicalPoint(idx,c);
+    for(int j=0;j<3;j++)
+      corner[j].push_back(c[j]);
+  }
+  typename I::IndexType start;
+  typename T::SizeType size;
+  typename T::OriginPointType org=img->GetOrigin();
+  typename I::SpacingType spc;
+  spc.Fill(step);
+  
+  for(int j=0;j<3;j++)
+  {
+    org[j]=org[j]-img->GetSpacing()[j]/2.0+step/2.0;
+    size[j]=::ceil((r.GetSize()[j]+1)*img->GetSpacing()[j]/step);
+  }
+  
+  start.Fill(0);
+  
+  flt->SetOutputDirection(img->GetDirection());
+  
+  flt->SetOutputStartIndex(start);
+  flt->SetSize(size);
+  flt->SetOutputOrigin(org);
+  flt->SetOutputSpacing(spc);
+}
+
 
 template<class D> bool abs_compare(const D& a,const D&b) { return fabs(a)<fabs(b);}
 
@@ -278,6 +319,7 @@ void resample_image(
    const std::string& like_f,
    bool invert,
    double uniformize,
+   double unistep,
    bool normalize,
    const char* history,
    bool store_float,
@@ -348,6 +390,8 @@ void resample_image(
     if(uniformize!=0.0)
     {
       generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),uniformize);
+    } else if(unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),unistep);
     } else if(normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,reader->GetOutput());
     } else {
@@ -420,6 +464,7 @@ void resample_label_image (
    const std::string& like_f,
    bool invert,
    double uniformize,
+   double unistep,
    bool normalize,
    const char* history,
    bool store_float,
@@ -501,6 +546,8 @@ void resample_label_image (
     if(uniformize!=0.0)
     {
       generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),uniformize);
+    } else if(unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),unistep);
     } else if(normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,reader->GetOutput());
     } else {
@@ -640,6 +687,7 @@ void resample_vector_image(
    const std::string& like_f,
    bool invert,
    double uniformize,
+   double unistep,
    bool normalize,
    const char* history,
    bool store_float,
@@ -694,6 +742,8 @@ void resample_vector_image(
     if(uniformize!=0.0)
     {
       generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),uniformize);
+    } else if(unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),unistep);
     } else if(normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,reader->GetOutput());
     } else {
@@ -759,6 +809,7 @@ int main (int argc, char **argv)
   int order=2;
   std::string like_f,xfm_f,output_f,input_f;
   double uniformize=0.0;
+  double unistep=0.0;
   int normalize=0;
   int invert=0;
   int labels=0;
@@ -784,6 +835,7 @@ int main (int argc, char **argv)
 		{"transform",    required_argument, 0, 't'},
     {"order",    required_argument, 0, 'o'},
     {"uniformize",    required_argument, 0, 'u'},
+    {"unistep",    required_argument, 0, 'U'},
     {"invert_transform", no_argument, &invert, 1},
     {"normalize", no_argument, &normalize, 1},
     {"labels",no_argument, &labels, 1},
@@ -801,7 +853,7 @@ int main (int argc, char **argv)
       /* getopt_long stores the option index here. */
       int option_index = 0;
 
-      int c = getopt_long (argc, argv, "vqcl:t:o:u:L:l:s:a:", long_options, &option_index);
+      int c = getopt_long (argc, argv, "vqcl:t:o:u:L:l:s:a:U:", long_options, &option_index);
 
       /* Detect the end of the options. */
       if (c == -1) break;
@@ -825,12 +877,12 @@ int main (int argc, char **argv)
         break;
       case 'u':
         uniformize=atof(optarg);break;
+      case 'U':
+        unistep=atof(optarg);break;
       case 'L':
-        map_f=optarg;
-        break;
+        map_f=optarg;break;
       case 's':
-        map_str=optarg;
-        break;
+        map_str=optarg;break;
 			case '?':
 				/* getopt_long already printed an error message. */
 			default:
@@ -933,31 +985,31 @@ int main (int argc, char **argv)
           //creating the interpolator
           NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
           if(store_byte)
-            resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
+            resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
           else if(store_short)
-            resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
+            resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
           else
-            resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
+            resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
         } else { //using slow algorithm
           InterpolatorType::Pointer interpolator = InterpolatorType::New();
           interpolator->SetSplineOrder(order);
           
           if(store_byte)
-            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
+            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
           else if(store_short)
-            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
+            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
           else
-            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
+            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
         }
       } else {
         InterpolatorType::Pointer interpolator = InterpolatorType::New();
         interpolator->SetSplineOrder(order);
-        resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+        resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
       }
      } else if( nd==3 && nc==3 )  { // deal with this case as vector image 
        VectorInterpolatorType::Pointer interpolator = VectorInterpolatorType::New();
        interpolator->SetSplineOrder(order);
-       resample_vector_image<Vector3DImage,Vector3DImage,VectorInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+       resample_vector_image<Vector3DImage,Vector3DImage,VectorInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
     } else {
       throw itk::ExceptionObject("This number of dimensions is not supported currently");
     }
