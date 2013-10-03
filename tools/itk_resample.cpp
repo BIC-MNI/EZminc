@@ -159,19 +159,7 @@ template<class T,class I> void generate_unistep_sampling(T* flt, const I* img,do
 {
   //obtain physical coordinats of all image corners
   typename I::RegionType r=img->GetLargestPossibleRegion();
-  std::vector<double> corner[3];
-  for(int i=0;i<8;i++)
-  {
-    typename I::IndexType idx;
-    typename I::PointType c;
-    idx[0]=r.GetIndex()[0]+r.GetSize()[0]*(i%2);
-    idx[1]=r.GetIndex()[1]+r.GetSize()[1]*((i/2)%2);
-    idx[2]=r.GetIndex()[2]+r.GetSize()[2]*((i/4)%2);
-    
-    img->TransformIndexToPhysicalPoint(idx,c);
-    for(int j=0;j<3;j++)
-      corner[j].push_back(c[j]);
-  }
+  
   typename I::IndexType start;
   typename T::SizeType size;
   typename T::OriginPointType org=img->GetOrigin();
@@ -404,6 +392,8 @@ void resample_image(
     if(uniformize!=0.0)
     {
       generate_uniform_sampling<ResampleFilterType,Image>(filter,in,uniformize);
+    } else if(unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,in,unistep);
     } else if(normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,in);
     } else {
@@ -562,7 +552,9 @@ void resample_label_image (
     if(uniformize!=0.0)
     {
       generate_uniform_sampling<ResampleFilterType,Image>(filter,in,uniformize);
-    } else if(normalize) {
+    } else if(unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,in,unistep);
+    }else if(normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,in);
     } else {
       //we are using original sampling
@@ -759,6 +751,8 @@ void resample_vector_image(
     if(uniformize!=0.0)
     {
       generate_uniform_sampling<ResampleFilterType,Image>(filter,in,uniformize);
+    } else if(unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,in,unistep);
     } else if(normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,in);
     } else {
@@ -975,6 +969,16 @@ int main (int argc, char **argv)
     size_t nc = io->GetNumberOfComponents();
     itk::ImageIOBase::IOComponentType  ct = io->GetComponentType();
     itk::ImageIOBase::IOComponentType  oct = ct;
+   
+    if(verbose)
+    {
+      if(uniformize!=0.0)
+        std::cout<<"Making uniform sampling, step size="<<uniformize<<std::endl;
+      else if(unistep) 
+        std::cout<<"Making same step size, new step size="<<unistep<<std::endl;
+      else if(normalize)
+        std::cout<<"Performin direction cosine normalization"<<std::endl;
+    }
     
     if( nc==1 && nd==3 ) //3D image, simple case
     {
