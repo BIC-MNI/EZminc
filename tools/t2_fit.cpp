@@ -1,5 +1,6 @@
 #include <iostream>
 #include <minc_1_simple.h>
+#include <unistd.h>
 
 #include <math.h>
 #include "gsl_glue.h"
