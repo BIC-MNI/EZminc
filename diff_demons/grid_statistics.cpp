@@ -1,9 +1,19 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "itkImage.h"
 #include "itkVector.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
 #include "itkDisplacementToVelocityFieldLogFilter.h"
+
+#if ITK_VERSION_MAJOR >= 4
+#include <itkExponentialDisplacementFieldImageFilter.h>
+#else
 #include <itkExponentialDeformationFieldImageFilter.h>
+#endif
+
 #include "itkDisplacementFieldCompositionFilter.h"
 #include "itkImageRegionIterator.h"
 #include "itkImageRegionConstIterator.h"
@@ -37,9 +47,7 @@ int main ( int argc, char *argv[] )
   
   
   std::string mask_f;
-  char *_history = time_stamp(argc, argv); 
-  std::string minc_history=_history;
-  free ( _history );
+  std::string minc_history=minc_timestamp(argc,argv);
   
   static struct option long_options[] =
   {
@@ -89,8 +97,9 @@ int main ( int argc, char *argv[] )
   
   try
   {
+#if ITK_VERSION_MAJOR < 4
     itk::ObjectFactoryBase::RegisterFactory ( itk::MincImageIOFactory::New() );
-    
+#endif    
     typedef float TPixel;
     const unsigned int VImageDimension = 3;//TODO: make this a template?
     
@@ -104,7 +113,15 @@ int main ( int argc, char *argv[] )
     typedef itk::WarpHarmonicEnergyCalculator < VectorImageType >   HarmonicEnergyCalculatorType;
     typedef itk::VectorCentralDifferenceImageFunction < VectorImageType > WarpGradientCalculatorType;
     typedef WarpGradientCalculatorType::OutputType WarpGradientType;
-    typedef itk::ExponentialDeformationFieldImageFilter< VectorImageType, VectorImageType > ExponentiatorFilterType;
+    
+#if ITK_VERSION_MAJOR >= 4
+    typedef itk::ExponentialDisplacementFieldImageFilter< VectorImageType, VectorImageType >
+    ExponentiatorFilterType;
+#else    
+    typedef itk::ExponentialDeformationFieldImageFilter< VectorImageType, VectorImageType >
+    ExponentiatorFilterType;
+#endif
+
     typedef itk::ImageFileReader< VectorImageType >  VectorReaderType;
 
 

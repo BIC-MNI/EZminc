@@ -25,7 +25,8 @@
 #include <itkTransform.h>
 #include <itkObjectFactory.h>
 #include <memory>
-#include "minc_helpers.h"
+#include <itkMincHelpers.h>
+
 
 #ifdef _DEBUG
 #include <debug/vector>

@@ -21,12 +21,12 @@
 #include "itkPDEDeformableRegistrationFilterM.h"
 #include "itkESMDemonsRegistrationFunctionM.h"
 
-#include "itkMultiplyByConstantImageFilter.h"
-
 #if ( ITK_VERSION_MAJOR > 3 ) 
 #include <itkExponentialDisplacementFieldImageFilter.h>
+#include <itkMultiplyImageFilter.h>
 #else
 #include <itkExponentialDeformationFieldImageFilter.h>
+#include <itkMultiplyByConstantImageFilter.h>
 #endif
 
 #include "itkWarpVectorImageFilter.h"
@@ -191,17 +191,21 @@ private:
   const DemonsRegistrationFunctionType *  DownCastDifferenceFunctionType() const;
 
 
-  /** Exp and composition typedefs */
-  typedef MultiplyByConstantImageFilter<
-    DeformationFieldType, 
-    TimeStepType, DeformationFieldType >                MultiplyByConstantType;
 
 #if ( ITK_VERSION_MAJOR > 3 ) 
   typedef ExponentialDisplacementFieldImageFilter< 
     DeformationFieldType, DeformationFieldType >       FieldExponentiatorType;
+  /** Exp and composition typedefs */
+  typedef MultiplyImageFilter<
+    DeformationFieldType, DeformationFieldType,
+    DeformationFieldType >                MultiplyByConstantType;
 #else    
   typedef ExponentialDeformationFieldImageFilter< 
     DeformationFieldType, DeformationFieldType >        FieldExponentiatorType;
+  /** Exp and composition typedefs */
+  typedef MultiplyByConstantImageFilter<
+    DeformationFieldType, 
+    TimeStepType, DeformationFieldType >                MultiplyByConstantType;
 #endif  
 
   

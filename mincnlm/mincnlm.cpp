@@ -48,6 +48,7 @@
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <minc_1_simple.h> // simple minc reading & writing
 #include <time_stamp.h>    // for creating minc style history entry
@@ -162,7 +163,7 @@ void print_references(void)
 }
 
 // Function to perform preprocessing and call the denoising function
-void Exec(minc::simple_volume<float> & in, float *ima_out, int* vol_size, Real * vol_res, float *hallucinate_in)
+void Exec(minc::simple_volume<float> & in, float *ima_out, int* vol_size, VIO_Real * vol_res, float *hallucinate_in)
 {
   float *ima_in=in.c_buf();
 
@@ -321,7 +322,7 @@ void Exec(minc::simple_volume<float> & in, float *ima_out, int* vol_size, Real *
     
     if(weight_method ==1)
     {
-      std::cout <<" - ERROR: automatic variance estimation is not available for Spekle Noise:  option '-w 1'"<<std::endl
+      std::cout <<" - VIO_ERROR: automatic variance estimation is not available for Spekle Noise:  option '-w 1'"<<std::endl
                 <<"          Use option -sigma"<<std::endl;
       return;
     }
@@ -362,13 +363,13 @@ int main(int argc, char *argv[])
 	char    *out_file;
 	int      c, in_ndims;
 	float     min, max;
-	Status status = ERROR;
+	VIO_Status status = VIO_ERROR;
 	nc_type  datatype;
-	BOOLEAN  signed_flag;
+	VIO_BOOL  signed_flag;
 	minc_input_options in_ops;
-	Real     min_value, max_value;
+	VIO_Real     min_value, max_value;
 	int vol_size[3] = {0, 0, 0}; /* size */
-	Real vol_res[3] = {0.0, 0.0, 0.0};  /* resolutions */
+	VIO_Real vol_res[3] = {0.0, 0.0, 0.0};  /* resolutions */
   
 	char *history = time_stamp(argc, argv); //maybe we should free it afterwards
 
@@ -425,9 +426,9 @@ IDDN.FR.001.070033.000.S.P.2007.000.21000\n\n";
 			return EXIT_FAILURE;
 		}
      
-		vol_res[0] = ABS(minc_reader.nspacing(1));
-		vol_res[1] = ABS(minc_reader.nspacing(2));
-		vol_res[2] = ABS(minc_reader.nspacing(3));
+		vol_res[0] = VIO_ABS(minc_reader.nspacing(1));
+		vol_res[1] = VIO_ABS(minc_reader.nspacing(2));
+		vol_res[2] = VIO_ABS(minc_reader.nspacing(3));
 		vol_size[0] = minc_reader.ndim(1);
 		vol_size[1] = minc_reader.ndim(2);
 		vol_size[2] = minc_reader.ndim(3);

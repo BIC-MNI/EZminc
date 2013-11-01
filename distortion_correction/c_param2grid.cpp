@@ -12,11 +12,11 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
-#include "minc_wrappers.h"
 #include <iostream>
 #include <fstream>
 #include "mincMeanSquaresImageToImageMetric.h"
 #include "sphericalHarmonicsTransform.h"
+#include <itkMincHelpers.h>
 
 #include <vector>
 #include <unistd.h>

@@ -1,10 +1,25 @@
-#include <minc_helpers.h>
+/* ----------------------------- MNI Header -----------------------------------
+@NAME       : resample_grid
+@DESCRIPTION: apply arbitrary transform to deformation grid
+@COPYRIGHT  :
+              Copyright 2009 Vladimir Fonov, McConnell Brain Imaging Centre, 
+              Montreal Neurological Institute, McGill University.
+              Permission to use, copy, modify, and distribute this
+              software and its documentation for any purpose and without
+              fee is hereby granted, provided that the above copyright
+              notice appear in all copies.  The author and McGill University
+              make no representations about the suitability of this
+              software for any purpose.  It is provided "as is" without
+              express or implied warranty.
+---------------------------------------------------------------------------- */
+
+#if ( ITK_VERSION_MAJOR < 4 )
+#include <itkMincHelpers.h>
+#endif
 
 #include <unistd.h>
 #include <getopt.h>
-//#include "data_proc.h"
 
-//#include <itkVectorLinearInterpolateImageFunction.h>
 #include "mincVectorBSplineInterpolate.h"
 #include <vnl/vnl_matrix_fixed.h>
 #include <vnl/vnl_vector_fixed.h>
@@ -100,7 +115,7 @@ int main (int argc, char **argv)
     
     interpolator->SetInputImage(in_grid);
     
-    General_transform xfm;
+    VIO_General_transform xfm;
    /* read in  the input transformation */
     if(input_transform_file((char*)xfm_f.c_str(), &xfm)){
       std::cerr<<"Error reading in xfm"<<xfm_f.c_str()<< std::endl;
@@ -159,6 +174,7 @@ int main (int argc, char **argv)
       it.Value()[2]=_out[2];
       
     }
+    
     delete_general_transform(&xfm);
 
     save_minc<def3d>(output_f.c_str(),out_grid);

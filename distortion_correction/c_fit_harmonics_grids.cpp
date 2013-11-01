@@ -1,6 +1,6 @@
 /* ----------------------------- MNI Header -----------------------------------
-@NAME       :  fit_harmonics_grids
-@DESCRIPTION:  spherical harminic LSQ approximation programm
+@NAME       :  c_fit_harmonics_grids
+@DESCRIPTION:  cylindrical harminic LSQ approximation programm
 @COPYRIGHT  :
               Copyright 2006 Vladimir Fonov, McConnell Brain Imaging Centre, 
               Montreal Neurological Institute, McGill University.
@@ -12,11 +12,12 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
-#include "minc_wrappers.h"
+
 #include <iostream>
 #include <fstream>
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
+#include <itkMincHelpers.h>
 
 #include <itkBSplineInterpolateImageFunction.h>
 #include <unistd.h>
@@ -159,26 +160,26 @@ class Tag_fit
       
       for(; i!=ideal.end(); i++, j++, m++)
       {
-        if(*m) continue;
-        
-        if(cache_basis)
+        if(!*m)
         {
-          bas_x=*bx;
-        } else {
-          fun_x.generate_basis(bas_x,order,*i);
-        }
-        
-        
-        if(limit_linear)
-        {
-          double dx=(*j)[0]-(*i)[0];
-          double dy=(*j)[1]-(*i)[1];
+          if(cache_basis)
+          {
+            bas_x=*bx;
+          } else {
+            fun_x.generate_basis(bas_x,order,*i);
+          }
           
-          pol_x.accumulate(bas_x, sqrt(dx*dx+dy*dy)); //TODO: fix the index issue (bx should be shifted by 2
-          pol_z.accumulate(bas_x, (*j)[2]-(*i)[2]);
-        } else {
-          pol_x.accumulate(bas_x, sqrt((*j)[0]*(*j)[0]+(*j)[1]*(*j)[1]));
-          pol_z.accumulate(bas_x, (*j)[2]);
+          if(limit_linear)
+          {
+            double dx=(*j)[0]-(*i)[0];
+            double dy=(*j)[1]-(*i)[1];
+            
+            pol_x.accumulate(bas_x, sqrt(dx*dx+dy*dy)); //TODO: fix the index issue (bx should be shifted by 2
+            pol_z.accumulate(bas_x, (*j)[2]-(*i)[2]);
+          } else {
+            pol_x.accumulate(bas_x, sqrt((*j)[0]*(*j)[0]+(*j)[1]*(*j)[1]));
+            pol_z.accumulate(bas_x, (*j)[2]);
+          }
         }
         if(cache_basis)
         {

@@ -4,7 +4,12 @@
 #include "itkLogDomainDeformableRegistrationFilter.h"
 #include "itkESMDemonsRegistrationFunctionM.h"
 
+#if ( ITK_VERSION_MAJOR > 3 ) 
+#include "itkMultiplyImageFilter.h"
+#else
 #include "itkMultiplyByConstantImageFilter.h"
+#endif 
+
 #include "itkVelocityFieldBCHCompositionFilter.h"
 
 
@@ -155,10 +160,15 @@ private:
   const DemonsRegistrationFunctionType *  DownCastDifferenceFunctionType() const;
 
   /** Exp and composition typedefs */
+#if ITK_VERSION_MAJOR >= 4
+    typedef itk::MultiplyImageFilter<VelocityFieldType, VelocityFieldType, VelocityFieldType> MultiplyByConstantType;
+#else
   typedef MultiplyByConstantImageFilter<
     VelocityFieldType, 
     TimeStepType, VelocityFieldType >                   MultiplyByConstantType;
+#endif    
 
+    
   typedef VelocityFieldBCHCompositionFilter<
      VelocityFieldType,
     VelocityFieldType>                                  BCHFilterType;

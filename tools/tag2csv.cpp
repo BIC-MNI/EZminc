@@ -15,6 +15,7 @@
 #include "minc_wrappers.h"
 #include <iostream>
 #include <getopt.h>
+#include <unistd.h>
 
 using namespace  minc;
 using namespace  std;

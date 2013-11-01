@@ -24,6 +24,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <cmath>
 
 namespace minc
 {
@@ -395,12 +396,12 @@ namespace minc
 	
 		T& operator()(T x, T y)
 		{
-			return _joint[idx(x)][y];
+			return _joint[this->idx(x)][y];
 		}
 	
 		const T& operator()(T x, T y) const
 		{
-			return _joint[idx(x)][y];
+			return _joint[this->idx(x)][y];
 		}
 	
 		T& operator()(int x, int y)
@@ -467,7 +468,7 @@ namespace minc
     int cnt=0;
 		//2. populate histogram
     for (int i=0; i<count; i++) {
-			if(isnan(img.c_buf()[i]) || isinf(img.c_buf()[i])) 
+      if(!std::isfinite(img.c_buf()[i])) 
 				continue;
 
       hist.seed(img.c_buf()[i]);
@@ -494,7 +495,7 @@ namespace minc
 		{
       if (mask.c_buf()[i])
       {
-				if(isnan(img.c_buf()[i]) || isinf(img.c_buf()[i])) 
+	if(!std::isfinite(img.c_buf()[i])) 
 					continue;
 
 				hist.seed(img.c_buf()[i]);
@@ -528,10 +529,10 @@ namespace minc
 		//2. populate histogram
     for (int i=0; i<img1.c_buf_size(); i++) {
 			
-			if(isnan(img1.c_buf()[i]) || isinf(img1.c_buf()[i])) 
+			if(std::isnan(img1.c_buf()[i]) || std::isinf(img1.c_buf()[i]))
 				continue;
 			
-			if(isnan(img2.c_buf()[i]) || isinf(img2.c_buf()[i])) 
+			if(std::isnan(img2.c_buf()[i]) || std::isinf(img2.c_buf()[i]))
 				continue;
 			
       hist[img1.c_buf()[i]]++;

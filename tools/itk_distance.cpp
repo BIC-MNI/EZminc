@@ -12,19 +12,28 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif 
+
+
 #include <unistd.h>
 #include <getopt.h>
 #include <iostream>
 #include <itkDanielssonDistanceMapImageFilter.h>
 #include <itkSignedDanielssonDistanceMapImageFilter.h>
+#include <itkImageFileReader.h>
+#include <itkImageFileWriter.h>
+#include <itkBinaryThresholdImageFilter.h>
+
+#ifdef HAVE_MINC4ITK
 #include <time_stamp.h>    // for creating minc style history entry
 #include "itkMincImageIOFactory.h"
 #include "itkMincImageIO.h"
-#include "minc_helpers.h"
-
-//#include <minc_wrappers.h>
-
+#include "itkMincHelpers.h"
 using namespace minc;
+#endif 
+
 using namespace std;
 void show_usage(const char *name)
 {
@@ -32,8 +41,22 @@ void show_usage(const char *name)
     << "Usage: "<<name<<" <input> <output> " << endl
     << "--verbose be verbose "    << endl
     << "--clobber clobber output files"<<endl
-    << "--signed produce signed distance map"<<endl;
+    << "--signed produce signed distance map"<<endl
+    << "--label <n> -extract label n before calculating distance"<<endl
+    << "--voronoi <out.mnc> output voronoi map"<<std::endl;
 }
+
+
+typedef itk::Image<short,3> InputImageType;
+typedef itk::Image<float,3> DistanceImageType;
+
+typedef itk::BinaryThresholdImageFilter< 
+                    InputImageType, 
+                    InputImageType >     BinaryThresholdFilter;
+
+typedef itk::DanielssonDistanceMapImageFilter< InputImageType, DistanceImageType >       DistanceMapFilter;
+typedef itk::SignedDanielssonDistanceMapImageFilter< InputImageType, DistanceImageType > SignedDistanceMapFilter;
+
 
 int main (int argc, char **argv)
 {
@@ -45,14 +68,30 @@ int main (int argc, char **argv)
   int approx=0;
   int ss=0;
   int clobber=0;
+  int label=0;
+  bool label_set=false;
+  std::string voronoi_f;
+  
+  int store_float=0;
+  int store_short=0;
+  int store_byte=0;
+  
+  
+#ifdef HAVE_MINC4ITK
   char *history = time_stamp(argc, argv); 
-
+#endif
+  
   //int voxel_neibourhood=5;
   static struct option long_options[] = { 
     {"clobber", no_argument, &clobber, 1},
     {"verbose", no_argument, &verbose, 1},
     {"quiet", no_argument, &verbose, 0},
     {"signed",no_argument, &ss, 1},
+    {"label" ,required_argument, 0, 'l'},
+    {"voronoi" ,required_argument, 0, 'v'},
+    {"float",   no_argument, &store_float, 1},
+    {"short",   no_argument, &store_short, 1},
+    {"byte",    no_argument, &store_byte,  1},
     {0, 0, 0, 0}
   };
   
@@ -71,6 +110,10 @@ int main (int argc, char **argv)
     //    voxel_neibourhood=atoi(optarg);break;
       case 0:
         break;
+      case 'l':
+        label=atoi(optarg);label_set=true;break;
+      case 'v':
+        voronoi_f=optarg;break;
       case '?':
         /* getopt_long already printed an error message. */
       default:
@@ -93,20 +136,30 @@ int main (int argc, char **argv)
     
   try
   {
-    itk::ObjectFactoryBase::RegisterFactory(itk::MincImageIOFactory::New());
-    itk::ImageFileReader<minc::mask3d >::Pointer reader = itk::ImageFileReader<minc::mask3d >::New();
+#ifdef HAVE_MINC4ITK
+    itk::RegisterMincIO();
+#endif
+    itk::ImageFileReader<InputImageType >::Pointer reader = itk::ImageFileReader< InputImageType >::New();
     
     //initializing the reader
     reader->SetFileName(input_f.c_str());
     reader->Update();
     
-    minc::mask3d::Pointer input=reader->GetOutput();
-    minc::image3d::Pointer output;
+    InputImageType::Pointer input=reader->GetOutput();
+    DistanceImageType::Pointer output;
+    DistanceImageType::Pointer voronoi;
+    BinaryThresholdFilter::Pointer threshold;
     
-    typedef itk::DanielssonDistanceMapImageFilter< minc::mask3d, minc::image3d >
-            DistanceMapFilter;
-    typedef itk::SignedDanielssonDistanceMapImageFilter< minc::mask3d, minc::image3d >
-        SignedDistanceMapFilter;
+    if(label_set)
+    {
+      threshold=BinaryThresholdFilter::New();
+      threshold->SetInput(input);
+      threshold->SetLowerThreshold(label);
+      threshold->SetUpperThreshold(label);
+      threshold->Update();
+      input=threshold->GetOutput();
+      
+    }
     
     if(ss)
     {
@@ -114,26 +167,67 @@ int main (int argc, char **argv)
       dist->SetInput(input);
       dist->Update();
       output=dist->GetOutput();
+      voronoi=dist->GetVoronoiMap();
+      
     } else {
       DistanceMapFilter::Pointer dist(DistanceMapFilter::New());
       dist->SetInput(input);
       dist->Update();
       output=dist->GetOutput();
+      
+      voronoi=dist->GetVoronoiMap();
     }
     
-    minc::copy_metadata(output,input);
-    minc::append_history(output,history);
-    free(history);
+#ifdef HAVE_MINC4ITK
+
+    copy_metadata(output,input);
+    copy_metadata(voronoi,input);
     
-    itk::ImageFileWriter< minc::image3d >::Pointer writer = itk::ImageFileWriter<minc::image3d >::New();
+    append_history(output,history);
+    append_history(voronoi,history);
+    
+    if(store_float)
+    {
+      minc::set_minc_storage_type(output,NC_FLOAT,true);
+      minc::set_minc_storage_type(voronoi,NC_FLOAT,true);
+    } else if(store_short) {
+      minc::set_minc_storage_type(output,NC_SHORT,true);
+      minc::set_minc_storage_type(voronoi,NC_SHORT,true);
+    } else if(store_byte) {
+      minc::set_minc_storage_type(output,NC_BYTE,false);
+      minc::set_minc_storage_type(voronoi,NC_BYTE,false);
+    }
+    
+    free(history);
+#endif 
+    
+    itk::ImageFileWriter< DistanceImageType >::Pointer writer = itk::ImageFileWriter<DistanceImageType >::New();
     writer->SetFileName(out_f.c_str());
     writer->SetInput( output );
     writer->Update();
     
-  } catch (const minc::generic_error & err) {
+    if(!voronoi_f.empty())
+    {
+      itk::ImageFileWriter< DistanceImageType >::Pointer writer = itk::ImageFileWriter<DistanceImageType >::New();
+      writer->SetFileName(voronoi_f.c_str());
+      writer->SetInput( voronoi );
+      writer->Update();
+    }
+    
+  } 
+#ifdef HAVE_MINC4ITK
+  catch (const generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     cerr << err.msg()<<endl;
     return 1;
   }
+#endif
+  catch( itk::ExceptionObject & err )
+  {
+    std::cerr << "ExceptionObject caught !" << std::endl;
+    std::cerr << err << std::endl;
+    return 2;
+  }
+
   return 0;
 }

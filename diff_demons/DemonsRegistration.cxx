@@ -6,6 +6,9 @@
  * \author Tom Vercauteren, INRIA & Mauna Kea Technologies
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif 
 
 #include <itkCommand.h>
 #include <itkDiffeomorphicDemonsRegistrationFilterM.h>
@@ -38,6 +41,7 @@
 
 #include "mincUtils.h"
 
+extern std::string minc_history;
 
 struct arguments
 {
@@ -760,124 +764,128 @@ void DemonsRegistrationFunction ( arguments args )
       // Set up the transform reader
       //itk::TransformFactory<BSplineTransformType>::RegisterTransform();
       std::string dumb1,dumb2;
+      
       if(parse_xfm_file_name(args.inputTransformFile,dumb1,dumb2) ) //we are deling with .XFM filename
       {
-	if( args.verbosity>0 )
-	  std::cout<<"Reading Deformations from XFM file..."<<std::endl;
-	
-	typedef typename minc::XfmTransform<double,Dimension,Dimension>  XfmTransformType;
-
-	typename XfmTransformType::Pointer transform=XfmTransformType::New();
-	
-	transform->OpenXfm(args.inputTransformFile.c_str());
-	
+#ifdef HAVE_MINC4ITK
+        
+        if( args.verbosity>0 )
+          std::cout<<"Reading Deformations from XFM file..."<<std::endl;
+        
+        typedef typename minc::XfmTransform<double,Dimension,Dimension>  XfmTransformType;
+        typename XfmTransformType::Pointer transform=XfmTransformType::New();
+        transform->OpenXfm(args.inputTransformFile.c_str());
+        
 #if ( ITK_VERSION_MAJOR > 3 ) 
-  typedef typename itk::TransformToDisplacementFieldSource<DeformationFieldType,double> TransformToDeformationSource;
+        typedef typename itk::TransformToDisplacementFieldSource<DeformationFieldType,double> TransformToDeformationSource;
 #else  
-  typedef typename itk::TransformToDeformationFieldSource<DeformationFieldType,double> TransformToDeformationSource;
+        typedef typename itk::TransformToDeformationFieldSource<DeformationFieldType,double> TransformToDeformationSource;
 #endif
-  
-	typename TransformToDeformationSource::Pointer transform_to_def=TransformToDeformationSource::New();
-	transform_to_def->SetOutputParametersFromImage ( fixedImageReader->GetOutput() );
-	transform_to_def->SetTransform(transform);
-	transform_to_def->SetNumberOfThreads(1);
-	
-	transform_to_def->Update();
-	inputDefField=transform_to_def->GetOutput();
-	
-	inputDefField->DisconnectPipeline();
-
+        
+        typename TransformToDeformationSource::Pointer transform_to_def=TransformToDeformationSource::New();
+        transform_to_def->SetOutputParametersFromImage ( fixedImageReader->GetOutput() );
+        transform_to_def->SetTransform(transform);
+        transform_to_def->SetNumberOfThreads(1);
+        
+        transform_to_def->Update();
+        inputDefField=transform_to_def->GetOutput();
+        
+        inputDefField->DisconnectPipeline();
+#else 
+        //TODO: USE ITK Transform IO here
+        std::cout<<"XFM reading not implemented!"<<std::endl;
+#endif
       } else {
-	typename TransformReaderType::Pointer transformReader = TransformReaderType::New();
-	transformReader->SetFileName ( args.inputTransformFile.c_str() );
+        typename TransformReaderType::Pointer transformReader = TransformReaderType::New();
+        transformReader->SetFileName ( args.inputTransformFile.c_str() );
 
-	// Update the reader
+        // Update the reader
 
-	try
-	{
-	  transformReader->Update();
-	}
-	catch ( itk::ExceptionObject& err )
-	{
-	  std::cout << "Could not read the input transform." << std::endl;
-	  std::cout << err << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
+        try
+        {
+          transformReader->Update();
+        }
+        catch ( itk::ExceptionObject& err )
+        {
+          std::cout << "Could not read the input transform." << std::endl;
+          std::cout << err << std::endl;
+          exit ( EXIT_FAILURE );
+        }
 
-	typedef typename TransformReaderType::TransformType BaseTransformType;
+        typedef typename TransformReaderType::TransformType BaseTransformType;
 
-	BaseTransformType* baseTrsf ( 0 );
+        BaseTransformType* baseTrsf ( 0 );
 
-	const typename TransformReaderType::TransformListType* trsflistptr
-	= transformReader->GetTransformList();
+        const typename TransformReaderType::TransformListType* trsflistptr
+        = transformReader->GetTransformList();
 
-	if ( trsflistptr->empty() )
-	{
-	  std::cout << "Could not read the input transform." << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
-	else if ( trsflistptr->size() > 1 )
-	{
-	  std::cout << "The input transform file contains more than one transform." << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
+        if ( trsflistptr->empty() )
+        {
+          std::cout << "Could not read the input transform." << std::endl;
+          exit ( EXIT_FAILURE );
+        }
+        else if ( trsflistptr->size() > 1 )
+        {
+          std::cout << "The input transform file contains more than one transform." << std::endl;
+          exit ( EXIT_FAILURE );
+        }
 
-	baseTrsf = trsflistptr->front();
+        baseTrsf = trsflistptr->front();
 
-	if ( !baseTrsf )
-	{
-	  std::cout << "Could not read the input transform." << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
+        if ( !baseTrsf )
+        {
+          std::cout << "Could not read the input transform." << std::endl;
+          exit ( EXIT_FAILURE );
+        }
 
 
-	// Set up the TransformToDeformationFieldFilter
-#if ( ITK_VERSION_MAJOR > 3 ) 
-  typedef itk::TransformToDisplacementFieldSource <DeformationFieldType> FieldGeneratorType;
-#else  
-  typedef itk::TransformToDeformationFieldSource <DeformationFieldType> FieldGeneratorType;
-#endif
+        // Set up the TransformToDeformationFieldFilter
+      #if ( ITK_VERSION_MAJOR > 3 ) 
+        typedef itk::TransformToDisplacementFieldSource <DeformationFieldType> FieldGeneratorType;
+      #else  
+        typedef itk::TransformToDeformationFieldSource <DeformationFieldType> FieldGeneratorType;
+      #endif
 
-	typedef typename FieldGeneratorType::TransformType TransformType;
+        typedef typename FieldGeneratorType::TransformType TransformType;
 
-	TransformType* trsf = dynamic_cast<TransformType*> ( baseTrsf );
+        TransformType* trsf = dynamic_cast<TransformType*> ( baseTrsf );
 
-	if ( !trsf )
-	{
-	  std::cout << "Could not cast input transform to a usable transform." << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
+        if ( !trsf )
+        {
+          std::cout << "Could not cast input transform to a usable transform." << std::endl;
+          exit ( EXIT_FAILURE );
+        }
 
-	typename FieldGeneratorType::Pointer fieldGenerator = FieldGeneratorType::New();
+        typename FieldGeneratorType::Pointer fieldGenerator = FieldGeneratorType::New();
 
-	fieldGenerator->SetTransform ( trsf );
-	//fieldGenerator->SetOutputRegion(
-	//   fixedImageReader->GetOutput()->GetRequestedRegion());
-	fieldGenerator->SetOutputSize (
-	  fixedImageReader->GetOutput()->GetRequestedRegion().GetSize() );
-	fieldGenerator->SetOutputIndex (
-	  fixedImageReader->GetOutput()->GetRequestedRegion().GetIndex() );
-	fieldGenerator->SetOutputSpacing (
-	  fixedImageReader->GetOutput()->GetSpacing() );
-	fieldGenerator->SetOutputOrigin (
-	  fixedImageReader->GetOutput()->GetOrigin() );
+        fieldGenerator->SetTransform ( trsf );
+        //fieldGenerator->SetOutputRegion(
+        //   fixedImageReader->GetOutput()->GetRequestedRegion());
+        fieldGenerator->SetOutputSize (
+          fixedImageReader->GetOutput()->GetRequestedRegion().GetSize() );
+        fieldGenerator->SetOutputIndex (
+          fixedImageReader->GetOutput()->GetRequestedRegion().GetIndex() );
+        fieldGenerator->SetOutputSpacing (
+          fixedImageReader->GetOutput()->GetSpacing() );
+        fieldGenerator->SetOutputOrigin (
+          fixedImageReader->GetOutput()->GetOrigin() );
 
-	// Update the fieldGenerator
+        // Update the fieldGenerator
 
-	try
-	{
-	  fieldGenerator->Update();
-	}
-	catch ( itk::ExceptionObject& err )
-	{
-	  std::cout << "Could not generate the input field." << std::endl;
-	  std::cout << err << std::endl;
-	  exit ( EXIT_FAILURE );
-	}
+        try
+        {
+          fieldGenerator->Update();
+        }
+        catch ( itk::ExceptionObject& err )
+        {
+          std::cout << "Could not generate the input field." << std::endl;
+          std::cout << err << std::endl;
+          exit ( EXIT_FAILURE );
+        }
 
-	inputDefField = fieldGenerator->GetOutput();
+        inputDefField = fieldGenerator->GetOutput();
 
-	inputDefField->DisconnectPipeline();
+        inputDefField->DisconnectPipeline();
       }
     }
 
@@ -1175,7 +1183,11 @@ void DemonsRegistrationFunction ( arguments args )
   if ( !args.outputImageFile.empty() )
   {
     writer->SetFileName ( args.outputImageFile.c_str() );
-    mincify ( caster->GetOutput(), NC_SHORT );
+#ifdef HAVE_MINC4ITK
+    mincify ( caster->GetOutput(), minc_history, NC_SHORT );
+#else    
+    mincify ( caster->GetOutput(), minc_history, typeid(short).name() );
+#endif
 
     writer->SetInput ( caster->GetOutput() );
     writer->SetUseCompression ( true );
@@ -1222,8 +1234,12 @@ void DemonsRegistrationFunction ( arguments args )
     typename FieldWriterType::Pointer fieldWriter = FieldWriterType::New();
 
     fieldWriter->SetFileName ( output_def_field.c_str() );
-    mincify (defField, NC_SHORT );
-
+#ifdef HAVE_MINC4ITK
+    mincify (defField, minc_history, NC_SHORT );
+#else
+    mincify (defField, minc_history, typeid(short).name() );
+#endif
+    
     fieldWriter->SetInput ( defField );
     fieldWriter->SetUseCompression ( true );
 
@@ -1306,7 +1322,12 @@ void DemonsRegistrationFunction ( arguments args )
     typename GridWriterType::Pointer      gridwriter =  GridWriterType::New();
     gridwriter->SetFileName ( "WarpedGridImage.mnc" );
     gridwarper->Update();
-    mincify(gridwarper->GetOutput(),NC_BYTE);
+#if HAVE_MINC4ITK
+    mincify(gridwarper->GetOutput(),minc_history, NC_BYTE);
+#else    
+    mincify(gridwarper->GetOutput(),minc_history, typeid(unsigned char).name());
+#endif
+    
     gridwriter->SetInput ( gridwarper->GetOutput() );
     gridwriter->SetUseCompression ( true );
 
@@ -1338,8 +1359,12 @@ void DemonsRegistrationFunction ( arguments args )
 
     typename GridWriterType::Pointer      gridwriter =  GridWriterType::New();
     gridwriter->SetFileName ( "ForwardWarpedGridImage.mnc" );
-    mincify(fwWarper->GetOutput(),NC_BYTE);
-
+#ifdef HAVE_MINC4ITK
+    mincify(fwWarper->GetOutput(),minc_history, NC_BYTE);
+#else
+    mincify(fwWarper->GetOutput(),minc_history, typeid(unsigned char).name());
+#endif
+    
     gridwriter->SetInput ( fwWarper->GetOutput() );
     gridwriter->SetUseCompression ( true );
 
@@ -1396,19 +1421,23 @@ void DemonsRegistrationFunction ( arguments args )
       writer->SetFileName ( args.outputJacobianFile.c_str() );
       caster->SetInput ( jacobianFilter->GetOutput() );
       caster->Update();
-      mincify(caster->GetOutput(),NC_SHORT);
+#ifdef HAVE_MINC4ITK
+      mincify(caster->GetOutput(),minc_history, NC_SHORT);
+#else
+      mincify(caster->GetOutput(),minc_history, typeid(short).name());
+#endif
       writer->SetInput ( caster->GetOutput() );
       writer->SetUseCompression ( true );
 
       try
       {
-	writer->Update();
+        writer->Update();
       }
       catch ( itk::ExceptionObject& err )
       {
-	std::cout << "Unexpected error." << std::endl;
-	std::cout << err << std::endl;
-	exit ( EXIT_FAILURE );
+        std::cout << "Unexpected error." << std::endl;
+        std::cout << err << std::endl;
+        exit ( EXIT_FAILURE );
       }
     }
     
@@ -1420,9 +1449,9 @@ void DemonsRegistrationFunction ( arguments args )
       minmaxfilter->SetImage ( jacobianFilter->GetOutput() );
       minmaxfilter->Compute();
       std::cout << "Minimum of the determinant of the Jacobian of the warp: "
-		<< minmaxfilter->GetMinimum() << std::endl;
+        << minmaxfilter->GetMinimum() << std::endl;
       std::cout << "Maximum of the determinant of the Jacobian of the warp: "
-		<< minmaxfilter->GetMaximum() << std::endl;
+        << minmaxfilter->GetMaximum() << std::endl;
     }
   }
 
@@ -1432,10 +1461,8 @@ void DemonsRegistrationFunction ( arguments args )
 int main ( int argc, char *argv[] )
 {
 
-  char *_history = time_stamp ( argc, argv );
-  minc_history = _history;
-  free ( _history );
-
+  minc_history = minc_timestamp(argc,argv);
+  
   struct arguments args;
   parseOpts ( argc, argv, args );
 
@@ -1446,8 +1473,9 @@ int main ( int argc, char *argv[] )
   // itk::MultiThreader::SetGlobalDefaultNumberOfThreads(1);
 
   //Add Minc support
+#ifdef HAVE_MINC4ITK
   itk::RegisterMincIO();
-  
+#endif  
   // Get the image dimension
   itk::ImageIOBase::Pointer imageIO;
 

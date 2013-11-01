@@ -36,12 +36,34 @@
 #ifndef __GENERIC_IMAGE_H__
 #define __GENERIC_IMAGE_H__
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif // HAVE_CONFIG_H
+
+
 #include <vector>
 #include <algorithm>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#ifdef HAVE_VALUES_H
 #include <values.h>
+#else
+#include <limits.h>
+#include <float.h>
+#define MAXSHORT   SHRT_MAX
+#define MAXINT     INT_MAX 
+#define MAXDOUBLE  DBL_MAX
+#define MAXFLOAT   FLT_MAX
+
+#define MINSHORT   SHRT_MIN
+#define MININT     INT_MIN 
+#define MINDOUBLE  DBL_MIN
+#define MINFLOAT   FLT_MIN
+
+#endif 
+
 #include <math.h>
 
 

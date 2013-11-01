@@ -9,6 +9,8 @@
 #include <getopt.h>
 #include <complex>
 #include <stdlib.h>
+#include <unistd.h>
+
 #include <minc_1_simple.h> // simple minc reading & writing
 #include <minc_io_simple_volume.h>
 #include <time_stamp.h>    // for creating minc style history entry

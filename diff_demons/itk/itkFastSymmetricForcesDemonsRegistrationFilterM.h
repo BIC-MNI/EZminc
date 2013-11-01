@@ -21,12 +21,13 @@
 #include "itkPDEDeformableRegistrationFilterM.h"
 #include "itkESMDemonsRegistrationFunctionM.h"
 
-#include "itkMultiplyByConstantImageFilter.h"
 
 #if ( ITK_VERSION_MAJOR > 3 ) 
 #include <itkExponentialDisplacementFieldImageFilter.h>
+#include <itkMultiplyImageFilter.h>
 #else
 #include <itkExponentialDeformationFieldImageFilter.h>
+#include "itkMultiplyByConstantImageFilter.h"
 #endif
 
 #include "itkWarpVectorImageFilter.h"
@@ -166,14 +167,18 @@ protected:
   /** Apply update. */
 #if ( ITK_VERSION_MAJOR > 3 ) 
   virtual void ApplyUpdate(const TimeStepType &dt);  
+  typedef MultiplyImageFilter<
+    DeformationFieldType, 
+    DeformationFieldType, DeformationFieldType >         MultiplyByConstantType;
+
 #else  
   virtual void ApplyUpdate(TimeStepType dt);
-#endif  
-
   /** other typedefs */
   typedef MultiplyByConstantImageFilter<
     DeformationFieldType, 
     TimeStepType, DeformationFieldType >                  MultiplyByConstantType;
+#endif  
+
 
   typedef AddImageFilter<
      DeformationFieldType, 

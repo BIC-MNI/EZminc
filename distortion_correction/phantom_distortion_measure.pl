@@ -1,5 +1,21 @@
 #! /usr/bin/env perl
 
+############################# MNI Header #####################################
+#@NAME       :  phantom_distortion_measure.pl
+#@DESCRIPTION:  script to calculate distortions based on the phantom scans
+#@COPYRIGHT  :
+#              Vladimir S. Fonov  February, 2009
+#              Montreal Neurological Institute, McGill University.
+#              Permission to use, copy, modify, and distribute this
+#              software and its documentation for any purpose and without
+#              fee is hereby granted, provided that the above copyright
+#              notice appear in all copies.  The author and McGill University
+#              make no representations about the suitability of this
+#              software for any purpose.  It is provided "as is" without
+#              express or implied warranty.
+###############################################################################
+
+
 use strict; #become stricter
 
 use File::Basename;            # for function basename
@@ -34,6 +50,7 @@ my $dilate_roi=0;
 my $pca;
 my $pcs;
 my $use_dd=0;
+my $use_ants=0;
 my $keep_tmp=0;
 
 #additional parameters
@@ -64,6 +81,7 @@ GetOptions(
           "pca=s"     =>       \$pca,
           "pcs=n"     =>       \$pcs,
           "keep-tmp"  =>       \$keep_tmp,
+          "ants"      =>       \$use_ants,
           );
 
 die <<END 
@@ -89,6 +107,7 @@ die <<END
   --pca <rotation.csv>  - Principal Components rotation matrix
   --pcs <n>             - Number of Principal components to use
   --dd                  - Use Diffeomorphic Demons registration instead of minctracc 
+  --ants                - Use mincANTS
 ] 
 END
   if $#ARGV<2; #number of arguments -1 
@@ -154,12 +173,12 @@ if(!$acr && !$adni)
     if($mask)
     {
       #do_cmd('cp',$mask,"$tmpdir/fit.mnc");
-      do_cmd('itk_morph','--threshold',1,'--exp','D[2] D[2] D[2] E[2]',$model,"$tmpdir/fit_1.mnc");
+      do_cmd('itk_morph','--threshold',1,'--exp','D[4] E[2]',$model,"$tmpdir/fit_1.mnc");
       do_cmd('mincresample','-nearest','-like',"$tmpdir/fit_1.mnc",$mask,"$tmpdir/mask.mnc",'-q','-clob');
       do_cmd('minccalc','-express','A[0]>0.5?A[1]:0',"$tmpdir/mask.mnc","$tmpdir/fit_1.mnc","$tmpdir/fit.mnc");
       do_cmd('rm','-f',"$tmpdir/fit_1.mnc");
     } else {
-      do_cmd('itk_morph','--threshold',1,'--exp','D[2] D[2] D[2] E[2]',$model,"$tmpdir/fit.mnc");
+      do_cmd('itk_morph','--threshold',1,'--exp','D[4] E[2]',$model,"$tmpdir/fit.mnc");
     }
   }
 } elsif( $adni) {
@@ -183,12 +202,8 @@ foreach $scan(@scans) {
   {
     if($no_core_extract) # core was already extracted
     {
-#       if($scan =~ /\.gz$/)
-#       { 
-#         do_cmd("gunzip -c $scan > $work_dir/core_${name}");
-#       } else { 
-        do_cmd('minccalc','-express','A[0]>20?A[0]:0',$scan,"$work_dir/core_${name}");
-#       }
+      do_cmd('minccalc','-express','A[0]>20?A[0]:0',$scan,"$tmpdir/core_${name}");
+      do_cmd('autocrop','-isoexpand',30,"$tmpdir/core_${name}","$work_dir/core_${name}");
     } else {
       if($acr)
       {
@@ -247,7 +262,7 @@ foreach $scan(@scans) {
       do_cmd('uniformize_minc.pl',"$tmpdir/core_${name}","$tmpdir/init_${name}",
              '--transform',$init,'--resample','trilinear','--clobber') unless -e "$tmpdir/init_${name}";
 
-      do_cmd('bestlinreg.pl',$model,"$tmpdir/init_${name}",
+      do_cmd('bestlinreg_s',$model,"$tmpdir/init_${name}",'-nmi',
              "$work_dir/align_${name}.xfm",'-lsq6') unless -e "$work_dir/align_${name}.xfm";
 
     } else {
@@ -255,13 +270,13 @@ foreach $scan(@scans) {
      if(-e "$work_dir/mv_${name}.xfm") # allow specifiying initial transformation
      {
        print "Using manual xfm\n";
-       do_cmd('bestlinreg_s',
+       do_cmd('bestlinreg_s','-nmi','-close',
               $model,"$work_dir/core_${name}",
               "$work_dir/align_${name}.xfm",'-lsq6',
               '-init_xfm',"$work_dir/mv_${name}.xfm") 
 				unless -e "$work_dir/align_${name}.xfm";
      } else {
-        do_cmd('bestlinreg.pl',$model,"$work_dir/core_${name}",
+        do_cmd('bestlinreg_s',$model,"$work_dir/core_${name}",'-nmi',
                "$work_dir/align_${name}.xfm",'-lsq6') 
         unless -e "$work_dir/align_${name}.xfm";
      }
@@ -290,24 +305,33 @@ foreach $scan(@scans) {
              '-like',"$work_dir/core_${name}",
              '-transform',"$work_dir/align_${name}.xfm",'-nearest');
     } else {
-
-      do_cmd('mincresample',"$tmpdir/fit.mnc",
-             "$work_dir/fit_${name}",'-like',"$work_dir/core_${name}",
-             '-transform',"$work_dir/align_${name}.xfm",'-nearest');
-
-      do_cmd('mincresample',"$tmpdir/skeleton.mnc","$tmpdir/estimate_${name}",
-             '-like',"$work_dir/core_${name}",
-             '-transform',"$work_dir/align_${name}.xfm",'-trilinear','-float');
-
-    }
+      
+       do_cmd('mincresample',"$tmpdir/fit.mnc",
+              "$tmpdir/fit_${name}",'-like',"$work_dir/core_${name}",
+              '-transform',"$work_dir/align_${name}.xfm",'-nearest');
+       
+       do_cmd('mincANTS','3','-x',"$tmpdir/fit_${name}",'-m',"CC[$tmpdir/ideal_${name},$work_dir/core_${name},1,2]",
+              '-t','SyN[0.25]','--number-of-affine-iterations','0x0x0','-i','100x100x0',
+              '-o',"$tmpdir/ants_${name}.xfm");
+       
+       do_cmd('mincresample','-nearest','-like',"$tmpdir/fit_${name}","$work_dir/core_${name}",
+              '-transform',"$tmpdir/ants_${name}.xfm",'-invert_transformation',
+              "$tmpdir/fit2_${name}");
+       
+       do_cmd('itk_morph','--threshold','50','--exp','D[2] E[1]',"$tmpdir/fit2_${name}","$tmpdir/fit2c_${name}");
+       
+       do_cmd('mincresample','-nearest','-like',"$tmpdir/fit_${name}","$tmpdir/fit2c_${name}","$tmpdir/fit2r_${name}");
+       
+       do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0','-byte',"$tmpdir/fit_${name}","$tmpdir/fit2r_${name}","$work_dir/fit_${name}");
+     }
   }
 
-  unless(-e "$work_dir/estimate_${name}" || $acr)
+  unless(-e "$work_dir/estimate_${name}" )
   {
-      do_cmd('minccalc','-byte','-express','A[0]>0.5?1:0',"$tmpdir/estimate_${name}",
-              "$work_dir/estimate_${name}");
+    do_cmd('mincresample','-like',"$work_dir/fit_${name}","$tmpdir/skeleton.mnc","$tmpdir/skeleton_${name}",'-transform',"$work_dir/align_${name}.xfm",'-nearest');
+    do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0','-byte',"$work_dir/fit_${name}","$tmpdir/skeleton_${name}","$work_dir/estimate_${name}");
   }
-
+  
   if($acr) {
     push @args,"$work_dir/ideal_${name}","$work_dir/core_${name}","$work_dir/fit_${name}","$work_dir/fit_${name}";
   } else {
@@ -321,6 +345,8 @@ unless( $only_roi )
   if($use_dd)
   {
     @args=('phantomfit_DD.pl',@args,'-order',$order,'-clobber');
+  } elsif($use_ants) {
+    @args=('phantomfit_ANTS.pl',@args,'-order',$order,'-clobber');
   } else {
     @args=('phantomfit.pl',@args,'-order',$order,'-clobber');
 
@@ -369,8 +395,6 @@ if($out_roi)
 }
 
 #exit 0 if $only_roi;
-
-
 
 sub do_cmd {
     print STDOUT "@_\n" if $verbose;

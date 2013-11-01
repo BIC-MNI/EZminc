@@ -22,7 +22,8 @@ using namespace minc;
 
 void show_usage (const char * prog)
 {
-  std::cout<<"Program calculates fuzzy volume similarity metrics"<<std::endl
+  std::cout<<"Program calculates fuzzy volume similarity metrics "<<std::endl
+          <<" I.e to be used with tissue probability maps where all values are between 0 and 1"
           <<"based on :  William R. Crum, Oscar Camara, and Derek L. G. Hill"
           <<"\"Generalized Overlap Measures for Evaluation and Validation in Medical Image Analysis \""
           <<" IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 25, NO. 11, NOVEMBER 2006"<<std::endl
@@ -77,7 +78,7 @@ int main(int argc,char **argv)
   static struct option long_options[] = {
     {"verbose", no_argument,             &verbose, 1},
     {"quiet",   no_argument,             &verbose, 0},
-    {"mask",     required_argument,              0,'m'},
+    {"mask",    required_argument,       0,      'm'},
     
     {0, 0, 0, 0}
   };
@@ -181,11 +182,7 @@ int main(int argc,char **argv)
       std::cout<<"Volume 2 min="<<(int)f2.min()<<" max="<<(int)f2.max()<<" count="<<f2.count()<<std::endl;
     }
 
-    unsigned char low= std::min<double>(f1.min(), f2.min());
-    unsigned char hi = std::max<double>(f1.max(), f2.max());
-
-    int v1=0,v2=0;
-    double a=0.0,b=0.0,c=0.0,d=0.0;
+    double a=0.0,b=0.0;
     for(int i=0; i<size ; i++ )
     {
       

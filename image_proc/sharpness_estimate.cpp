@@ -18,6 +18,7 @@
 ---------------------------------------------------------------------------- */
 #include <iostream>
 #include <getopt.h>
+#include <math.h>
 #include <minc_io_simple_volume.h>
 #include <minc_1_simple.h>
 #include <minc_1_simple_rw.h>
@@ -39,7 +40,7 @@ double minc::sharpness_estimate(const minc::simple_volume<float>& input,const mi
 	calc_gradient_mag(input,gmag,1,1,1);//TODO: compensate for nonuniform step size?
 	
 	histogram<double> gmag_hist(hist_bins);
-	build_histogram(gmag_hist,gmag,mask);
+	build_histogram<float>(gmag_hist,gmag,mask);
 	
 	double gmag_median=gmag_hist.find_percentile( 0.5) ;
 	
