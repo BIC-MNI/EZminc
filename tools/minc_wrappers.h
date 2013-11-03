@@ -9,6 +9,9 @@
 
 #include <minc_io_exceptions.h>
 #include <minc_io_fixed_vector.h>
+
+#if ITK_VERSION_MAJOR < 4
 #include <itkMincHelpers.h>
+#endif
 
 #endif //_MINC_WRAPPERS_H_

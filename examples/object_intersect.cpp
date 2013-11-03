@@ -14,7 +14,6 @@
 ---------------------------------------------------------------------------- */
 
 #include "minc_wrappers.h"
-//#include "minc_io.h"
 #include <itkBSplineInterpolateImageFunction.h>
 
 
@@ -27,11 +26,8 @@
 using namespace  std;
 using namespace  minc;
 
-// typedef minc::mincVectorBSplineInterpolate<minc::def3d,double> Vector_Interpolator;
-// typedef minc::VectorMagnitudeFilter<minc::def3d,minc::image3d> _MagFilterType;
-
-
-typedef itk::BSplineInterpolateImageFunction< minc::image3d, double, double >  InterpolatorType;
+typedef itk::Image<float,3> image3d;
+typedef itk::BSplineInterpolateImageFunction< image3d, double, double >  InterpolatorType;
 
 
 void show_usage (const char * prog)
@@ -99,15 +95,11 @@ int main (int argc, char **argv)
   
   try
   {
-    
-    itk::ObjectFactoryBase::RegisterFactory(itk::MincImageIOFactory::New());
-    itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
-    
     //initializing the reader
     reader->SetFileName(in_volume.c_str());
     reader->Update();
     
-    minc::image3d::Pointer in=reader->GetOutput();
+    image3d::Pointer in=reader->GetOutput();
     
     std::cout<<"Building BSpline interpolator , order="<<order<<std::endl;
     InterpolatorType::Pointer interpolator = InterpolatorType::New();

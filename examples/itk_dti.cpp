@@ -25,8 +25,10 @@
 #include <itkDiffusionTensor3DReconstructionImageFilter.h>
 #include <itkTensorFractionalAnisotropyImageFilter.h>
 
+#if ITK_VERSION_MAJOR < 4
 #include "itkMincImageIOFactory.h"
 #include "itkMincImageIO.h"
+#endif
 
 typedef itk::VectorImage<float, 3>  DTIImageType;
 typedef itk::DiffusionTensor3DReconstructionImageFilter<float,float,float> DtiReconstructionFilter;
@@ -39,13 +41,9 @@ typedef itk::TensorFractionalAnisotropyImageFilter<TensorImage,faImage > FAFilte
 // a helper function for minc reading
 template <class T> typename T::Pointer load_minc(const char *file)
 {
-  typedef itk::MincImageIO ImageIOType;
-  ImageIOType::Pointer minc2ImageIO = ImageIOType::New();
-     
   typename itk::ImageFileReader<T>::Pointer reader = itk::ImageFileReader<T>::New();
     
   reader->SetFileName(file);
-  reader->SetImageIO( minc2ImageIO );
   reader->Update();
     
   return reader->GetOutput();
@@ -54,12 +52,9 @@ template <class T> typename T::Pointer load_minc(const char *file)
 // a helper function for minc writing
 template <class T> void save_minc(const char *file,typename T::ConstPointer img)
 {
-  typedef itk::MincImageIO ImageIOType;
-  ImageIOType::Pointer minc2ImageIO = ImageIOType::New();
      
   typename itk::ImageFileWriter< T >::Pointer writer = itk::ImageFileWriter<T>::New();
   writer->SetFileName(file);
-  writer->SetImageIO( minc2ImageIO );
   writer->SetInput( img );
   writer->Update();
 }
@@ -77,8 +72,6 @@ int main(int argc,char **argv)
   {
     std::cout<<"Reading "<<argv[1]<<"..."<<std::endl;
     
-    typedef itk::MincImageIO ImageIOType;
-    ImageIOType::Pointer minc2ImageIO = ImageIOType::New();
     DTIImageType::Pointer img=load_minc<DTIImageType>(argv[1]);
     DtiReconstructionFilter::Pointer filter=DtiReconstructionFilter::New();
     filter->SetNumberOfThreads(1); //as per request in documentation
