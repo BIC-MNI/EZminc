@@ -78,7 +78,7 @@ int main (int argc, char **argv)
   
   try
   {
-#ifdef HAVE_MINC4ITK    
+#ifdef HAVE_MINC4ITK
     itk::RegisterMincIO();
 #endif 
     
