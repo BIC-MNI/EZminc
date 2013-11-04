@@ -13,36 +13,29 @@
               express or implied warranty.
 ---------------------------------------------------------------------------- */
 
-#ifndef _MINC_HELPERS_H_
-#define _MINC_HELPERS_H_
+#ifndef _ITK4_MINC_HELPERS_H_
+#define _ITK4_MINC_HELPERS_H_
 
 #include <complex>
 #include <vector>
 #include <algorithm>
 
 #include "itkArray.h"
-
-#if ( ITK_VERSION_MAJOR > 3 ) 
 #include "itkImage.h"
-#else
-#include "itkOrientedImage.h"
-#endif 
-
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkImageRegionConstIteratorWithIndex.h"
-
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
 #include "itkImageIOFactory.h"
 
-#include "itkMincImageIOFactory.h"
-#include "itkMincImageIO.h"
 #include <minc_io_fixed_vector.h>
 
 /** 
-  * \ingroup  ITKIOMINC
   * \brief various helper functions for interacting with minc library
   */
+#ifndef REPORT_ERROR
+#define REPORT_ERROR(MSG) itkDebugMacro(MSG)
+#endif
 
 namespace minc
 {
@@ -64,17 +57,10 @@ namespace minc
   //! default minc complex voxel type
 	typedef std::complex < voxel_type > complex;
 
-#if ( ITK_VERSION_MAJOR > 3 ) 
 	typedef itk::Image < complex, volume_dimensions >         image3d_complex;
 	typedef itk::Image < voxel_type, volume_dimensions >      image3d;
 	typedef itk::Image < minc_mask_voxel, volume_dimensions > mask3d;
 	typedef itk::Image < def_vector, volume_dimensions >      def3d;
-#else
-	typedef itk::OrientedImage < complex, volume_dimensions >        image3d_complex;
-	typedef itk::OrientedImage < voxel_type, volume_dimensions >     image3d;
-	typedef itk::OrientedImage < minc_mask_voxel, volume_dimensions > mask3d;
-	typedef itk::OrientedImage < def_vector, volume_dimensions >     def3d;
-#endif
   
 	
 	typedef itk::ImageRegionIteratorWithIndex < image3d > image3d_iterator;
@@ -130,8 +116,6 @@ namespace minc
     image->SetDirection(sample->GetDirection());
     image->Allocate();
   }
-  
-  
   
   //! allocate volume of the same dimension,spacing and origin
   template<class T,class S> typename T::Pointer allocate_same(const typename S::Pointer &sample)
@@ -291,20 +275,17 @@ namespace minc
   //! a helper function for minc reading
   template <class T> typename T::Pointer load_minc(const char *file)
   {
-    typedef itk::MincImageIO ImageIOType;
-    ImageIOType::Pointer minc2ImageIO = ImageIOType::New();
      
     typename itk::ImageFileReader<T>::Pointer reader = itk::ImageFileReader<T>::New();
     
     reader->SetFileName(file);
-    reader->SetImageIO( minc2ImageIO );
     reader->Update();
     
     return reader->GetOutput();
   }
 
   //! set minc file storage type
-  void set_minc_storage_type(itk::Object* image,nc_type datatype,bool is_signed);
+  void set_minc_storage_type(itk::Object* image,std::string datatype);
   
   //! copy metadata
   void copy_metadata(itk::Object* dst,itk::Object* src);
@@ -318,12 +299,8 @@ namespace minc
   //! a helper function for minc writing
   template <class T> void save_minc(const char *file,typename T::Pointer img)
   {
-    typedef itk::MincImageIO ImageIOType;
-    ImageIOType::Pointer minc2ImageIO = ImageIOType::New();
-     
     typename itk::ImageFileWriter< T >::Pointer writer = itk::ImageFileWriter<T>::New();
     writer->SetFileName(file);
-    writer->SetImageIO( minc2ImageIO );
     writer->SetInput( img );
     writer->Update();
   } 
@@ -393,40 +370,19 @@ namespace minc
     img=load_minc<T>(file);
   }
   
-  template<class T> void setup_itk_image(const minc_1_base& minc_rw, typename T::Pointer& img)
+  template <class T> void  imitate_minc(const char *file,typename T::Pointer& img)
   {
-    itk::Vector< unsigned int,3> dims;
-    itk::Vector< double,3> spacing;
-    itk::Vector< double,3> origin;
-    itk::Vector< double,3> start;
-    itk::Matrix< double, 3, 3> dir_cos;
-    dir_cos.SetIdentity();
-    //std::cout<<"setup_itk_image"<<std::endl;
-    for(int i=0;i<3;i++)
-    {
-      dims[i]=minc_rw.ndim(i+1);
-      spacing[i]=minc_rw.nspacing(i+1);
-      start[i]=minc_rw.nstart(i+1);
-      if(minc_rw.have_dir_cos(i+1))
-      {
-        for(int j=0;j<3;j++)
-          dir_cos[j][i]=minc_rw.ndir_cos(i+1,j); //TODO: check transpose?
-      }
-      //std::cout<<start[i]<<"\t";
-    }
-    //std::cout<<std::endl;
-    origin=dir_cos*start;
-    allocate_image3d<T>(img,dims,spacing,origin);
-    img->SetDirection(dir_cos);
-  }
-  
-  template<class T> void imitate_minc (const char *path, typename T::Pointer &img)
-  {
-    minc_1_reader rdr;
-    rdr.open(path,true,true);
-    setup_itk_image<T>(rdr,img);
+    typename itk::ImageFileReader<T>::Pointer reader = itk::ImageFileReader<T>::New();
+    
+    reader->SetFileName(file);
+    reader->Update();
+
+    typename T::Pointer sample=reader->GetOutput();
+    allocate_same<T,T>(img,sample);
   }
   
 };
 
-#endif //_MINC_HELPERS_H_
+std::string minc_timestamp(int argc,char **argv);
+
+#endif //_ITK4_MINC_HELPERS_H_

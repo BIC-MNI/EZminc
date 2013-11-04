@@ -12,9 +12,16 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
-#include "itkMincImageIOFactory.h"
+#ifdef HAVE_MINC4ITK
+#include <time_stamp.h>    // for creating minc style history entry
+#include "itkMincHelpers.h"
 #include "itkMincImageIO.h"
 #include "itkMincHelpers.h"
+#else
+#include "itk4MincHelpers.h"
+#include "itkMINCTransformAdapter.h"
+#endif //HAVE_MINC4ITK
+
 #include <iostream>
 #include <getopt.h>
 #include <math.h>
@@ -86,8 +93,9 @@ int main (int argc, char **argv)
     
   try
   {
+#ifdef HAVE_MINC4ITK
     itk::ObjectFactoryBase::RegisterFactory(itk::MincImageIOFactory::New());
-    
+#endif    
     itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
     
     reader->SetFileName(input.c_str());
@@ -183,10 +191,20 @@ int main (int argc, char **argv)
     std::cout<<std::endl;
     
 		return 0;
-	} catch (const minc::generic_error & err) {
+	} 
+	
+#ifdef HAVE_MINC4ITK
+	catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
 		cerr << err.msg()<<endl;
     return 1;
   }
-	return 0;
+#endif
+  catch( itk::ExceptionObject & err ) 
+  { 
+    std::cerr << "ExceptionObject caught !" << std::endl; 
+    std::cerr << err << std::endl; 
+    return 2;
+  }
+  return 0;
 };

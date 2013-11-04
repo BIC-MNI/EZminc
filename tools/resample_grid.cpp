@@ -13,14 +13,17 @@
               express or implied warranty.
 ---------------------------------------------------------------------------- */
 
-#if ( ITK_VERSION_MAJOR < 4 )
+#include "mincVectorBSplineInterpolate.h"
+
+#ifdef HAVE_MINC4ITK
 #include <itkMincHelpers.h>
+#else
+#include "itk4MincHelpers.h"
 #endif
 
 #include <unistd.h>
 #include <getopt.h>
-
-#include "mincVectorBSplineInterpolate.h"
+ 
 #include <vnl/vnl_matrix_fixed.h>
 #include <vnl/vnl_vector_fixed.h>
 #include <vnl/vnl_det.h>
@@ -179,10 +182,13 @@ int main (int argc, char **argv)
 
     save_minc<def3d>(output_f.c_str(),out_grid);
     
-	} catch (const minc::generic_error & err) {
+	} 
+#ifdef HAVE_MINC4ITK
+  catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1; 
   }
+#endif  
   catch( itk::ExceptionObject & err ) 
   { 
     std::cerr << "ExceptionObject caught !" << std::endl; 

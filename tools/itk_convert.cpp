@@ -12,7 +12,7 @@
 #include <itkDiffusionTensor3D.h>
 
 #if ( ITK_VERSION_MAJOR > 3 ) 
-//TODO: what here?
+  #include "itk4MincHelpers.h"
 #else
   #include "itkMincImageIOFactory.h"
   #include "itkMincImageIO.h"
@@ -716,10 +716,11 @@ int main(int argc,char **argv)
   int assume_dti=0;
 #if ( ITK_VERSION_MAJOR < 4 ) 
   char *_history = time_stamp(argc, argv);
-#else
-  char *_history = "";
-#endif
   std::string history=_history;
+  free(_history);
+#else
+  std::string history= minc_timestamp(argc,argv);
+#endif
   int use_b_matrix=0;
   int dwi_flip_z=0;
   int minc_type=-1;
@@ -728,10 +729,6 @@ int main(int argc,char **argv)
   
   int store_char=0,store_uchar=0,store_short=0,store_ushort=0,store_float=0,store_int=0,store_uint=0,store_double=0;
   
-#if ( ITK_VERSION_MAJOR < 4 ) 
-  free(_history);
-#endif
-
   static struct option long_options[] = { 
     {"verbose", no_argument, &verbose, 1},
     {"quiet", no_argument, &verbose, 0},

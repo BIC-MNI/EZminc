@@ -95,6 +95,9 @@ int main (int argc, char **argv)
   
   try
   {
+    itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
+    //initializing the reader
+    
     //initializing the reader
     reader->SetFileName(in_volume.c_str());
     reader->Update();
@@ -215,9 +218,20 @@ int main (int argc, char **argv)
     }
     fclose(fp);*/
     
-  } catch (const minc::generic_error & err) {
+  } 
+#ifdef HAVE_MINC4ITK
+  catch (const minc::generic_error & err) 
+  {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;
   }
+#endif
+  catch( itk::ExceptionObject & err ) 
+  { 
+    std::cerr << "ExceptionObject caught !" << std::endl; 
+    std::cerr << err << std::endl; 
+    return 2;
+  }
+
   return 0;
 };

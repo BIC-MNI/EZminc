@@ -35,12 +35,14 @@
 #include <itkImageIOFactory.h>
 
 #ifdef HAVE_MINC4ITK
-#include <time_stamp.h>    // for creating minc style history entry
-#include "itkMincImageIOFactory.h"
-#include "itkMincImageIO.h"
-#include "itkMincHelpers.h"
-using namespace  minc;
+  #include <time_stamp.h>    // for creating minc style history entry
+  #include "itkMincImageIOFactory.h"
+  #include "itkMincImageIO.h"
+  #include "itkMincHelpers.h"
+#else
+  #include "itk4MincHelpers.h"
 #endif
+using namespace  minc;
 
 using namespace  std;
 
@@ -183,7 +185,11 @@ int main (int argc, char **argv)
   int bimodal=0;
   std::string operations;
 #if ( ITK_VERSION_MAJOR < 4 )
-  char *history = time_stamp(argc, argv); 
+  char *_history = time_stamp(argc, argv); 
+  std::string history=_history;
+  free(_history);
+#else
+  std::string history= minc_timestamp(argc,argv);  
 #endif
   
   static struct option long_options[] = { 
@@ -294,11 +300,9 @@ int main (int argc, char **argv)
         output_img=last->GetOutput();
       }
     }
-#ifdef HAVE_MINC4ITK
+    
     minc::copy_metadata(output_img,img);
-    minc::append_history(output_img,history);
-    free(history);
-#endif 
+    minc::append_history(output_img,history.c_str());
     
     itk::ImageFileWriter< ImageType >::Pointer writer = itk::ImageFileWriter<ImageType >::New();
     writer->SetFileName(output.c_str());

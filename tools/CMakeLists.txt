@@ -60,41 +60,45 @@ ENDIF(FFTW3F_FOUND AND GSL_FOUND AND HAVE_MINC1)
 
 IF(ITK_FOUND)
 
-  LINK_DIRECTORIES(${ITK_LIBRARY_DIRS} ${MINC4ITK_LIBRARY_DIRS})
-  INCLUDE_DIRECTORIES(${ITK_INCLUDE_DIRS} ${MINC4ITK_INCLUDE_DIRS})  
+  IF(HAVE_MINC4ITK)
+    LINK_DIRECTORIES(${MINC4ITK_LIBRARY_DIRS})
+    INCLUDE_DIRECTORIES( ${MINC4ITK_INCLUDE_DIRS})  
+  ELSE(HAVE_MINC4ITK)
+    SET(ITK_LIBRARIES itk4MincHelpers ${ITK_LIBRARIES})
+  ENDIF(HAVE_MINC4ITK)
 
   ADD_EXECUTABLE( multiple_volume_similarity multiple_volume_similarity.cpp)
-  TARGET_LINK_LIBRARIES( multiple_volume_similarity ITKIOMINC ${ITK_LIBRARIES}  )
+  TARGET_LINK_LIBRARIES( multiple_volume_similarity ${ITK_LIBRARIES}  )
 
   ADD_EXECUTABLE( itk_distance itk_distance.cpp)
-  TARGET_LINK_LIBRARIES(itk_distance ITKIOMINC ${ITK_LIBRARIES})
+  TARGET_LINK_LIBRARIES(itk_distance ${ITK_LIBRARIES})
 
   ADD_EXECUTABLE( itk_similarity itk_similarity.cpp )
-  TARGET_LINK_LIBRARIES(itk_similarity ITKIOMINC ${ITK_LIBRARIES})
+  TARGET_LINK_LIBRARIES(itk_similarity ${ITK_LIBRARIES})
   
   ADD_EXECUTABLE( itk_resample itk_resample.cpp )
-  TARGET_LINK_LIBRARIES(itk_resample ITKIOMINC ${ITK_LIBRARIES})
+  TARGET_LINK_LIBRARIES(itk_resample  ${ITK_LIBRARIES})
   
   ADD_EXECUTABLE( itk_convert itk_convert.cpp )
-  TARGET_LINK_LIBRARIES(itk_convert ITKIOMINC ${ITK_LIBRARIES})
+  TARGET_LINK_LIBRARIES(itk_convert  ${ITK_LIBRARIES})
   
   ADD_EXECUTABLE( itk_morph
                   itk_morph.cpp )
-  TARGET_LINK_LIBRARIES( itk_morph  ITKIOMINC ${ITK_LIBRARIES})
+  TARGET_LINK_LIBRARIES( itk_morph   ${ITK_LIBRARIES})
 
   ADD_EXECUTABLE( itk_g_morph
                   itk_g_morph.cpp )
-  TARGET_LINK_LIBRARIES( itk_g_morph  ITKIOMINC ${ITK_LIBRARIES} )
+  TARGET_LINK_LIBRARIES( itk_g_morph   ${ITK_LIBRARIES} )
 
   IF(HAVE_MINC1)
     ADD_EXECUTABLE( resample_grid
                   resample_grid.cpp )
 
-    TARGET_LINK_LIBRARIES(resample_grid ITKIOMINC ${ITK_LIBRARIES} ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES} )
+    TARGET_LINK_LIBRARIES(resample_grid ${ITK_LIBRARIES} ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES} )
     
     ADD_EXECUTABLE( dircos_to_xfm
                     dircos_to_xfm.cpp )
-    TARGET_LINK_LIBRARIES( dircos_to_xfm  ITKIOMINC ${ITK_LIBRARIES} )
+    TARGET_LINK_LIBRARIES( dircos_to_xfm itk4MincHelpers  ${ITK_LIBRARIES} )
     
     INSTALL(TARGETS dircos_to_xfm resample_grid RUNTIME DESTINATION bin)
   
@@ -128,7 +132,7 @@ IF(HAVE_MINC1)
   TARGET_LINK_LIBRARIES(xfm2def ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES} )
   
   ADD_EXECUTABLE( tag2csv  tag2csv.cpp)
-  TARGET_LINK_LIBRARIES(tag2csv ITKIOMINC ${ITK_LIBRARIES})
+  TARGET_LINK_LIBRARIES(tag2csv ${ITK_LIBRARIES})
 
   ADD_EXECUTABLE( fuzzy_volume_similarity fuzzy_volume_similarity.cpp)
   TARGET_LINK_LIBRARIES(fuzzy_volume_similarity minc_image_proc ${EZMINC_LIBRARIES})

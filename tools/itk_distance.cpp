@@ -31,8 +31,10 @@
 #include "itkMincImageIOFactory.h"
 #include "itkMincImageIO.h"
 #include "itkMincHelpers.h"
-using namespace minc;
+#else
+#include "itk4MincHelpers.h"
 #endif 
+using namespace minc;
 
 using namespace std;
 void show_usage(const char *name)
@@ -77,8 +79,12 @@ int main (int argc, char **argv)
   int store_byte=0;
   
   
-#ifdef HAVE_MINC4ITK
-  char *history = time_stamp(argc, argv); 
+#if ( ITK_VERSION_MAJOR < 4 ) 
+  char *_history = time_stamp(argc, argv);
+  std::string history=_history;
+  free(_history);
+#else
+  std::string history= minc_timestamp(argc,argv);
 #endif
   
   //int voxel_neibourhood=5;
@@ -147,7 +153,12 @@ int main (int argc, char **argv)
     
     InputImageType::Pointer input=reader->GetOutput();
     DistanceImageType::Pointer output;
+#if (ITK_VERSION_MAJOR==3)
     DistanceImageType::Pointer voronoi;
+#else
+    SignedDistanceMapFilter::VoronoiImageType::Pointer voronoi;    
+#endif
+    
     BinaryThresholdFilter::Pointer threshold;
     
     if(label_set)
@@ -174,11 +185,9 @@ int main (int argc, char **argv)
       dist->SetInput(input);
       dist->Update();
       output=dist->GetOutput();
-      
       voronoi=dist->GetVoronoiMap();
     }
     
-#ifdef HAVE_MINC4ITK
 
     copy_metadata(output,input);
     copy_metadata(voronoi,input);
@@ -186,6 +195,7 @@ int main (int argc, char **argv)
     append_history(output,history);
     append_history(voronoi,history);
     
+#ifdef HAVE_MINC4ITK
     if(store_float)
     {
       minc::set_minc_storage_type(output,NC_FLOAT,true);
@@ -197,8 +207,8 @@ int main (int argc, char **argv)
       minc::set_minc_storage_type(output,NC_BYTE,false);
       minc::set_minc_storage_type(voronoi,NC_BYTE,false);
     }
-    
-    free(history);
+#else
+  //TODO: convert to ITK4 style
 #endif 
     
     itk::ImageFileWriter< DistanceImageType >::Pointer writer = itk::ImageFileWriter<DistanceImageType >::New();
@@ -208,7 +218,12 @@ int main (int argc, char **argv)
     
     if(!voronoi_f.empty())
     {
+      
+#if (ITK_VERSION_MAJOR==3)
       itk::ImageFileWriter< DistanceImageType >::Pointer writer = itk::ImageFileWriter<DistanceImageType >::New();
+#else
+      itk::ImageFileWriter< SignedDistanceMapFilter::VoronoiImageType >::Pointer writer = itk::ImageFileWriter<SignedDistanceMapFilter::VoronoiImageType >::New();
+#endif
       writer->SetFileName(voronoi_f.c_str());
       writer->SetInput( voronoi );
       writer->Update();

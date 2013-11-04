@@ -25,7 +25,12 @@
 #include <itkTransform.h>
 #include <itkObjectFactory.h>
 #include <memory>
+
+#if ( ITK_VERSION_MAJOR < 4 )
 #include <itkMincHelpers.h>
+#else
+#include "itk4MincHelpers.h"
+#endif
 
 
 #ifdef _DEBUG

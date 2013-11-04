@@ -63,6 +63,9 @@
 #include "itkMincGeneralTransform.h"
 #include "itkMincImageIO.h"
 #include "itkMincHelpers.h"
+#else
+#include "itk4MincHelpers.h"
+#include "itkMINCTransformAdapter.h"
 #endif //HAVE_MINC4ITK
 
 typedef itk::ImageBase<3>           Image3DBase;
@@ -90,7 +93,7 @@ typedef itk::IdentityTransform<double,3> IdentityTransformType;
 #if ( ITK_VERSION_MAJOR < 4 )
 typedef minc::XfmTransform<double,3,3>  TransformType;
 #else
-typedef itk::CompositeTransform< double, 3 > TransformType;
+typedef itk::MINCTransformAdapter<double,3,3> TransformType;
 #endif
 
 using namespace  std;
@@ -356,8 +359,9 @@ void resample_image(
     if(!invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
 #else
-    //TODO: implement this
-    std::cerr<<"MINC XFM IO not implemented yet"<<std::endl;
+    transform->OpenXfm(xfm_f.c_str());
+    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    filter->SetTransform( transform );
 #endif    
   } else {
     filter->SetTransform( identity_transform );
@@ -418,14 +422,12 @@ void resample_image(
   filter->Update();
   typename ImageOut::Pointer out=filter->GetOutput();
   
-#ifdef HAVE_MINC4ITK
   minc::copy_metadata(out,in);
   minc::append_history(out,history);
   
   //correct dimension order
   if(like.IsNotNull())
     minc::copy_dimorder(out,like);
-#endif
     
   //generic file writer
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
@@ -439,6 +441,15 @@ void resample_image(
     minc::set_minc_storage_type(out,NC_SHORT,true);
   } else if(store_byte) {
     minc::set_minc_storage_type(out,NC_BYTE,false);
+  }
+#else
+  if(store_float)
+  {
+    minc::set_minc_storage_type(out,typeid(float).name());
+  } else if(store_short) {
+    minc::set_minc_storage_type(out,typeid(unsigned short).name());
+  } else if(store_byte) {
+    minc::set_minc_storage_type(out,typeid(unsigned char).name());
   }
 #endif
 
@@ -513,8 +524,9 @@ void resample_label_image (
     if(!invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
 #else
-    //TODO: implement this
-    std::cerr<<"MINC XFM IO not implemented yet"<<std::endl;
+    transform->OpenXfm(xfm_f.c_str());
+    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    filter->SetTransform( transform );
 #endif
   }
 
@@ -641,14 +653,12 @@ void resample_label_image (
   
   
   //typename ImageOut::Pointer out=filter->GetOutput();
-#if ( ITK_VERSION_MAJOR < 4 )
   minc::copy_metadata(LabelImage,in);
   minc::append_history(LabelImage,history);
   
   //correct dimension order
   if(like.IsNotNull())
     minc::copy_dimorder(LabelImage,like);
-#endif
     
   //generic file writer
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
@@ -662,6 +672,15 @@ void resample_label_image (
     minc::set_minc_storage_type(LabelImage,NC_SHORT,true);
   } else if(store_byte) {
     minc::set_minc_storage_type(LabelImage,NC_BYTE,false);
+  }
+#else  
+  if(store_float)
+  {
+    minc::set_minc_storage_type(LabelImage,typeid(float).name());
+  } else if(store_short) {
+    minc::set_minc_storage_type(LabelImage,typeid(unsigned short).name());
+  } else if(store_byte) {
+    minc::set_minc_storage_type(LabelImage,typeid(unsigned char).name());
   }
 #endif
 
@@ -713,7 +732,9 @@ void resample_vector_image(
     if(!invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
 #else
-    std::cerr<<"MINC XFM IO not implemented yet!"<<std::endl;
+    transform->OpenXfm(xfm_f.c_str());
+    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    filter->SetTransform( transform );
 #endif
   }
 
@@ -768,7 +789,6 @@ void resample_vector_image(
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());
   
-#ifdef HAVE_MINC4ITK
   minc::copy_metadata(out,in);
   minc::append_history(out,history);
   
@@ -778,6 +798,7 @@ void resample_vector_image(
   
   //generic file writer
   
+#ifdef HAVE_MINC4ITK
   if(store_float)
   {
     minc::set_minc_storage_type(out,NC_FLOAT,true);
@@ -785,6 +806,15 @@ void resample_vector_image(
     minc::set_minc_storage_type(out,NC_SHORT,true);
   } else if(store_byte) {
     minc::set_minc_storage_type(out,NC_BYTE,false);
+  }
+#else
+  if(store_float)
+  {
+    minc::set_minc_storage_type(out,typeid(float).name());
+  } else if(store_short) {
+    minc::set_minc_storage_type(out,typeid(unsigned short).name());
+  } else if(store_byte) {
+    minc::set_minc_storage_type(out,typeid(unsigned char).name());
   }
 #endif
 

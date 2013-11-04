@@ -78,8 +78,10 @@ int main (int argc, char **argv)
   
   try
   {
+#ifdef HAVE_MINC4ITK    
     itk::RegisterMincIO();
-
+#endif 
+    
     itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
     reader->SetFileName(input.c_str());
     reader->Update();
@@ -106,5 +108,5 @@ int main (int argc, char **argv)
     std::cerr << err << std::endl; 
     return 2;
   } 
-  
+  return 0;
 }

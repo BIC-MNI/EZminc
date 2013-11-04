@@ -24,10 +24,16 @@
 #include <itkImageFileWriter.h>
 #include <itkImageIOFactory.h>
 
-#include "itkMincImageIOFactory.h"
-#include "itkMincImageIO.h"
 
+#ifdef HAVE_MINC4ITK
+#include <time_stamp.h>    // for creating minc style history entry
 #include "itkMincHelpers.h"
+#include "itkMincImageIO.h"
+#include "itkMincHelpers.h"
+#else
+#include "itk4MincHelpers.h"
+#include "itkMINCTransformAdapter.h"
+#endif //HAVE_MINC4ITK
 
 
 using namespace  std;
@@ -38,7 +44,6 @@ void show_usage (const char * prog)
   std::cerr<<"Usage:"<<prog<<" in.mnc out.csv --mask <mask> --clobber --terse"<<endl; 
 }
 
-typedef itk::MincImageIO ImageIOType;
 
 
 int main (int argc, char **argv)
@@ -96,15 +101,13 @@ int main (int argc, char **argv)
 		minc::mask3d::Pointer  mask(minc::mask3d::New());
     
     //creating a minc reader
-    ImageIOType::Pointer minc2ImageIO = ImageIOType::New();
     
     itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
     //initializing the reader
     reader->SetFileName(argv[optind]);
-    reader->SetImageIO( minc2ImageIO );
     reader->Update();
     
-		minc::image3d::Pointer img=reader->GetOutput();
+    minc::image3d::Pointer img=reader->GetOutput();
     
     
     if(!mask_f.empty())
@@ -112,7 +115,6 @@ int main (int argc, char **argv)
       itk::ImageFileReader<minc::mask3d >::Pointer reader = itk::ImageFileReader<minc::mask3d >::New();
       //initializing the reader
       reader->SetFileName(mask_f.c_str());
-      reader->SetImageIO( minc2ImageIO );
       reader->Update();
       mask=reader->GetOutput();
     }
@@ -148,9 +150,18 @@ int main (int argc, char **argv)
         REPORT_ERROR ("can't write to file");
     }
 		return 0;
-	} catch (const minc::generic_error & err) {
+	} 
+#ifdef HAVE_MINC4ITK    
+  catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1;
   }
-	return 0;
+#endif
+  catch( itk::ExceptionObject & err ) 
+  { 
+    std::cerr << "ExceptionObject caught !" << std::endl; 
+    std::cerr << err << std::endl; 
+    return 2;
+  }
+  return 0;
 };
