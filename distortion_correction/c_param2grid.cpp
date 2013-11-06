@@ -16,7 +16,7 @@
 #include <fstream>
 #include "mincMeanSquaresImageToImageMetric.h"
 #include "sphericalHarmonicsTransform.h"
-#include <itkMincHelpers.h>
+#include <itk4MincHelpers.h>
 
 #include <vector>
 #include <unistd.h>
@@ -132,10 +132,13 @@ int main (int argc, char **argv)
 			cout<<"Done!"<<endl;
     save_minc<minc::def3d>(output.c_str(), grid);
 		
-	} catch (const minc::generic_error & err) {
+	} 
+#ifdef HAVE_MINC4ITK	
+	catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1; 
   }
+#endif  
   catch( itk::ExceptionObject & err ) 
   { 
     std::cerr << "ExceptionObject caught !" << std::endl; 

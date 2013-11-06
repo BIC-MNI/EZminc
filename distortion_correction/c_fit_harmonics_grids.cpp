@@ -17,7 +17,7 @@
 #include <fstream>
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
-#include <itkMincHelpers.h>
+#include <itk4MincHelpers.h>
 
 #include <itkBSplineInterpolateImageFunction.h>
 #include <unistd.h>
@@ -474,10 +474,13 @@ int main (int argc, char **argv)
     save_coeff(cf,fit.coeff[0]);
     save_coeff(cf,fit.coeff[1]);
     
-	} catch (const minc::generic_error & err) {
+	} 
+#ifdef HAVE_MINC4ITK	
+	catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1; 
   }
+#endif  
   catch( itk::ExceptionObject & err ) 
   { 
     std::cerr << "ExceptionObject caught !" << std::endl; 
