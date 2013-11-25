@@ -22,7 +22,6 @@
 namespace minc
 {
   
-
   void calculate_gaussian(std::vector<complex_f>& res,double sigma,bool dx)
   {
     double pi=2*atan2(1.0,0.0);
@@ -69,30 +68,34 @@ namespace minc
     std::vector<complex_f> _fz(in.dim(2)*2),_gz(in.dim(2)*2);
     
     px=fftwf_plan_dft_1d(_fx.size(), 
-                        reinterpret_cast<fftwf_complex*>(&_fx[0]), 
-                        reinterpret_cast<fftwf_complex*>(&_fx[0]), FFTW_FORWARD, FFTW_ESTIMATE);
+                          reinterpret_cast<fftwf_complex*>(&_fx[0]), 
+                          reinterpret_cast<fftwf_complex*>(&_fx[0]), FFTW_FORWARD, FFTW_ESTIMATE);
+    
     ipx=fftwf_plan_dft_1d(_fx.size(),
                           reinterpret_cast<fftwf_complex*>(&_fx[0]), 
                           reinterpret_cast<fftwf_complex*>(&_fx[0]), FFTW_BACKWARD, FFTW_ESTIMATE);
   
     py=fftwf_plan_dft_1d(_fy.size(), 
-                        reinterpret_cast<fftwf_complex*>(&_fy[0]), 
-                        reinterpret_cast<fftwf_complex*>(&_fy[0]), FFTW_FORWARD, FFTW_ESTIMATE);
+                          reinterpret_cast<fftwf_complex*>(&_fy[0]), 
+                          reinterpret_cast<fftwf_complex*>(&_fy[0]), FFTW_FORWARD, FFTW_ESTIMATE);
+    
     ipy=fftwf_plan_dft_1d(_fy.size(),
                           reinterpret_cast<fftwf_complex*>(&_fy[0]), 
                           reinterpret_cast<fftwf_complex*>(&_fy[0]), FFTW_BACKWARD, FFTW_ESTIMATE);
   
     pz=fftwf_plan_dft_1d(_fz.size(), 
-                        reinterpret_cast<fftwf_complex*>(&_fz[0]), 
-                        reinterpret_cast<fftwf_complex*>(&_fz[0]), FFTW_FORWARD, FFTW_ESTIMATE);
+                          reinterpret_cast<fftwf_complex*>(&_fz[0]), 
+                          reinterpret_cast<fftwf_complex*>(&_fz[0]), FFTW_FORWARD, FFTW_ESTIMATE);
+
     ipz=fftwf_plan_dft_1d(_fz.size(),
-                        reinterpret_cast<fftwf_complex*>(&_fz[0]), 
-                        reinterpret_cast<fftwf_complex*>(&_fz[0]), FFTW_BACKWARD, FFTW_ESTIMATE);
+                          reinterpret_cast<fftwf_complex*>(&_fz[0]), 
+                          reinterpret_cast<fftwf_complex*>(&_fz[0]), FFTW_BACKWARD, FFTW_ESTIMATE);
     
     //precalculate gaussians in frequency domain 
     calculate_gaussian(_fx,sx,dx);
     calculate_gaussian(_fy,sy,dy);
     calculate_gaussian(_fz,sz,dz);
+    
     fftwf_execute(px);
     fftwf_execute(py);
     fftwf_execute(pz);

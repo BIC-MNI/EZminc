@@ -109,7 +109,10 @@ int main (int argc, char **argv)
   binary=(kappa==1);
 	try
   {
-    
+#ifdef HAVE_MINC4ITK
+    itk::RegisterMincIO();
+#endif
+
     typedef itk::ImageMaskSpatialObject< 3 >   MaskType;
     typedef float FloatVoxel;
     typedef unsigned char BinaryVoxel;

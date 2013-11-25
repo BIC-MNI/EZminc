@@ -154,7 +154,7 @@ int main (int argc, char **argv)
     
     simple_volume<float>::idx dims(volume_in.size());
     
-    dims/=IDX<int>(factor_x,factor_y,factor_z);
+    dims/=IDX<size_t>(factor_x,factor_y,factor_z);
     for(int i=0;i<3;i++)
       if(dims[i]<1) dims[i]=1;
     

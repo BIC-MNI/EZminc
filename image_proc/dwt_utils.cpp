@@ -20,14 +20,14 @@ namespace minc
 {
   idx3d find_nearest_square_pow2(const idx3d& i)
   {
-    unsigned int m=i.max(),_m=i.max();
-    unsigned int p=0;
+    size_t m=i.max(),_m=i.max();
+    size_t p=0;
   
     while(m!=0) { m>>=1;p++;}
   
     if(_m==(1<<(p-1))) p--; //special case, when we have exatly power of 2
   
-    return IDX(1<<p,1<<p,1<<p);
+    return IDX<size_t>(1<<p,1<<p,1<<p);
   }
 
   void dwt_forward(const simple_volume<float> &src,std::vector<simple_volume<float> > &dst)
@@ -39,7 +39,7 @@ namespace minc
     
     input_size=src.size();
     
-    output_size=(input_size+IDX(1,1,1))/2;
+    output_size=(input_size+IDX<size_t>(1,1,1))/2;
     
     padded_size=find_nearest_square_pow2(input_size);
     pad=(padded_size-input_size)/2;
@@ -53,7 +53,7 @@ namespace minc
     
     pad/=2;
     dst.resize(8);
-    for(int j=0;j<8;j++)
+    for(size_t j=0;j<8;j++)
     {
       dst[j].resize(output_size);
       extract_quadrant<float>(input_vol,dst[j],j,pad);
@@ -78,7 +78,7 @@ namespace minc
     
     simple_volume<float> input_vol(padded_size[0]*2,padded_size[1]*2,padded_size[2]*2);
     
-    for(int j=0;j<8;j++)
+    for(size_t j=0;j<8;j++)
       insert_quadrant<float>(input_vol,src[j],j,pad);
       
     volume_dwt(input_vol,0);

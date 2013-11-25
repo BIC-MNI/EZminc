@@ -44,22 +44,26 @@ my $labels_mask;
 my $red;
 my $green_mask;
 my $clamp;
+my $mask_lut;
+my $discrete_mask;
 
 GetOptions(
 	   'verbose' => \$verbose,
 	   'fake'    => \$fake,
 	   'clobber' => \$clobber,
 	   'title=s'          => \$title,
-	   'mask=s' 	      => \$mask,
+	   'mask=s' 	        => \$mask,
 	   'spectral'         => \$spectral,
 	   'spectral-mask'    => \$spectral_mask,
-     'gray-mask'    => \$gray_mask,
+     'gray-mask'        => \$gray_mask,
 	   'image-range=f{2}' => \@image_range,
 	   'mask-range=f{2}' => \@mask_range,
      'cyanred'         => \$cyanred,
      'cyanred-mask'    => \$cyanred_mask,
      'lut=s'           => \$lut,
+     'mask-lut=s'      => \$mask_lut,
      'discrete'        => \$discrete,
+     'discrete-mask'   => \$discrete_mask,
      'big'             => \$big,
      'labels'          => \$labels,
      'labels-mask'     => \$labels_mask,
@@ -83,9 +87,11 @@ die "Usage: $me  <input.mnc> <output jpeg file>
   --cyanred 
   --cyanred-mask
   --lut <lut>
+  --mask-lut <lut>
   --labels
   --labels-mask
   --dicrete
+  --dicrete-mask
   --red
   --green-mask
   --clamp
@@ -165,9 +171,12 @@ foreach $infile(@ARGV)
         push @args,'-lut_string','0.0 0.0 0.0 0.0;1.0 0.0 1.0 0.0';
       } elsif($labels_mask) {
         push @args,'-discrete','-lut_string',$labels_lut;
+      } elsif($mask_lut) {
+        push @args,'-lookup_table',$mask_lut;
       } else {
         push @args,'-lut_string','0.0 0.0 0.0 0.0;1.0 1.0 0.0 0.0';
       }
+			push @args,'-discrete' if($discrete_mask);
 			
       if($#mask_range>0 && $mask_range[0]!=$mask_range[1])
       {

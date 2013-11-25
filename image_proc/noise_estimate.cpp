@@ -76,21 +76,21 @@ double minc::noise_estimate(const minc::simple_volume<float>& input,double &mean
 	std::vector<double> LLL_mu;
 	simple_k_means(LLL_hist,LLL_mu,2,10);
 	
-	double LLL_threshold=(LLL_mu[0]+LLL_mu[1])/2;
+	float LLL_threshold=(float)(LLL_mu[0]+LLL_mu[1])/2;
 	
 	if(verbose) std::cout<<"LLL threshold="<<LLL_threshold<<std::endl;
 	
-	for(int i=0;i<LLL_mask.c_buf_size();i++)
-		LLL_mask.c_buf()[i]=dwt[0].c_buf()[i]>LLL_threshold ;
+	for(size_t i=0;i<LLL_mask.c_buf_size();i++)
+		LLL_mask.c_buf()[i]=(dwt[0].c_buf()[i]>LLL_threshold?1:0);
 	
 	
 	double bkgr_mean=0.0;
 	double bkgr_std=0.0;
-	int bkgr_cnt=0;
+	size_t bkgr_cnt=0;
 	
-	for(int z=0;z<input.dim(2);z++)
-		for(int y=0;y<input.dim(1);y++)
-			for(int x=0;x<input.dim(1);x++)
+	for(size_t z=0;z<input.dim(2);z++)
+		for(size_t y=0;y<input.dim(1);y++)
+			for(size_t x=0;x<input.dim(0);x++)
 	{
 		if(!LLL_mask.get(x/2,y/2,z/2))
 		{
@@ -167,11 +167,11 @@ double minc::noise_estimate(const minc::simple_volume<float>& input,double &mean
 	}*/
 	
 	mean_signal=0.0;
-	int    cnt_signal=0;
+	size_t    cnt_signal=0;
 	
-	for(int z=0;z<input.dim(2);z++)
-		for(int y=0;y<input.dim(1);y++)
-			for(int x=0;x<input.dim(1);x++)
+	for(size_t z=0;z<input.dim(2);z++)
+		for(size_t y=0;y<input.dim(1);y++)
+			for(size_t x=0;x<input.dim(0);x++)
 	{
 		if(LLL_mask.get(x/2,y/2,z/2))
 		{

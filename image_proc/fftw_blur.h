@@ -23,13 +23,17 @@
 namespace minc
 {
   typedef std::complex<float> complex_f;
+  
   //! calculate a windowed [derivative of ] gaussian
   void calculate_gaussian(std::vector<complex_f>& res,double sigma,bool dx);
   
   //! coordinate wise blurring
   void blur_volume(const simple_volume<float> &in,simple_volume<float> &out, bool dx,bool dy, bool dz, double fx,double fy,double fz);
   
+  //! estimate 3D gradients using convolution with derivative of gaussian
   void calc_gradient(const simple_volume<float> &in,minc_grid_volume &out, double fx,double fy,double fz);
+  
+  //! estimate magniture of 3D gradients using convolution with derivative of gaussian
   void calc_gradient_mag(const simple_volume<float> &in,simple_volume<float> &out, double fx,double fy,double fz);
 
 };

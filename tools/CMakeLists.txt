@@ -15,11 +15,17 @@ IF(GSL_FOUND AND HAVE_MINC1)
                 fdr_threshold.cpp )
 
   TARGET_LINK_LIBRARIES(fdr_threshold ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY}  ${EZMINC_LIBRARIES} )
+  
+  ADD_EXECUTABLE(t2_fit
+      t2_fit.cpp )
+
+  TARGET_LINK_LIBRARIES(t2_fit ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY}  ${EZMINC_LIBRARIES} )
 
   INSTALL(TARGETS 
         random_volume
         fdr_threshold
         volume_pol
+        t2_fit
         RUNTIME DESTINATION bin )
 ENDIF(GSL_FOUND AND HAVE_MINC1)
 
@@ -114,7 +120,6 @@ IF(HAVE_MINC1)
                   minc_nuyl.cpp )
   TARGET_LINK_LIBRARIES(minc_nuyl minc_image_proc ${EZMINC_LIBRARIES})
 
-
   ADD_EXECUTABLE( minc_rank
                   minc_rank.cpp )
   TARGET_LINK_LIBRARIES(minc_rank minc_image_proc ${EZMINC_LIBRARIES})
@@ -125,8 +130,24 @@ IF(HAVE_MINC1)
   ADD_EXECUTABLE( tag2csv  tag2csv.cpp)
   TARGET_LINK_LIBRARIES(tag2csv ITKIOMINC ${ITK_LIBRARIES})
 
+  ADD_EXECUTABLE( fuzzy_volume_similarity fuzzy_volume_similarity.cpp)
+  TARGET_LINK_LIBRARIES(fuzzy_volume_similarity minc_image_proc ${EZMINC_LIBRARIES})
+  
+  ADD_EXECUTABLE( volume_gtc_similarity volume_gtc_similarity.cpp)
+  TARGET_LINK_LIBRARIES(volume_gtc_similarity minc_image_proc ${EZMINC_LIBRARIES})
+  
+  ADD_EXECUTABLE( volume_similarity volume_similarity.cpp)
+  TARGET_LINK_LIBRARIES(volume_similarity minc_image_proc ${EZMINC_LIBRARIES})
+  
   INSTALL(TARGETS 
-          volume_dwt minc_downsample minc_nuyl minc_rank xfm2def
+            volume_dwt
+            minc_downsample
+            minc_nuyl
+            minc_rank
+            xfm2def
+            fuzzy_volume_similarity
+            volume_gtc_similarity
+            volume_similarity
           RUNTIME DESTINATION bin )
 
 ENDIF(HAVE_MINC1)

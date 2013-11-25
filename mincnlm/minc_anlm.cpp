@@ -1,4 +1,15 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif //HAVE_CONFIG_H
+
 #include <iostream>
+#include <cstdlib>
+
+#include <math.h>
+#include <float.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 #include <getopt.h>
 #include <minc_io_simple_volume.h>
 #include <minc_1_simple.h>
@@ -8,6 +19,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <vector>
+
 using namespace minc;
 
 class anlm_proc
@@ -663,7 +675,7 @@ void * anlm_proc::thread_process(int ini,int fin)
                   double d=distance(ima,i,j,k,ni,nj,nk,patch_radius);
                   double w=0.0;
                   
-                  if(d <= 0.0 || isnan(d) ||isinf(d)) d=epsilon;
+                  if(d <= 0.0 || std::isnan(d) || std::isinf(d)) d=epsilon;
                   
                   if( d > 3.0*distanciaminima ) 
                     w=0.0;
@@ -671,7 +683,7 @@ void * anlm_proc::thread_process(int ini,int fin)
                   {
                     w = exp(-d/(distanciaminima*beta)); //
                     
-                    if(isnan(w) || isinf(w)) 
+                    if(std::isnan(w) || std::isinf(w)) 
                       w=0.0;
                   }
                   
@@ -856,7 +868,7 @@ void anlm_proc::exec(int Nthreads)
       {
         SNR=means.c_buf()[i]/sqrt(variances.c_buf()[i]);
         bias.c_buf()[i]=2*(variances.c_buf()[i]/Epsi(SNR));
-        if(isnan(bias.c_buf()[i])) bias.c_buf()[i]=0;
+        if(std::isnan(bias.c_buf()[i])) bias.c_buf()[i]=0;
       }
     }
   }
@@ -876,7 +888,7 @@ void anlm_proc::exec(int Nthreads)
         estimate = sqrt(d<0.0 ? 0.0:d);
       }
 
-      if(!isnan(estimate) && !isinf(estimate))
+      if(!std::isnan(estimate) && !std::isinf(estimate))
         fima.c_buf()[i]=estimate;	
       else
         fima[i]=0.0;

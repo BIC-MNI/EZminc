@@ -20,9 +20,9 @@
 
 namespace minc
 {
-  typedef fixed_vec<3,int> idx3d;
+  typedef fixed_vec<3,size_t> idx3d;
   
-  template<class T> void extract_quadrant(const simple_volume<float> &src,simple_volume<float>& dst,int quadrant,const idx3d& pad=IDX<int>(0,0,0))
+  template<class T> void extract_quadrant(const simple_volume<float> &src,simple_volume<float>& dst,int quadrant,const idx3d& pad=IDX<size_t>(0,0,0))
   {
 //make sure out is one half
     for(int i=0;i<3;i++)
@@ -41,7 +41,7 @@ namespace minc
     }
   }
 
-  template<class T> void insert_quadrant(simple_volume<float> &dst,const simple_volume<float>& src,int quadrant,const idx3d& pad=IDX<int>(0,0,0))
+  template<class T> void insert_quadrant(simple_volume<float> &dst,const simple_volume<float>& src,int quadrant,const idx3d& pad=IDX<size_t>(0,0,0))
   {
     for(int i=0;i<3;i++)
       if((dst.dim(i)/2)<((src.dim(i)+pad[i])))
