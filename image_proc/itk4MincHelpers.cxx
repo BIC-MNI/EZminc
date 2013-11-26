@@ -758,10 +758,10 @@ namespace minc
   
   void copy_dimorder(itk::Object* dst,itk::Object* src)
   {
-    std::vector<std::string> dimorder;
-    if(itk::ExposeMetaData(src->GetMetaDataDictionary(),"dimorder",dimorder))
+    std::string dimorder;
+    if(itk::ExposeMetaData(src->GetMetaDataDictionary(),"dimension_order",dimorder))
     {
-      itk::EncapsulateMetaData(dst->GetMetaDataDictionary(),"dimorder",dimorder);
+      itk::EncapsulateMetaData(dst->GetMetaDataDictionary(),"dimension_order",dimorder);
     }
   }
   

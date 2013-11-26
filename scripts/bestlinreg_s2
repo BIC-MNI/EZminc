@@ -292,7 +292,7 @@ for ($i=0; $i<=$#conf; $i++){
 
    # Initial transformation will be computed from the from Principal axis 
    # transformation (PAT).
-   push(@args, @{$conf[$i]{trans}}) if( defined $conf[$i]{trans} );
+   push(@args, @{$conf[$i]{trans}}) if( defined $conf[$i]{trans} && !$opt{init_xfm} );
 
    # Current transformation at this step
    if( defined $prev_xfm ) 
@@ -300,8 +300,7 @@ for ($i=0; $i<=$#conf; $i++){
      push(@args, '-transformation', $prev_xfm ) ;
    } elsif( defined $opt{init_xfm} ) { 
      push(@args, '-transformation', $opt{init_xfm} ) ;
-     # 
-     push(@args, '-est_center' ) ;
+     #push(@args, '-est_center' ) ;
      
    } elsif($opt{close}) {
     push(@args, '-identity') ;  

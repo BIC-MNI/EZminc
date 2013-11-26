@@ -848,6 +848,7 @@ int main (int argc, char **argv)
   history=_history;
   free(_history);
 #else
+  history = minc_timestamp(argc,argv);
 #endif  
   bool order_was_set=false;
   

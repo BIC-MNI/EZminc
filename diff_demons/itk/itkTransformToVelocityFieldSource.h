@@ -165,13 +165,13 @@ protected:
    * filter. */
   void ThreadedGenerateData(
     const OutputImageRegionType & outputRegionForThread,
-    int threadId );
+     ThreadIdType threadId );
 
   /** Faster implementation for resampling that works for with linear
    *  incremental transformation types. */
   void LinearThreadedGenerateData(
     const OutputImageRegionType & outputRegionForThread,
-    int threadId );
+     ThreadIdType threadId );
   
 private:
 
