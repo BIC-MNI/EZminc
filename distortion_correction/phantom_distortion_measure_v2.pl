@@ -38,12 +38,10 @@ my $ex_r;
 my $limit_linear=0;
 my $keep=1.0;
 my $cylindric=0;
-my $acr;
 my $init;
 my $step_iterations;
 my $measure;
 my $debug;
-my $adni;
 my $out_roi;
 my $only_roi;
 my $dilate_roi=0;
@@ -52,6 +50,7 @@ my $pcs;
 my $use_dd=0;
 my $use_ants=0;
 my $keep_tmp=0;
+my $use_elastix=0;
 
 #additional parameters
 GetOptions( 
@@ -68,11 +67,9 @@ GetOptions(
           "limit_linear" =>    \$limit_linear,
           "keep=f"    =>       \$keep,
           "cylindric" =>       \$cylindric,
-          "acr=s"     =>       \$acr,
           "init=s"    =>       \$init,
           "step_iterations=n"=>\$step_iterations,
           "measure=s" =>       \$measure,
-          "adni"      =>       \$adni,
           "out-roi=s" =>       \$out_roi,
           "only-roi"  =>       \$only_roi,
           "dd"        =>       \$use_dd,
@@ -81,6 +78,7 @@ GetOptions(
           "pcs=n"     =>       \$pcs,
           "keep-tmp"  =>       \$keep_tmp,
           "ants"      =>       \$use_ants,
+          "elastix"   =>       \$use_elastix, 
           );
 
 die <<END 
@@ -94,12 +92,10 @@ Usage: $me <scan_1> <mask_1> [<scan_2> <mask_2>...<scan_n> <mask_n>] <output.par
   --limit_linear        - don't use
   --keep <n>            - perform LTS approximation with this fraction, when ==1 perform LSQ approxiamtion (default $keep)
   --cylindric           - assume cylindric (around Z axis) simmetricity of distortion field  
-  --acr <real_acr>      - in case of ACR phantom specify the 'real' acr scan 
   --init <init_xfm>     - specify initial distortion estimation 
   --step_iterations <n> - specify number of iterations at each level of detail (used for debuggin mainly)
   --measure <output>    - perform residual deformation measurement at each iteration (long) 
   --debug               - for debugging
-  --adni                - treat the phantom as adni 
   --out-roi <output>    - create ROI describing volume where distortions may be applied
   --only-roi            - a HACK to skip actual distortion correction field calculations 
   --pca <rotation.csv>  - Principal Components rotation matrix
@@ -145,57 +141,27 @@ unless($work_dir)
   do_cmd('mkdir','-p',$work_dir);
 }
 
-if($ex_r) #making a spherical mask with specified radius
+unless( -e "$tmpdir/skeleton.mnc") #creating a mask for ROI where fitting will happen
 {
-  $mask="$tmpdir/mask_sph.mnc";
-  unless( -e  $mask)
-  {
-    do_cmd('make_phantom','-byte','-no_partial','-ellipse',
-     '-width',$ex_r,$ex_r,$ex_r,
-     '-center',0,0,0,
-     '-start',-400,-400,-400,
-     '-nelements',200,200,200,
-     '-step',4,4,4,
-     "$tmpdir/sphere.mnc");
-    do_cmd('minccalc','-expression','1-A[0]',"$tmpdir/sphere.mnc",$mask);
+  do_cmd('minccalc','-expres','A[0]>1?1:0',$model,"$tmpdir/skeleton.mnc") ;
+
+  if($mask) {
+    do_cmd('mincresample','-nearest','-like',"$tmpdir/skeleton.mnc",$mask,"$tmpdir/mask.mnc",'-q');
+    do_cmd('minccalc','-expression','A[0]>0&&A[1]>0?1:0',"$tmpdir/skeleton.mnc","$tmpdir/mask.mnc","$tmpdir/skeleton_.mnc");
+    do_cmd('mv',"$tmpdir/skeleton_.mnc","$tmpdir/skeleton.mnc");
   }
 }
 
-if(!$acr && !$adni)
+unless(-e "$tmpdir/fit.mnc")
 {
-
-  unless( -e "$tmpdir/skeleton.mnc") #creating a mask for ROI where fitting will happen
+  if($mask)
   {
-    do_cmd('minccalc','-expres','A[0]>1?1:0',$model,"$tmpdir/skeleton.mnc") ;
-
-    if($mask) {
-      do_cmd('mincresample','-nearest','-like',"$tmpdir/skeleton.mnc",$mask,"$tmpdir/mask.mnc",'-q');
-      do_cmd('minccalc','-expression','A[0]>0&&A[1]>0?1:0',"$tmpdir/skeleton.mnc","$tmpdir/mask.mnc","$tmpdir/skeleton_.mnc");
-      do_cmd('mv',"$tmpdir/skeleton_.mnc","$tmpdir/skeleton.mnc");
-    }
-  }
-
-  unless(-e "$tmpdir/fit.mnc")
-  {
-    if($mask)
-    {
-      do_cmd('itk_morph', '--threshold', 1 , '--exp','D[4] E[2]' , $model, "$tmpdir/fit_1.mnc");
-      do_cmd('mincresample', '-nearest','-like',"$tmpdir/fit_1.mnc",$mask,"$tmpdir/mask.mnc",'-q','-clob');
-      do_cmd('minccalc', '-express', 'A[0]>0.5?A[1]:0', "$tmpdir/mask.mnc", "$tmpdir/fit_1.mnc", "$tmpdir/fit.mnc");
-      do_cmd('rm', '-f', "$tmpdir/fit_1.mnc");
-    } else {
-      do_cmd('itk_morph', '--threshold', 1, '--exp', 'D[4] E[2]', $model, "$tmpdir/fit.mnc");
-    }
-  }
-} elsif( $adni) {
-  if($mask) {
-    do_cmd('cp',$mask,"$tmpdir/fit.mnc");
-    do_cmd('cp',$mask,"$tmpdir/skeleton.mnc");
+    do_cmd('itk_morph', '--threshold', 1 , '--exp','D[4] E[2]' , $model, "$tmpdir/fit_1.mnc");
+    do_cmd('mincresample', '-nearest','-like',"$tmpdir/fit_1.mnc",$mask,"$tmpdir/mask.mnc",'-q','-clob');
+    do_cmd('minccalc', '-express', 'A[0]>0.5?A[1]:0', "$tmpdir/mask.mnc", "$tmpdir/fit_1.mnc", "$tmpdir/fit.mnc");
+    do_cmd('rm', '-f', "$tmpdir/fit_1.mnc");
   } else {
-    do_cmd('itk_morph','--threshold',1,'--exp','D[3]',$model,"$tmpdir/skeleton.mnc") 
-        unless -e "$tmpdir/skeleton.mnc";
-    do_cmd('cp',"$tmpdir/skeleton.mnc","$tmpdir/fit.mnc")
-        unless -e "$tmpdir/fit.mnc";
+    do_cmd('itk_morph', '--threshold', 1, '--exp', 'D[4] E[2]', $model, "$tmpdir/fit.mnc");
   }
 }
 
@@ -207,130 +173,85 @@ for ($i=0;$i<=$#scans;$i+=1) {
   my $scan_mask=$scan_masks[$i];
   my $name=basename($scan,'.gz');
   
-  unless(-e "$work_dir/core_${name}")
+  unless(-e "$work_dir/${name}")
   {
-    do_cmd('minccalc','-express','A[0]>20?A[0]:0',$scan,"$work_dir/core_${name}");
+    do_cmd('cp',$scan,"$work_dir/${name}");
   }
   
   # align ideal representation to the scan
-  if($acr && ! -e "$work_dir/align_${name}.xfm" ) #ADNI scan
+  if( $init )
   {
-    # use predefined distortion correction to improve initial alignment
-    if($init) {
-      do_cmd('uniformize_minc.pl',"$work_dir/core_${name}","$tmpdir/init_${name}",
-             '--transform',$init,'--resample','trilinear','--clobber') unless -e "$tmpdir/init_${name}";
-      do_cmd('acr_align.pl',"$tmpdir/init_${name}",$acr,"$tmpdir/pre_align_${name}.xfm") unless -e "$tmpdir/pre_align_${name}.xfm";
-    } else {
-      do_cmd('acr_align.pl',"$tmpdir/core_${name}",$acr,"$tmpdir/pre_align_${name}.xfm") unless -e "$tmpdir/pre_align_${name}.xfm";
-    }
-    do_cmd('xfminvert',"$tmpdir/pre_align_${name}.xfm","$work_dir/align_${name}.xfm");
-  } else { #LEGO phantom scan
-    if( $init )
+    do_cmd('uniformize_minc.pl', "$tmpdir/${name}", "$tmpdir/init_${name}",
+            '--transform',$init,'--resample','trilinear','--clobber') unless -e "$tmpdir/init_${name}";
+
+    do_cmd('bestlinreg_s2', $model, "$tmpdir/init_${name}",
+            "$work_dir/align_${name}.xfm",'-lsq6') unless -e "$work_dir/align_${name}.xfm";
+
+  } else {
+    if(-e "$work_dir/mv_${name}.xfm") # allow specifiying initial transformation
     {
-      do_cmd('uniformize_minc.pl', "$tmpdir/core_${name}", "$tmpdir/init_${name}",
-             '--transform',$init,'--resample','trilinear','--clobber') unless -e "$tmpdir/init_${name}";
-
-      do_cmd('bestlinreg_s2', $model, "$tmpdir/init_${name}",
-              "$work_dir/align_${name}.xfm",'-lsq6') unless -e "$work_dir/align_${name}.xfm";
-
-    } else {
-     print "Manual xfm:$work_dir/mv_${name}.xfm\n";
-     if(-e "$work_dir/mv_${name}.xfm") # allow specifiying initial transformation
-     {
-       print "Using manual xfm\n";
-       do_cmd('bestlinreg_s2','-close',
-              $model,"$work_dir/core_${name}",
-              '-source_mask', $mask, '-target_mask', $scan_mask, 
-              "$work_dir/align_${name}.xfm",'-lsq6',
-              '-init_xfm',"$work_dir/mv_${name}.xfm") 
-          unless -e "$work_dir/align_${name}.xfm";
-     } else {
-        do_cmd('bestlinreg_s2',$model,"$work_dir/core_${name}",
-               '-source_mask', $mask, '-target_mask', $scan_mask, 
-               "$work_dir/align_${name}.xfm",'-lsq6') 
+      print "Using manual xfm:$work_dir/mv_${name}.xfm\n";
+      do_cmd('bestlinreg_s2','-close',
+            $model,"$work_dir/core_${name}",
+            '-source_mask', $mask, 
+            '-target_mask', $scan_mask, 
+            "$work_dir/align_${name}.xfm",'-lsq6',
+            '-init_xfm',"$work_dir/mv_${name}.xfm") 
         unless -e "$work_dir/align_${name}.xfm";
-     }
+    } else {
+      do_cmd('bestlinreg_s2',$model,"$work_dir/core_${name}",
+              '-source_mask', $mask, 
+              '-target_mask', $scan_mask, 
+              "$work_dir/align_${name}.xfm",'-lsq6')
+        unless -e "$work_dir/align_${name}.xfm";
     }
   }
   # create ideal representation
-
+  
   $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
 
   unless( -e "$work_dir/ideal_${name}") 
   { 
-    do_cmd('mincresample',$model,"$tmpdir/ideal_${name}",'-like',
-         "$work_dir/core_${name}",
-         '-transform',"$work_dir/align_${name}.xfm") ;
+    do_cmd('mincresample',$model,"$work_dir/ideal_${name}",
+           '-like',"$work_dir/${name}",
+           '-transform',"$work_dir/align_${name}.xfm") ;
+  }
 
-    do_cmd('minccalc','-express','A[0]>20?A[0]:0',"$tmpdir/ideal_${name}","$work_dir/ideal_${name}");
+  unless(-e "$work_dir/ideal_mask_${name}" )
+  {
+    do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[4]', 
+           "$work_dir/ideal_${name}", "$tmpdir/ideal_mask_${name}");
+    
+    do_cmd('mincresample',$mask,"$tmpdir/ideal_mask2_${name}",
+          '-like',"$work_dir/${name}",
+          '-transform',"$work_dir/align_${name}.xfm") ;
+
+    do_cmd('minccalc', '-express', 'A[0]>0.5&&A[1]>0.5?1:0', '-byte', 
+      "$tmpdir/ideal_mask_${name}", "$tmpdir/ideal_mask2_${name}",  "$work_dir/ideal_mask_${name}");
+
   }
 
   # create mask
-  unless(-e "$work_dir/fit_${name}")
+  unless(-e "$work_dir/mask_${name}")
   {
-    if($acr)
-    {
-      die "ACR phantom processing needs --mask !\n" unless $mask;
-      do_cmd('mincresample',$mask,"$work_dir/fit_${name}",
-             '-like',"$work_dir/core_${name}",
-             '-transform',"$work_dir/align_${name}.xfm",'-nearest');
-    } else {
       
-       do_cmd('mincresample', "$tmpdir/fit.mnc",
-              "$tmpdir/fit_${name}", '-like', "$work_dir/core_${name}",
-              '-transform', "$work_dir/align_${name}.xfm", '-nearest');
-       
-       do_cmd('mincANTS','3','-x',"$tmpdir/fit_${name}", '-m', "CC[$tmpdir/ideal_${name},$work_dir/core_${name},1,2]",
-              '-t', 'SyN[0.25]','--number-of-affine-iterations', '0x0x0', '-i', '100x100x0',
-              '-o', "$tmpdir/ants_${name}.xfm");
-       
-       do_cmd('mincresample', '-nearest', '-like', "$tmpdir/fit_${name}", "$work_dir/core_${name}",
-              '-transform', "$tmpdir/ants_${name}.xfm", '-invert_transformation',
-              "$tmpdir/fit2_${name}");
-       
-       do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[2] E[1]', "$tmpdir/fit2_${name}", "$tmpdir/fit2c_${name}");
-       
-       do_cmd('mincresample','-nearest','-like', "$tmpdir/fit_${name}", "$tmpdir/fit2c_${name}", "$tmpdir/fit2r_${name}");
-       
-       do_cmd('minccalc', '-express', 'A[0]>0.5&&A[1]>0.5?1:0', '-byte', "$tmpdir/fit_${name}", "$tmpdir/fit2r_${name}", "$work_dir/fit_${name}");
-     }
+      do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[4]', "$work_dir/${name}", "$tmpdir/mask_${name}");
+      
+      do_cmd('mincresample','-nearest','-like', "$tmpdir/mask_${name}", $scan_mask, "$tmpdir/mask2_${name}");
+      
+      do_cmd('minccalc', '-express', 'A[0]>0.5&&A[1]>0.5?1:0', '-byte', 
+        "$tmpdir/mask_${name}", "$tmpdir/mask2_${name}", "$work_dir/mask_${name}");
   }
 
-  unless(-e "$work_dir/estimate_${name}" )
-  {
-    do_cmd('mincresample', '-like', "$work_dir/fit_${name}", 
-           "$tmpdir/skeleton.mnc", "$tmpdir/skeleton_${name}", 
-           '-transform', "$work_dir/align_${name}.xfm", '-nearest');
-           
-    do_cmd('minccalc', 
-            '-express', 'A[0]>0.5&&A[1]>0.5&&A[2]>0.5?1:0', 
-            '-byte', "$work_dir/fit_${name}", 
-            "$tmpdir/skeleton_${name}", 
-            $scan_mask, 
-            "$work_dir/estimate_${name}");
-  }
   
-  if($acr) {
-    push @args,"$work_dir/ideal_${name}","$work_dir/core_${name}","$work_dir/fit_${name}","$work_dir/fit_${name}";
-  } else {
-    push @args,"$work_dir/ideal_${name}","$work_dir/core_${name}","$work_dir/fit_${name}","$work_dir/estimate_${name}";
-  }
+  push @args,"$work_dir/ideal_${name}","$work_dir/core_${name}","$tmpdir/ideal_mask_${name}","$tmpdir/mask_${name}";
 }
 
 unless( $only_roi )
 {
   # calculate parameters
-  if($use_dd)
-  {
-    @args=('phantomfit_DD.pl',@args,'-order',$order,'-clobber');
-  } elsif($use_ants) {
-    @args=('phantomfit_ANTS.pl',@args,'-order',$order,'-clobber');
-  } else {
-    @args=('phantomfit.pl',@args,'-order',$order,'-clobber');
-
-    push @args,'-weight',1;
-    push @args,'-stiffness',0.4;
-  }
+  @args=('phantomfit_elastix.pl',@args,'-order',$order,'-clobber');
+  
   push @args,'-cylindric'        if $cylindric;
   push @args,'-keep',$keep       if $keep;
   push @args,"-measure",$measure if $measure;
@@ -354,18 +275,16 @@ if($out_roi)
   $output_field=~s/.xfm$/_grid_0.mnc/;
 
   my @masks;
-  foreach $scan(@scans) {
+  for ($i=0;$i<=$#scans;$i+=1) {
+# extract core
+    my $scan=$scans[$i];
+    my $scan_mask=$scan_masks[$i];
     my $name=basename($scan,'.gz');
-    if($dilate_roi>0)
-    {
-      do_cmd('itk_morph','--exp',"D[${dilate_roi}]",$mask,"$tmpdir/mask.mnc",'--clobber');
-      $mask="$tmpdir/mask.mnc";
-    }
-    do_cmd('mincresample',$mask,'-like',$output_field,
-           '-transform',"$work_dir/align_${name}.xfm",
-           '-nearest',"$work_dir/mask_${name}.mnc",'-clobber');
 
-    push @masks,"$work_dir/mask_${name}.mnc";
+    do_cmd('mincresample',$scan_mask,'-like',$output_field,
+           '-nearest',"$work_dir/mask_lr_${name}.mnc",'-clobber');
+
+    push @masks,"$work_dir/mask_lr_${name}.mnc";
   }
 
   $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
