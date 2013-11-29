@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+
 use strict;
 use File::Basename;
 use File::Temp qw/ tempfile tempdir /;
@@ -17,23 +18,23 @@ my $mri_3t;
 my $nuc_iter=1;
 
 GetOptions (    
-        "verbose"   => \$verbose,
-        "clobber"   => \$clobber,
-        "grayscale" => \$grayscale,
-        "nuc"       => \$nuc,
-        "denoise"   => \$denoise,
-        '3t'        => \$mri_3t,
-        'nuc-iter=n'=> \$nuc_iter
-          );
+        "verbose"    => \$verbose,
+        "clobber"    => \$clobber,
+        "grayscale"  => \$grayscale,
+        "nuc"        => \$nuc,
+        "denoise"    => \$denoise,
+        '3t'         => \$mri_3t,
+        'nuc-iter=n' => \$nuc_iter
+        );
 
-die "Usage: $me <input> <output> [--verbose --clobber --grayscale --nuc --denoise --3t --nuc-iter <n>] \n" if $#ARGV<1;
+die "Usage: $me <input> <output_core> [output_mask] [--verbose --clobber --grayscale --nuc --denoise --3t --nuc-iter <n>] \n" if $#ARGV<1;
 
-my ($input,$output)=@ARGV;
+my ($input,$output,$output_mask)=@ARGV;
 
 check_file($output) unless $clobber;
+check_file($output_mask) if $output_mask && !$clobber;
 
 my $tmpdir = &tempdir( "$me-XXXXXXXX", TMPDIR => 1, CLEANUP => !$keep_tmp );
-#add black padding
 
 
 
@@ -62,7 +63,7 @@ $zspace+=20;
 
 if($denoise)
 {
-  do_cmd('mincnlm',$input,"$tmpdir/denoised.mnc");
+  do_cmd('minc_anlm',$input,"$tmpdir/denoised.mnc");
   $input="$tmpdir/denoised.mnc";
 }
 
@@ -70,35 +71,53 @@ my @args;
 
 unless($grayscale)
 {
- nu_correct($input,$nuc_iter,"$tmpdir/corrected.mnc");
- $input="$tmpdir/corrected.mnc";
- 
- do_cmd('mincreshape','-dimrange',"xspace=-10,$xspace",'-dimrange',"yspace=-10,$yspace",'-dimrange',"zspace=-10,$zspace",$input,"$tmpdir/padded.mnc");
- do_cmd('mv',"$tmpdir/padded.mnc","$tmpdir/corrected.mnc");
- do_cmd('itk_morph','--bimodal','--exp','D[4] E[5]',"$tmpdir/corrected.mnc","$tmpdir/mask.mnc");
- do_cmd('mincresample','-nearest',"$tmpdir/corrected.mnc",'-like',"$tmpdir/mask.mnc","$tmpdir/scan.mnc");
- my $threshold=`mincstats -mask $tmpdir/mask.mnc -mask_binvalue 1 -q -pctT 50 $tmpdir/scan.mnc`;
- chomp($threshold);
- do_cmd('minccalc','-clobber','-expression',"A[0]?clamp(100*($threshold-A[1])/($threshold),0,100):0",
+  nu_correct($input,$nuc_iter,"$tmpdir/corrected.mnc");
+  $input="$tmpdir/corrected.mnc";
+
+  do_cmd('mincreshape','-dimrange',"xspace=-10,$xspace",'-dimrange',"yspace=-10,$yspace",'-dimrange',"zspace=-10,$zspace",$input,"$tmpdir/padded.mnc");
+  do_cmd('mv',"$tmpdir/padded.mnc","$tmpdir/corrected.mnc");
+  do_cmd('itk_morph','--bimodal','--exp','D[4] E[5]',"$tmpdir/corrected.mnc","$tmpdir/mask.mnc");
+  do_cmd('mincresample','-nearest',"$tmpdir/corrected.mnc",'-like',"$tmpdir/mask.mnc","$tmpdir/scan.mnc");
+  my $threshold=`mincstats -mask $tmpdir/mask.mnc -mask_binvalue 1 -q -pctT 50 $tmpdir/scan.mnc`;
+  chomp($threshold);
+
+  do_cmd('minccalc','-clobber','-expression',"A[0]?clamp(100*($threshold-A[1])/($threshold),0,100):0",
         "$tmpdir/mask.mnc","$tmpdir/scan.mnc","$tmpdir/corrected.mnc");
+
 } else {
+
+  if($nuc) {
+    nu_correct($input,$nuc_iter,"$tmpdir/nuc.mnc");
+    $input="$tmpdir/nuc.mnc";
+  }
   
- if($nuc) {
-  nu_correct($input,$nuc_iter,"$tmpdir/nuc.mnc");
-  $input="$tmpdir/nuc.mnc";
- }
- do_cmd('mincreshape','-dimrange',"xspace=-10,$xspace",'-dimrange',"yspace=-10,$yspace",'-dimrange',"zspace=-10,$zspace",$input,"$tmpdir/corrected.mnc",'-clobber');
- do_cmd('itk_g_morph','--exp','D[3]',"$tmpdir/corrected.mnc","$tmpdir/corrected_d3.mnc");
- do_cmd('itk_g_morph','--exp','E[3]',"$tmpdir/corrected_d3.mnc","$tmpdir/mask.mnc");
- do_cmd('mincresample','-nearest',"$tmpdir/corrected.mnc",'-like',"$tmpdir/mask.mnc","$tmpdir/scan.mnc");
- my $pct10=`mincstats -q -biModalT $tmpdir/input.mnc`; # -pctT 10
- chomp($pct10);
- do_cmd('minccalc','-expression',"A[2]>${pct10}&&(A[0]-A[1])>10?(A[0]-A[1])/A[2]:0","$tmpdir/mask.mnc","$tmpdir/scan.mnc","$tmpdir/corrected_d3.mnc","$tmpdir/diff.mnc");
- my $threshold=`mincstats -q -pctT 99 $tmpdir/diff.mnc`;
- chomp($threshold);
- $threshold/=100.0;
- do_cmd('minccalc','-clobber','-expression',"clamp(A[0]/${threshold},0,100)",
+  do_cmd('mincreshape','-dimrange',"xspace=-10,$xspace",'-dimrange',"yspace=-10,$yspace",'-dimrange',"zspace=-10,$zspace",$input,"$tmpdir/corrected.mnc",'-clobber');
+  do_cmd('itk_g_morph','--exp','D[3]',"$tmpdir/corrected.mnc","$tmpdir/corrected_d3.mnc");
+  do_cmd('itk_g_morph','--exp','E[3]',"$tmpdir/corrected_d3.mnc","$tmpdir/mask.mnc");
+  
+  do_cmd('mincresample','-nearest',"$tmpdir/corrected.mnc",'-like',"$tmpdir/mask.mnc","$tmpdir/scan.mnc");
+  
+  my $pct10=`mincstats -q -biModalT $tmpdir/input.mnc`; # -pctT 10
+  chomp($pct10);
+  
+  do_cmd('minccalc','-expression',"A[2]>${pct10}&&(A[0]-A[1])>10?(A[0]-A[1])/A[2]:0",
+    "$tmpdir/mask.mnc",
+    "$tmpdir/scan.mnc",
+    "$tmpdir/corrected_d3.mnc",
+    "$tmpdir/diff.mnc");
+    
+  my $threshold=`mincstats -q -pctT 99 $tmpdir/diff.mnc`;
+  chomp($threshold);
+  $threshold/=100.0;
+  
+  do_cmd('minccalc','-clobber','-expression',"clamp(A[0]/${threshold},0,100)",
         "$tmpdir/diff.mnc","$tmpdir/corrected.mnc",'-byte');
+
+  if ($output_mask)
+  {
+    do_cmd('itk_morph', '--bimodal', '--exp', 'E[2]', "$tmpdir/mask.mnc", "$tmpdir/mask_bin.mnc") ;
+    do_cmd('mv', "$tmpdir/mask_bin.mnc", "$tmpdir/mask.mnc");
+  }
 }
 
 
@@ -112,7 +131,12 @@ do_cmd('mincreshape','-dimrange',"xspace=10,$xspace",
                      '-dimrange',"zspace=10,$zspace",
                      "$tmpdir/corrected.mnc",$output,'-clobber');
 
+if ( $output_mask)                     
+{
+  do_cmd('mincresample', '-nearest', '-like', $output, "$tmpdir/mask.mnc", $output_mask, '-byte', '-clobber');
+}
 
+                     
 sub do_cmd {
     print STDOUT "@_\n" if $verbose;
     if(!$fake) {
