@@ -104,6 +104,9 @@ int main (int argc, char **argv)
   }
 	try
   {
+#ifdef HAVE_MINC4ITK
+    itk::RegisterMincIO();
+#endif    
     const double delta=1e-5;
     minc::def3d::Pointer in_grid=minc::load_minc<minc::def3d>(input_f.c_str());
     minc::def3d::Pointer out_grid(minc::def3d::New());

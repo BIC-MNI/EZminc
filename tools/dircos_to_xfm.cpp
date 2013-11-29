@@ -80,7 +80,7 @@ int main (int argc, char **argv)
   {
 #ifdef HAVE_MINC4ITK
     itk::RegisterMincIO();
-#endif 
+#endif
     
     itk::ImageFileReader<minc::image3d >::Pointer reader = itk::ImageFileReader<minc::image3d >::New();
     reader->SetFileName(input.c_str());
