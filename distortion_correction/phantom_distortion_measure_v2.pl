@@ -141,29 +141,29 @@ unless($work_dir)
   do_cmd('mkdir','-p',$work_dir);
 }
 
-unless( -e "$tmpdir/skeleton.mnc") #creating a mask for ROI where fitting will happen
-{
-  do_cmd('minccalc','-expres','A[0]>1?1:0',$model,"$tmpdir/skeleton.mnc") ;
-
-  if($mask) {
-    do_cmd('mincresample','-nearest','-like',"$tmpdir/skeleton.mnc",$mask,"$tmpdir/mask.mnc",'-q');
-    do_cmd('minccalc','-expression','A[0]>0&&A[1]>0?1:0',"$tmpdir/skeleton.mnc","$tmpdir/mask.mnc","$tmpdir/skeleton_.mnc");
-    do_cmd('mv',"$tmpdir/skeleton_.mnc","$tmpdir/skeleton.mnc");
-  }
-}
-
-unless(-e "$tmpdir/fit.mnc")
-{
-  if($mask)
-  {
-    do_cmd('itk_morph', '--threshold', 1 , '--exp','D[4] E[2]' , $model, "$tmpdir/fit_1.mnc");
-    do_cmd('mincresample', '-nearest','-like',"$tmpdir/fit_1.mnc",$mask,"$tmpdir/mask.mnc",'-q','-clob');
-    do_cmd('minccalc', '-express', 'A[0]>0.5?A[1]:0', "$tmpdir/mask.mnc", "$tmpdir/fit_1.mnc", "$tmpdir/fit.mnc");
-    do_cmd('rm', '-f', "$tmpdir/fit_1.mnc");
-  } else {
-    do_cmd('itk_morph', '--threshold', 1, '--exp', 'D[4] E[2]', $model, "$tmpdir/fit.mnc");
-  }
-}
+# unless( -e "$tmpdir/skeleton.mnc") #creating a mask for ROI where fitting will happen
+# {
+#   do_cmd('minccalc','-expres','A[0]>1?1:0',$model,"$tmpdir/skeleton.mnc") ;
+# 
+#   if($mask) {
+#     do_cmd('mincresample','-nearest','-like',"$tmpdir/skeleton.mnc",$mask,"$tmpdir/mask.mnc",'-q');
+#     do_cmd('minccalc','-expression','A[0]>0&&A[1]>0?1:0',"$tmpdir/skeleton.mnc","$tmpdir/mask.mnc","$tmpdir/skeleton_.mnc");
+#     do_cmd('mv',"$tmpdir/skeleton_.mnc","$tmpdir/skeleton.mnc");
+#   }
+# }
+# 
+# unless(-e "$tmpdir/fit.mnc")
+# {
+#   if($mask)
+#   {
+#     do_cmd('itk_morph', '--threshold', 1 , '--exp','D[4] E[2]' , $model, "$tmpdir/fit_1.mnc");
+#     do_cmd('mincresample', '-nearest','-like',"$tmpdir/fit_1.mnc",$mask,"$tmpdir/mask.mnc",'-q','-clob');
+#     do_cmd('minccalc', '-express', 'A[0]>0.5?A[1]:0', "$tmpdir/mask.mnc", "$tmpdir/fit_1.mnc", "$tmpdir/fit.mnc");
+#     do_cmd('rm', '-f', "$tmpdir/fit_1.mnc");
+#   } else {
+#     do_cmd('itk_morph', '--threshold', 1, '--exp', 'D[4] E[2]', $model, "$tmpdir/fit.mnc");
+#   }
+# }
 
 #now preparing files for each acquisition
 my @args;
@@ -192,14 +192,14 @@ for ($i=0;$i<=$#scans;$i+=1) {
     {
       print "Using manual xfm:$work_dir/mv_${name}.xfm\n";
       do_cmd('bestlinreg_s2','-close',
-            $model,"$work_dir/core_${name}",
+            $model,"$work_dir/${name}",
             '-source_mask', $mask, 
             '-target_mask', $scan_mask, 
             "$work_dir/align_${name}.xfm",'-lsq6',
             '-init_xfm',"$work_dir/mv_${name}.xfm") 
         unless -e "$work_dir/align_${name}.xfm";
     } else {
-      do_cmd('bestlinreg_s2',$model,"$work_dir/core_${name}",
+      do_cmd('bestlinreg_s2',$model,"$work_dir/${name}",
               '-source_mask', $mask, 
               '-target_mask', $scan_mask, 
               "$work_dir/align_${name}.xfm",'-lsq6')
@@ -219,7 +219,7 @@ for ($i=0;$i<=$#scans;$i+=1) {
 
   unless(-e "$work_dir/ideal_mask_${name}" )
   {
-    do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[4]', 
+    do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[4] E[2]', 
            "$work_dir/ideal_${name}", "$tmpdir/ideal_mask_${name}");
     
     do_cmd('mincresample',$mask,"$tmpdir/ideal_mask2_${name}",
@@ -235,7 +235,7 @@ for ($i=0;$i<=$#scans;$i+=1) {
   unless(-e "$work_dir/mask_${name}")
   {
       
-      do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[4]', "$work_dir/${name}", "$tmpdir/mask_${name}");
+      do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[4] E[2]', "$work_dir/${name}", "$tmpdir/mask_${name}");
       
       do_cmd('mincresample','-nearest','-like', "$tmpdir/mask_${name}", $scan_mask, "$tmpdir/mask2_${name}");
       
@@ -244,14 +244,16 @@ for ($i=0;$i<=$#scans;$i+=1) {
   }
 
   
-  push @args,"$work_dir/ideal_${name}","$work_dir/core_${name}","$tmpdir/ideal_mask_${name}","$tmpdir/mask_${name}";
+  push @args,"$work_dir/ideal_${name}","$work_dir/${name}","$work_dir/ideal_mask_${name}","$work_dir/mask_${name}";
 }
+
+do_cmd('mkdir','-p',"$work_dir/work") if $debug;
 
 unless( $only_roi )
 {
   # calculate parameters
   @args=('phantomfit_elastix.pl',@args,'-order',$order,'-clobber');
-  
+  push @args,'-work_dir',"$work_dir/work"  if $debug ;
   push @args,'-cylindric'        if $cylindric;
   push @args,'-keep',$keep       if $keep;
   push @args,"-measure",$measure if $measure;
@@ -260,7 +262,6 @@ unless( $only_roi )
   push @args,'-par',$output_par,'-min_step',$min_step,$output_xfm;
   push @args,'-measure',$measure if $measure;
   push @args,'-step_iterations',$step_iterations if $step_iterations;
-
   push @args,'-debug' if $debug;
   push @args,'-pca',$pca if $pca;
   push @args,'-pcs',$pcs if $pcs;

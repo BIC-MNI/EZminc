@@ -46,7 +46,7 @@ my $elastix_par= <<ELX;
 
 (HowToCombineTransforms "Compose")
 
-(ErodeMask "true")
+//(ErodeMask "true")
 
 (NumberOfResolutions 4)
 
@@ -184,14 +184,14 @@ unless($opt{work_dir})
 }
 
 # write out elastix parameters
-open EL, ">$tmpdir/elastix_parameters" or die;
+open EL, ">$tmpdir/elastix_parameters.txt" or die;
 print EL $elastix_par;
 close EL;
 
 # set up filename base
 my($i, $s_base, $t_base, $tmp_xfm, $tmp_grid, $tmp_source, $tmp_target, $prev_grid, $prev_xfm);
 my @grids;
-
+my @masks;
 # a fitting we shall go...
 for(my $k=0;$k<=$#source;$k++)
 {
@@ -202,12 +202,12 @@ for(my $k=0;$k<=$#source;$k++)
   do_cmd('mkdir', '-p', "$tmpdir/$s_base");
 
   @args = ('elastix',
-    '-f',  $target[$k], 
-    '-m',  $source[$k], 
-    '-fMask',  $source_mask[$k], 
-    '-mMask',  $target_mask[$k],  
+    '-f',  $source[$k],
+    '-m',  $target[$k],
+#    '-fMask',  $target_mask[$k], 
+#    '-mMask',  $source_mask[$k],  
     '-out',  "$tmpdir/$s_base/", 
-    '-p',  "$tmpdir/elastix_parameters");
+    '-p',  "$tmpdir/elastix_parameters.txt");
   
   do_cmd(@args);
   
@@ -215,11 +215,23 @@ for(my $k=0;$k<=$#source;$k++)
     '-def',  'all', '-out',  "$tmpdir/$s_base/");
 
   $tmp_grid = "$tmpdir/$s_base/deformationField.mnc";
-
+  $tmp_xfm  = "$tmpdir/$s_base/deformationField.xfm";
+  #   
+  open XFM, ">$tmp_xfm" or die;
+  print XFM "MNI Transform File\n";
+  print XFM "Transform_Type = Linear;\nLinear_Transform =\n 1 0 0 0\n 0 1 0 0\n 0 0 1 0;\n";
+  print XFM "Transform_Type = Grid_Transform;\n";
+  print XFM "Displacement_Volume = deformationField.mnc;";
+  close XFM;
+  
+  do_cmd('mincresample','-like',$source_mask[$k],$target_mask[$k],'-transform',$tmp_xfm,"$tmpdir/$s_base/target_mask.mnc",'-nearest','-invert');
+  do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],"$tmpdir/$s_base/target_mask.mnc","$tmpdir/$s_base/estimate_mask.mnc");
+  
+  push @masks,"$tmpdir/$s_base/estimate_mask.mnc";
   push @grids,$tmp_grid;
 }
 
-regularize_grids(\@grids,\@source_mask,$opt{order},"$tmpdir/regularize.xfm",1);
+regularize_grids(\@grids,\@masks,$opt{order},"$tmpdir/regularize.xfm",1);
 cleanup_grids(\@grids) unless $opt{debug};
 
 $prev_xfm = "$tmpdir/regularize.xfm";
@@ -284,7 +296,7 @@ sub regularize_grids {
   push(@args,"$tmpdir/regularize.par",'--clobber');
   
   do_cmd(@args);
-  @args=('par2xfm.pl',"$tmpdir/regularize.par",$out,'--clobber','--max',20,'--extent',400,'--step',4);
+  @args=('par2xfm.pl',"$tmpdir/regularize.par",$out,'--clobber','--max',30,'--extent',400,'--step',4);
   push @args,'--noinvert'  if $invert;
   push @args,'--cylindric' if $opt{cyl};
   do_cmd(@args);
