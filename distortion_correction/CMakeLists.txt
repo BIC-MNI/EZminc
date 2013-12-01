@@ -7,11 +7,22 @@ ADD_LIBRARY(spherical_harmonics
   sphericalHarmonicsTransform.cpp 
   sphericalHarmonicsTransform.h)
 
-TARGET_LINK_LIBRARIES( spherical_harmonics
+TARGET_LINK_LIBRARIES( 
+    spherical_harmonics
     ITKIOMINC 
+    minc_image_proc
     ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY} 
     )
 
+IF( ITK_VERSION_MAJOR VERSION_EQUAL 4 )
+  TARGET_LINK_LIBRARIES( 
+    spherical_harmonics
+    itk4MincHelpers
+  )
+ENDIF( ITK_VERSION_MAJOR VERSION_EQUAL 4 )
+
+    
+    
 ADD_EXECUTABLE( fit_harmonics_grids
                 fit_harmonics_grids.cpp )
                 
@@ -40,7 +51,7 @@ ADD_EXECUTABLE( param2grid
                 
                 
 TARGET_LINK_LIBRARIES( param2grid 
-  spherical_harmonics 
+  spherical_harmonics
   ${ITK_LIBRARIES}
   )
 

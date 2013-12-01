@@ -20,7 +20,11 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include "itkMincHelpers.h"
+#ifdef HAVE_MINC4ITK
+#include <itkMincHelpers.h>
+#else
+#include "itk4MincHelpers.h"
+#endif
 
 #include "sphericalHarmonicsTransform.h"
 
@@ -714,11 +718,13 @@ int main (int argc, char **argv)
       REPORT_ERROR("Can't open file for writing!");
     
     save_coeff(cf,fit.coeff);
-    
-	} catch (const minc::generic_error & err) {
+  }  
+#ifdef HAVE_MINC4ITK
+   catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1; 
   }
+#endif  
   catch( itk::ExceptionObject & err ) 
   { 
     std::cerr << "ExceptionObject caught !" << std::endl; 

@@ -22,7 +22,12 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <gsl/gsl_rng.h>
+
+#ifdef HAVE_MINC4ITK
 #include <itkMincHelpers.h>
+#else
+#include "itk4MincHelpers.h"
+#endif
 
 using namespace std;
 using namespace minc;
@@ -133,10 +138,13 @@ int main (int argc, char **argv)
 			cout<<"Done!"<<endl;
     save_minc<def3d>(output.c_str(), grid);
 		
-	} catch (const minc::generic_error & err) {
+	} 
+	#ifdef HAVE_MINC4ITK
+	catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1; 
   }
+  #endif
   catch( itk::ExceptionObject & err ) 
   { 
     std::cerr << "ExceptionObject caught !" << std::endl; 

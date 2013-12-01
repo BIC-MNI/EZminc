@@ -23,7 +23,12 @@
 #include <gsl/gsl_rng.h>
 #include <time.h>
 #include <sys/time.h>
+
+#ifdef HAVE_MINC4ITK
 #include <itkMincHelpers.h>
+#else
+#include "itk4MincHelpers.h"
+#endif
 
 using namespace std;
 using namespace minc;
@@ -473,11 +478,11 @@ int main (int argc, char **argv)
       cerr << output.c_str () << " Exists!" << endl;
       return 1;
     }
-		if(!fit.fit_tags(cond))
-		{
-			cerr<<"Fitting failed, due to large Standard Deviation !"<<endl;
-			return 10;
-		}
+    if(!fit.fit_tags(cond))
+    {
+      cerr<<"Fitting failed, due to large Standard Deviation !"<<endl;
+      return 10;
+    }
     
     std::ofstream cf(output.c_str());
     
@@ -488,10 +493,13 @@ int main (int argc, char **argv)
     save_coeff(cf,fit.coeff[1]);
     save_coeff(cf,fit.coeff[2]);
     
-	} catch (const minc::generic_error & err) {
+  }
+#ifdef HAVE_MINC4ITK
+  catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1; 
   }
+#endif  
   catch( itk::ExceptionObject & err ) 
   { 
     std::cerr << "ExceptionObject caught !" << std::endl; 

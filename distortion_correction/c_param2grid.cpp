@@ -16,7 +16,12 @@
 #include <fstream>
 #include "mincMeanSquaresImageToImageMetric.h"
 #include "sphericalHarmonicsTransform.h"
-#include <itk4MincHelpers.h>
+
+#ifdef HAVE_MINC4ITK
+#include <itkMincHelpers.h>
+#else
+#include "itk4MincHelpers.h"
+#endif
 
 #include <vector>
 #include <unistd.h>

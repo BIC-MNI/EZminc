@@ -17,7 +17,12 @@
 #include <fstream>
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
-#include <itk4MincHelpers.h>
+
+#ifdef HAVE_MINC4ITK
+#include <itkMincHelpers.h>
+#else
+#include "itk4MincHelpers.h"
+#endif
 
 #include <itkBSplineInterpolateImageFunction.h>
 #include <unistd.h>
@@ -474,9 +479,9 @@ int main (int argc, char **argv)
     save_coeff(cf,fit.coeff[0]);
     save_coeff(cf,fit.coeff[1]);
     
-	} 
+  } 
 #ifdef HAVE_MINC4ITK	
-	catch (const minc::generic_error & err) {
+  catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1; 
   }
