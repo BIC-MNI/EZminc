@@ -72,6 +72,7 @@ $me = &basename($0);
    'verbose'   => 1,
    'clobber'   => 0,
    'fake'      => 0,
+   'debug'     => 0,
    'init_xfm'  => undef,
    'source_mask' => undef,
    'target_mask' => undef,
@@ -105,6 +106,8 @@ $Usage = "Usage: $me [options] source.mnc target.mnc output.xfm [output.mnc]\n".
       "clobber existing check files" ],
    ["-fake", "boolean", 0, \$opt{fake},
       "do a dry run, (echo cmds only)" ],
+   ["-debug", "boolean", 0, \$opt{debug},
+      "run minctracc in debug mode" ],
    ["-init_xfm", "string", 1, \$opt{init_xfm},
       "initial transformation (default identity)" ],
    ["-source_mask", "string", 1, \$opt{source_mask},
@@ -153,6 +156,8 @@ $source = shift(@ARGV);
 $target = shift(@ARGV);
 $outxfm = shift(@ARGV);
 $outfile = (defined($ARGV[0])) ? shift(@ARGV) : undef;
+
+$opt{verbose}=1 if $opt{debug};
 
 # check for files
 die "$me: Couldn't find input file: $source\n\n" if (!-e $source);
@@ -214,7 +219,7 @@ $prev_xfm = undef;
 for ($i=0; $i<=$#conf; $i++){
    
    # set up intermediate files
-   $tmp_xfm = "$tmpdir/$s_base\_$i.xfm";
+   $tmp_xfm    = "$opt{work_dir}/$s_base\_$i.xfm";
    $tmp_source = "$opt{work_dir}/$s_base\_$conf[$i]{blur_fwhm}";
    $tmp_target = "$opt{work_dir}/$t_base\_$conf[$i]{blur_fwhm}";
 
@@ -327,6 +332,7 @@ for ($i=0; $i<=$#conf; $i++){
    push @args,'-w_scales',0,0,0 if $opt{noscale};
    push @args,'-w_translations',0,0,0 if $opt{noshift};
    push @args,'-w_rotations',0,0,0 if $opt{norot};
+   push @args,'-debug' if $opt{debug};
    
    # add files and run registration
    push(@args, $tmp_xfm);
