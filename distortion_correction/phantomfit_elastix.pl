@@ -104,7 +104,7 @@ $Help = <<HELP;
 | Problems or comments should be sent to: vladimir.fonov\@gmail.com
 HELP
 
-$Usage = "Usage: $me [options] source.mnc target.mnc source_mask.mnc target_mask.mnc [source.mnc target.mnc source_mask.mnc target_mask.mnc...] output.xfm\n$me -help to list options\n\n";
+$Usage = "Usage: $me [options] source.mnc target.mnc source_mask.mnc target_mask.mnc bricks.mnc [source.mnc target.mnc source_mask.mnc target_mask.mnc bricks.mnc...] output.xfm\n$me -help to list options\n\n";
 
 @opt_table = (
    ["-verbose", "boolean", 0, \$opt{verbose},
@@ -141,6 +141,8 @@ $Usage = "Usage: $me [options] source.mnc target.mnc source_mask.mnc target_mask
       "Use pca rotation matrix" ],
    ["-pcs", "integer", 1, \$opt{pcs},
       "limit number of PCs" ],
+   ["-outdir","string", 1, \$opt{outdir},
+      "Output files directory (bricks)" ],
    );
 
 # Check arguments
@@ -151,28 +153,30 @@ my @source;
 my @target;
 my @source_mask;
 my @target_mask;
+my @bricks;
+
 print "ARGV:",join(',',@ARGV),"\n";
 
 my $minc_compress=$ENV{MINC_COMPRESS};
 delete $ENV{MINC_COMPRESS} if $minc_compress;
 
-$outxfm=pop(@ARGV);
+$outxfm = pop(@ARGV);
 $outfile = $opt{output};
 
-for(my $i=0;$i <= (($#ARGV-1)/4);$i++)
+for(my $i=0;$i <= (($#ARGV-1)/5);$i++)
 {
-  push @source,$ARGV[$i*4];
-  push @target,$ARGV[$i*4+1];
-  push @source_mask,$ARGV[$i*4+2];
-  push @target_mask,$ARGV[$i*4+3];
+  push @source,$ARGV[$i*5];
+  push @target,$ARGV[$i*5+1];
+  push @source_mask,$ARGV[$i*5+2];
+  push @target_mask,$ARGV[$i*5+3];
+  push @bricks,$ARGV[$i*5+4];
 }
 print "Sources:",join(' ',@source),"\n";
 print "Target:",join(' ',@target),"\n";
 
-check_file($outxfm) unless $opt{clobber};
-check_file($outfile) unless $opt{clobber} || !defined($outfile);
+check_file($outxfm)   unless $opt{clobber};
+check_file($outfile)  unless $opt{clobber} || !defined($outfile);
 check_file($opt{par}) unless $opt{clobber} || !defined($opt{par});
-#check_file($opt{measure}) unless $opt{clobber} || !defined($opt{measure});
 
 # make tmpdir
 unless($opt{work_dir})
@@ -227,6 +231,16 @@ for(my $k=0;$k<=$#source;$k++)
   do_cmd('mincresample','-like',$source_mask[$k],$target_mask[$k],'-transform',$tmp_xfm,"$tmpdir/$s_base/target_mask.mnc",'-nearest','-invert');
   do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],"$tmpdir/$s_base/target_mask.mnc","$tmpdir/$s_base/estimate_mask.mnc");
   
+  if($opt{outdir})
+  {
+    do_cmd('itk_resample',
+          '--labels',
+          '--like',$source_mask[$k],
+          '--transform',$tmp_xfm,
+          '--invert_transform',$bricks[$k],
+          "$opt{outdir}/${s_base}_bricks.mnc");
+  }
+
   push @masks,"$tmpdir/$s_base/estimate_mask.mnc";
   push @grids,$tmp_grid;
 }
@@ -236,8 +250,7 @@ cleanup_grids(\@grids) unless $opt{debug};
 
 $prev_xfm = "$tmpdir/regularize.xfm";
 $prev_grid = "$tmpdir/regularize_grid_0.mnc";
-    
-    
+
 do_cmd('cp',"$tmpdir/regularize.par",$opt{par}) if $opt{par};
 do_cmd('xfminvert',$prev_xfm,$outxfm);
 

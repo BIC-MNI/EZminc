@@ -30,6 +30,7 @@ my $model;
 my $min_step=2;
 my $no_core_extract=0;
 my $me=basename( $0 ) ;
+my $mydir=dirname( $0 );
 my ($fit_xfm,$ideal,$core);
 my $work_dir;
 my $measure;
@@ -51,6 +52,7 @@ my $use_dd=0;
 my $use_ants=0;
 my $keep_tmp=0;
 my $use_elastix=0;
+my $bricks;
 
 #additional parameters
 GetOptions( 
@@ -79,10 +81,11 @@ GetOptions(
           "keep-tmp"  =>       \$keep_tmp,
           "ants"      =>       \$use_ants,
           "elastix"   =>       \$use_elastix, 
+          "bricks=s" =>        \$bricks,
           );
 
 die <<END 
-Usage: $me <scan_1> <mask_1> [<scan_2> <mask_2>...<scan_n> <mask_n>] <output.par> <output.xfm> 
+Usage: $me <scan_1> <mask_1> [<scan_2> <mask_2>...<scan_n> <mask_n>] <output.par> <output.xfm> <output_measure.csv>
   --model <model>       - ideal model 
 [ 
   --mask  <mask file>   - mask the unwonted areas of the model (i.e edges)
@@ -102,16 +105,19 @@ Usage: $me <scan_1> <mask_1> [<scan_2> <mask_2>...<scan_n> <mask_n>] <output.par
   --pcs <n>             - Number of Principal components to use
   --dd                  - Use Diffeomorphic Demons registration instead of minctracc 
   --ants                - Use mincANTS
+  --elastix             - Use Elastix
+  --bricks <bricks.mnc> - provide bricks file
 ] 
 END
-  if $#ARGV<3; #number of arguments -1 
+  if $#ARGV<4; #number of arguments -1 
 
 die "You need to specify a model (--model) and mask (--mask)!\n" unless $model && -e $model && $mask && -e $mask;
 
-my ($scan,$output_par,$output_xfm);
+my ($scan,$output_par,$output_xfm,$output_csv);
+
+$output_csv=pop @ARGV;
 $output_xfm=pop @ARGV;
 $output_par=pop @ARGV;
-
 
 my $i;
 my @scans;
@@ -141,29 +147,6 @@ unless($work_dir)
   do_cmd('mkdir','-p',$work_dir);
 }
 
-# unless( -e "$tmpdir/skeleton.mnc") #creating a mask for ROI where fitting will happen
-# {
-#   do_cmd('minccalc','-expres','A[0]>1?1:0',$model,"$tmpdir/skeleton.mnc") ;
-# 
-#   if($mask) {
-#     do_cmd('mincresample','-nearest','-like',"$tmpdir/skeleton.mnc",$mask,"$tmpdir/mask.mnc",'-q');
-#     do_cmd('minccalc','-expression','A[0]>0&&A[1]>0?1:0',"$tmpdir/skeleton.mnc","$tmpdir/mask.mnc","$tmpdir/skeleton_.mnc");
-#     do_cmd('mv',"$tmpdir/skeleton_.mnc","$tmpdir/skeleton.mnc");
-#   }
-# }
-# 
-# unless(-e "$tmpdir/fit.mnc")
-# {
-#   if($mask)
-#   {
-#     do_cmd('itk_morph', '--threshold', 1 , '--exp','D[4] E[2]' , $model, "$tmpdir/fit_1.mnc");
-#     do_cmd('mincresample', '-nearest','-like',"$tmpdir/fit_1.mnc",$mask,"$tmpdir/mask.mnc",'-q','-clob');
-#     do_cmd('minccalc', '-express', 'A[0]>0.5?A[1]:0', "$tmpdir/mask.mnc", "$tmpdir/fit_1.mnc", "$tmpdir/fit.mnc");
-#     do_cmd('rm', '-f', "$tmpdir/fit_1.mnc");
-#   } else {
-#     do_cmd('itk_morph', '--threshold', 1, '--exp', 'D[4] E[2]', $model, "$tmpdir/fit.mnc");
-#   }
-# }
 
 #now preparing files for each acquisition
 my @args;
@@ -207,7 +190,6 @@ for ($i=0;$i<=$#scans;$i+=1) {
     }
   }
   # create ideal representation
-  
   $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
 
   unless( -e "$work_dir/ideal_${name}") 
@@ -230,6 +212,15 @@ for ($i=0;$i<=$#scans;$i+=1) {
       "$tmpdir/ideal_mask_${name}", "$tmpdir/ideal_mask2_${name}",  "$work_dir/ideal_mask_${name}");
 
   }
+  
+  unless( -e "$work_dir/bricks_${name}") #consider using tfm_input_sampling here
+  { 
+    do_cmd('itk_resample',
+           $bricks,"$work_dir/bricks_${name}",
+           '--like',"$work_dir/${name}",
+           '--transform',"$work_dir/align_${name}.xfm",
+           '--labels') ;
+  }
 
   # create mask
   unless(-e "$work_dir/mask_${name}")
@@ -244,7 +235,7 @@ for ($i=0;$i<=$#scans;$i+=1) {
   }
 
   
-  push @args,"$work_dir/ideal_${name}","$work_dir/${name}","$work_dir/ideal_mask_${name}","$work_dir/mask_${name}";
+  push @args,"$work_dir/ideal_${name}","$work_dir/${name}","$work_dir/ideal_mask_${name}","$work_dir/mask_${name}","$work_dir/bricks_${name}";
 }
 
 do_cmd('mkdir','-p',"$work_dir/work") if $debug;
@@ -252,7 +243,8 @@ do_cmd('mkdir','-p',"$work_dir/work") if $debug;
 unless( $only_roi )
 {
   # calculate parameters
-  @args=('phantomfit_elastix.pl',@args,'-order',$order,'-clobber');
+  @args=("$mydir/phantomfit_elastix.pl",@args,'-order',$order,'-clobber');
+
   push @args,'-work_dir',"$work_dir/work"  if $debug ;
   push @args,'-cylindric'        if $cylindric;
   push @args,'-keep',$keep       if $keep;
@@ -265,7 +257,8 @@ unless( $only_roi )
   push @args,'-debug' if $debug;
   push @args,'-pca',$pca if $pca;
   push @args,'-pcs',$pcs if $pcs;
-  
+  push @args,'-outdir',$work_dir;
+
   do_cmd(@args);
 }
 
@@ -291,8 +284,6 @@ if($out_roi)
   $ENV{MINC_COMPRESS}=$minc_compress if $minc_compress;
   do_cmd('mincmath','-byte','-max',@masks,$out_roi,'-clobber');
 }
-
-#exit 0 if $only_roi;
 
 sub do_cmd {
     print STDOUT "@_\n" if $verbose;
