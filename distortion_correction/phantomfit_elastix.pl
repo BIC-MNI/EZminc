@@ -233,6 +233,7 @@ for(my $k=0;$k<=$#source;$k++)
   
   if($opt{outdir})
   {
+    do_cmd('cp',"$tmpdir/$s_base/TransformParameters.0.txt","$opt{outdir}/${s_base}_elx.txt");
     do_cmd('itk_resample',
           '--labels',
           '--like',$source_mask[$k],
@@ -240,6 +241,7 @@ for(my $k=0;$k<=$#source;$k++)
           '--invert_transform',$bricks[$k],
           "$opt{outdir}/${s_base}_bricks.mnc");
   }
+  
 
   push @masks,"$tmpdir/$s_base/estimate_mask.mnc";
   push @grids,$tmp_grid;
