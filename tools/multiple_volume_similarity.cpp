@@ -14,6 +14,8 @@
 ---------------------------------------------------------------------------- */
 
 #include <iostream>
+#include <fstream>
+
 #include <itkImage.h>
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
@@ -150,8 +152,6 @@ int main(int argc,char **argv)
         break;
       case 'l':
         list_f=optarg;
-        std::cerr<<"Sorry, not implemented yet!"<<std::endl;
-        return 1;
         break;
       case 'c':
         classes=atoi(optarg);
@@ -170,8 +170,7 @@ int main(int argc,char **argv)
     }
   }
 
-  //TODO: add reading from file list
-  if((argc - optind) < 2) {
+  if(list_f.empty() && (argc - optind) < 2) {
     show_usage (argv[0]);
     return 1;
   }
@@ -206,10 +205,7 @@ int main(int argc,char **argv)
 #if ( ITK_VERSION_MAJOR < 4 )
     itk::RegisterMincIO();
 #endif
-    int nfiles=argc-optind;
     
-    if(verbose)
-      std::cout<<"Processing:"<<nfiles<< " files"<<std::endl;
     
     VectorImageType::Pointer distribution=VectorImageType::New();
     ReaderType::Pointer reader=ReaderType::New();
@@ -231,10 +227,42 @@ int main(int argc,char **argv)
     }
 
     std::set<IOPixelType> labels_set;
+    
+    int nfiles=argc-optind;
+    
+    std::vector<std::string> input_files;
+    
+    for(int i=0;i<nfiles;i++)
+    {
+      input_files.push_back(argv[i+optind]);
+    }
+    
+    if(!list_f.empty())
+    {
+      std::ifstream inf(list_f.c_str());
+      while(inf.good() && !inf.eof())
+      {
+        char tmp[1024];
+        inf>>tmp;
+        if(!strlen(tmp)) break;
+        input_files.push_back(tmp);
+      }
+    }
+    
+    nfiles=input_files.size();
+    
+    if(!nfiles)
+    {
+      std::cerr<<"No input files provided!, aborting!"<<std::endl;
+      return 1 ;
+    }
+    
+    if(verbose)
+      std::cout<<"Processing:"<<nfiles<< " files"<<std::endl;
   
     for(int i=0;i<nfiles;i++)
     {
-      const char* fname=argv[i+optind];
+      const char* fname=input_files[i].c_str();
       if(verbose)
         std::cout<<fname<<"\t"<<std::flush;
       
@@ -292,19 +320,19 @@ int main(int argc,char **argv)
         distribution->Allocate();
         distribution->FillBuffer(zero);
       } else {  
-				if(distribution->GetSpacing()!=img->GetSpacing())
-				{
-					std::cerr<<fname<<" spacing mismatch!"<<std::endl;return 1;
-				}
-				if(distribution->GetOrigin()!=img->GetOrigin())
-				{
-					std::cerr<<fname<<" origin mismatch!"<<std::endl;return 1;
-				}
-				if(distribution->GetDirection()!=img->GetDirection())
-				{
-					std::cerr<<fname<<" direction cosines mismatch!"<<std::endl;return 1;
-				}
-			}
+      	if(distribution->GetSpacing()!=img->GetSpacing())
+      	{
+      		std::cerr<<fname<<" spacing mismatch!"<<std::endl;return 1;
+      	}
+      	if(distribution->GetOrigin()!=img->GetOrigin())
+      	{
+      		std::cerr<<fname<<" origin mismatch!"<<std::endl;return 1;
+      	}
+      	if(distribution->GetDirection()!=img->GetDirection())
+      	{
+      		std::cerr<<fname<<" direction cosines mismatch!"<<std::endl;return 1;
+      	}
+      }
 			
 			IOImageConstIterator it1(img,img->GetLargestPossibleRegion());
 			VectorImageIterator  it2(distribution,distribution->GetLargestPossibleRegion());
