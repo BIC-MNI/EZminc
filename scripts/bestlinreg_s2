@@ -27,7 +27,7 @@ use File::Temp qw/ tempdir /;
 my @conf = (
 
    { type        => "blur",
-     trans       => [qw/-est_translations/],
+     trans       => undef,
      blur_fwhm   => 16,
      steps       => [qw/8 8 8/],
      tolerance   => 0.01,
@@ -305,11 +305,10 @@ for ($i=0; $i<=$#conf; $i++){
      push(@args, '-transformation', $prev_xfm ) ;
    } elsif( defined $opt{init_xfm} ) { 
      push(@args, '-transformation', $opt{init_xfm} ) ;
-     # 
-     push(@args, '-est_center' ) ;
-     
    } elsif($opt{close}) {
-    push(@args, '-identity') ;  
+     push(@args, '-identity') ;  
+   } else {
+     push(@args, '-est_translations','-est_center') ;
    }
 
    # masks (even if the blurred image is masked, it's still preferable
