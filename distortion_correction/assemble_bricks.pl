@@ -36,14 +36,13 @@ GetOptions (
 	        "verbose"   => \$verbose,
           "clobber"   => \$clobber,
           "brick=s"   => \$brick,
-          "out=s"     => \$out,
           "like=s"    => \$like,
           "mask=s"    => \$mask,
           "cont"      => \$cont,
           "tmp=s"     => \$tmpdir
           );
           
-die "Usage: $me <bricks.tag> <output_model.mnc> --verbose --clobber --brick <brick> --out <out> --mask <brick_mask> --like <sample> --cont \n"  if $#ARGV<0;
+die "Usage: $me <bricks.tag> <output_model.mnc> --verbose --clobber --brick <brick> --mask <brick_mask> --like <sample> --cont \n"  if $#ARGV<0;
 
 my ($tag,$out)=@ARGV;
 
@@ -73,6 +72,10 @@ for $i(0..$#tags)
 	}
 	push (@xfm,$out_xfm);
 }
+
+
+my $comp=$ENV{MINC_COMPRESS};
+delete $ENV{MINC_COMPRESS} if $comp;
 
 my $b;
 my $j=1;
@@ -104,8 +107,14 @@ if($cont) {
   }
 }
 
-#do_cmd('mincmath','-max',@bricks,$out,'-clobber');
-do_cmd('cp',"$tmpdir/brick_tmp.mnc",$out);
+$ENV{MINC_COMPRESS}=$comp if $comp;
+
+if($cont)
+{
+  do_cmd('mincreshape',"$tmpdir/brick_tmp.mnc",$out);
+} else {
+  do_cmd('mincreshape',"$tmpdir/brick_tmp.mnc",$out,'-image_range',0,$j,'-valid_range',0,$j);
+}
 
 
 sub do_cmd {
