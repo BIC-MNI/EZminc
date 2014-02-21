@@ -38,6 +38,7 @@ my $model_dir;
 my $face;
 my $brain;
 my $normalize;
+my $dilate_brain=2;
 
 GetOptions (    
           "verbose"       => \$verbose,
@@ -54,6 +55,7 @@ GetOptions (
           "brain=s"       => \$brain,
           "face=s"        => \$face,
           "normalize"     => \$normalize,
+          "dilate=n"      => \$dilate_brain,
           ); 
 
 die <<HELP
@@ -100,7 +102,7 @@ if($model && $model_dir && !$tal_xfm)
 
 if($face && $brain)
 {
-  do_cmd('itk_morph','--exp','D[2]',$brain,"$tmpdir/brain.mnc");
+  do_cmd('itk_morph','--exp',"D[$dilate_brain]",$brain,"$tmpdir/brain.mnc");
   do_cmd('itk_morph','--exp','D[2]',$face ,"$tmpdir/face.mnc");
   #substract brain from face
   do_cmd('minccalc','-expression','A[0]==1&&A[1]==0?1:0', "$tmpdir/face.mnc", "$tmpdir/brain.mnc", "$tmpdir/mask.mnc",'-clobber');
