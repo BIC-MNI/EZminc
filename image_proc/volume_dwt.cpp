@@ -21,7 +21,7 @@
 #include <iostream>
 #include <getopt.h>
 
-#include "dwt.h"
+#include "volume_dwt.h"
 #include "dwt_utils.h"
 
 
@@ -34,10 +34,8 @@ void show_usage(const char *name)
 {
   std::cerr 
       << "Usage: "<<name<<" --forward <input>  <output_LLL> <output_LLH> <output_LHL> <output_LHH> <output_HLL> <output_HLH> <output_HHL> <output_HHH>" << std::endl
-      
       << "Or: "<<name<<" --backward <input_LLL> <input_LLH> <input_LHL> <input_LHH> <input_HLL> <input_HLH> <input_HHL> <input_HHH> <output>"<<std::endl 
-      
-      <<"Or: "<<name<<"[--forward|--backward] --packed <input> <output>"<<std::endl;
+      << "Or: "<<name<<"[--forward|--backward] --packed <input> <output>"<<std::endl;
 }
 
 

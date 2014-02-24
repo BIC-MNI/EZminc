@@ -21,7 +21,7 @@
 #include <getopt.h>
 #include <unistd.h>
 
-#include "dwt.h"
+#include "volume_dwt.h"
 #include "dwt_utils.h"
 
 

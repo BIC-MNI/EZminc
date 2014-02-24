@@ -1,7 +1,7 @@
 IF(HAVE_MINC1)
 
-SET( IMAGE_PROC_SRC minc_histograms.cpp dwt.cpp  dwt_utils.cpp )
-SET( IMAGE_PROC_HDR minc_histograms.h dwt.h  dwt_utils.h )
+SET( IMAGE_PROC_SRC minc_histograms.cpp dwt.cpp       dwt_utils.cpp )
+SET( IMAGE_PROC_HDR minc_histograms.h   volume_dwt.h  dwt_utils.h )
 
 IF( GSL_FOUND )
   SET( IMAGE_PROC_HDR ${IMAGE_PROC_HDR} gsl_gauss.h  gsl_glue.h gsl_nlfit.h )

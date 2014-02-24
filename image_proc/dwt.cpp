@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 #include <math.h>
-#include "dwt.h"
+#include "volume_dwt.h"
 
 
 #define C0 0.4829629131445341 

@@ -13,7 +13,7 @@
               express or implied warranty.
 ---------------------------------------------------------------------------- */
 #include "dwt_utils.h"
-#include "dwt.h"
+#include "volume_dwt.h"
 #include <assert.h>
 
 namespace minc
