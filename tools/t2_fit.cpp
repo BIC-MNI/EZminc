@@ -166,7 +166,13 @@ int main (int argc, char **argv)
           return 1;
         }
       }
-      te[i]=files[i].att_value_double("acquisition","echo_time")[0];
+      std::vector<double> _te=files[i].att_value_double("acquisition","echo_time");
+      if(_te.empty())
+      {
+        std::cerr<<"Input file "<< argv[i+optind]<<" Does not specify echo time in acquisition:echo_time"<<std::endl;
+        return 1;
+      }
+      te[i]=_te[0];
       files[i].setup_read_float();
       in[i].attach(files[i]);
       in[i].begin();
