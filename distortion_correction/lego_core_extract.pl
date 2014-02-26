@@ -9,13 +9,12 @@ use Getopt::Long;
 my $fake=0;
 my $verbose=0;
 my $clobber=0;
-my $keep_tmp=0;
+my $keep_tmp=1;
 my $me=basename($0);
 my $grayscale;
 my $nuc;
 my $denoise;
 my $mri_3t;
-my $nuc_iter=1;
 
 GetOptions (    
         "verbose"    => \$verbose,
@@ -24,10 +23,9 @@ GetOptions (
         "nuc"        => \$nuc,
         "denoise"    => \$denoise,
         '3t'         => \$mri_3t,
-        'nuc-iter=n' => \$nuc_iter
         );
 
-die "Usage: $me <input> <output_core> [output_mask] [--verbose --clobber --grayscale --nuc --denoise --3t --nuc-iter <n>] \n" if $#ARGV<1;
+die "Usage: $me <input> <output_core> [output_mask] [--verbose --clobber --grayscale --nuc --denoise --3t ] \n" if $#ARGV<1;
 
 my ($input,$output,$output_mask)=@ARGV;
 
@@ -71,7 +69,7 @@ my @args;
 
 unless($grayscale)
 {
-  nu_correct($input,$nuc_iter,"$tmpdir/corrected.mnc");
+  nu_correct($input,"$tmpdir/corrected.mnc");
   $input="$tmpdir/corrected.mnc";
 
   do_cmd('mincreshape','-dimrange',"xspace=-10,$xspace",'-dimrange',"yspace=-10,$yspace",'-dimrange',"zspace=-10,$zspace",$input,"$tmpdir/padded.mnc");
@@ -87,7 +85,7 @@ unless($grayscale)
 } else {
 
   if($nuc) {
-    nu_correct($input,$nuc_iter,"$tmpdir/nuc.mnc");
+    nu_correct($input,"$tmpdir/nuc.mnc");
     $input="$tmpdir/nuc.mnc";
   }
   
@@ -100,7 +98,7 @@ unless($grayscale)
   my $pct10=`mincstats -q -biModalT $tmpdir/input.mnc`; # -pctT 10
   chomp($pct10);
   
-  do_cmd('minccalc','-expression',"A[2]>${pct10}&&(A[0]-A[1])>10?(A[0]-A[1])/A[2]:0",
+  do_cmd('minccalc','-expression',"A[2]>${pct10}&&(A[0]-A[1])>0?(A[0]-A[1])/A[2]:0",
     "$tmpdir/mask.mnc",
     "$tmpdir/scan.mnc",
     "$tmpdir/corrected_d3.mnc",
@@ -131,7 +129,7 @@ do_cmd('mincreshape','-dimrange',"xspace=10,$xspace",
                      '-dimrange',"zspace=10,$zspace",
                      "$tmpdir/corrected.mnc",$output,'-clobber');
 
-if ( $output_mask)                     
+if ( $output_mask)
 {
   do_cmd('mincresample', '-nearest', '-like', $output, "$tmpdir/mask.mnc", $output_mask, '-byte', '-clobber');
 }
@@ -150,23 +148,11 @@ sub check_file {
 
 
 sub nu_correct {
- my ($input,$nuc_iter,$output)=@_;
+  my ($input,$output)=@_;
 
- my $iter=0;
- while($iter<$nuc_iter)
- {
-  @args=("nu_correct", "-clobber", "-iter", 100, "-stop", 0.00001, "-fwhm", 0.1,$input,  "$tmpdir/corrected_$iter.mnc",'-clobber');
+  my $iter=0;
+  @args=("nu_correct", "-clobber", "-iter", 100, "-stop", 0.00001, "-fwhm", 0.1, $input,  "$tmpdir/corrected.mnc",'-clobber');
   push @args,'-distance',50 if $mri_3t;
-  if($iter>0)
-  {
-    do_cmd('itk_morph','--bimodal','--exp','E[1]',$input,"$tmpdir/mask_tmp_$iter.mnc");
-    do_cmd('mincresample','-nearest','-like',$input,"$tmpdir/mask_tmp_$iter.mnc","$tmpdir/mask_$iter.mnc",'-q');
-    do_cmd('rm','-f',"$tmpdir/mask_tmp_$iter.mnc");
-    push(@args,'-mask',"$tmpdir/mask_$iter.mnc");
-  }
   do_cmd(@args);
-  $input="$tmpdir/corrected_$iter.mnc";
-  $iter+=1;
- }
- do_cmd('mv',$input,$output);
+  do_cmd('mv',"$tmpdir/corrected.mnc",$output);
 }
