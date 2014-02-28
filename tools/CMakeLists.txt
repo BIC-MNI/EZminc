@@ -96,9 +96,12 @@ IF(ITK_FOUND)
                     dircos_to_xfm.cpp )
     TARGET_LINK_LIBRARIES( dircos_to_xfm  ITKIOMINC ${ITK_LIBRARIES} )
     
-    INSTALL(TARGETS dircos_to_xfm resample_grid RUNTIME DESTINATION bin)
+    ADD_EXECUTABLE( tag2csv  tag2csv.cpp)
+    TARGET_LINK_LIBRARIES(tag2csv ITKIOMINC ${ITK_LIBRARIES})
+    
+    INSTALL(TARGETS dircos_to_xfm resample_grid tag2csv RUNTIME DESTINATION bin)
   
-  ENDIF(HAVE_MINC1)
+      ENDIF(HAVE_MINC1)
   
   INSTALL(TARGETS 
     multiple_volume_similarity itk_distance itk_similarity itk_resample  itk_convert itk_morph itk_g_morph
@@ -126,9 +129,6 @@ IF(HAVE_MINC1)
 
   ADD_EXECUTABLE( xfm2def xfm2def.c)
   TARGET_LINK_LIBRARIES(xfm2def ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES} )
-  
-  ADD_EXECUTABLE( tag2csv  tag2csv.cpp)
-  TARGET_LINK_LIBRARIES(tag2csv ITKIOMINC ${ITK_LIBRARIES})
 
   ADD_EXECUTABLE( fuzzy_volume_similarity fuzzy_volume_similarity.cpp)
   TARGET_LINK_LIBRARIES(fuzzy_volume_similarity minc_image_proc ${EZMINC_LIBRARIES})
