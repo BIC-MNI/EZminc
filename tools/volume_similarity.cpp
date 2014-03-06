@@ -29,7 +29,7 @@ void show_usage (const char * prog)
           <<"\"Relationships between statistical measures of agreement: sensitivity, specificity and kappa\""
           <<" Journal of Evaluation in Clinical Practice vol. 14 no. 5 pp 930-933 2008"<<std::endl
           <<"http://dx.doi.org/10.1111/j.1365-2753.2008.00984.x"<<std::endl<<std::endl
-          <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> [--kappa --sensitivity --specificity --verbose --jaccard --csv]"<<std::endl;
+          <<"Usage: "<<prog<<" <ground_truth.mnc> <test.mnc> [--kappa --sensitivity --specificity --verbose --jaccard --csv]"<<std::endl;
   
 }
 
