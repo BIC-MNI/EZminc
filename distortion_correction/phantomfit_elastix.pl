@@ -249,10 +249,18 @@ for(my $k=0;$k<=$#source;$k++)
   $s_base = basename($source[$k]);
   $s_base =~ s/\.gz$//;
   $s_base =~ s/\.mnc$//;
-
-  $tmp_xfm=run_elastix($elastix_par,$source[$k],$target[$k],"$tmpdir/$s_base/",$source_mask[$k],$target_mask[$k]);
   
-  do_cmd('mincresample','-like',$source_mask[$k],$target_mask[$k],'-transform',$tmp_xfm,"$tmpdir/$s_base/target_mask.mnc",'-nearest','-invert');
+  # 1 refine masks to avoid fitting in areas where information is missing
+  my $fast_xfm=run_elastix($elastix_fast,$source[$k],$target[$k],"$tmpdir/${s_base}_fast/");
+  
+  do_cmd('itk_resample','--like',$source_mask[$k],$target_mask[$k],'--transform',$fast_xfm,"$tmpdir/${s_base}_fast/target_mask.mnc",'--labels','--invert');
+  do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],"$tmpdir/${s_base}_fast/target_mask.mnc","$tmpdir/${s_base}_fast/new_source_mask.mnc");
+  do_cmd('itk_resample','--like',$target_mask[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc",'--transform',$fast_xfm,"$tmpdir/${s_base}_fast/new_target_mask.mnc",'--labels');
+
+  # 2 run real fit
+  $tmp_xfm=run_elastix($elastix_par,$source[$k],$target[$k],"$tmpdir/$s_base/","$tmpdir/${s_base}_fast/new_source_mask.mnc","$tmpdir/${s_base}_fast/new_target_mask.mnc");
+  
+  do_cmd('itk_resample','--like',$source_mask[$k],$target_mask[$k],'-transform',$tmp_xfm,"$tmpdir/$s_base/target_mask.mnc",'--labels','--invert');
   do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],"$tmpdir/$s_base/target_mask.mnc","$tmpdir/$s_base/estimate_mask.mnc");
   
   if($opt{outdir})
@@ -266,7 +274,6 @@ for(my $k=0;$k<=$#source;$k++)
           '--invert_transform',$bricks[$k],
           "$opt{outdir}/${s_base}_bricks.mnc");
   }
-  
 
   push @masks,"$tmpdir/$s_base/estimate_mask.mnc";
   push @grids,$tmp_grid;
@@ -361,12 +368,13 @@ sub run_elastix {
   my @args = ('elastix',
     '-f',  $source,
     '-m',  $target,
-    '-fMask',  $source_mask, 
-    '-mMask',  $target_mask, 
     '-out',  $out_dir, 
     '-p',  "$out_dir/elastix_parameters.txt",
     '-threads',4 );
-  
+ 
+  push (@args,'-fMask', $source_mask) if defined( $source_mask);
+  push (@args,'-mMask',  $target_mask) if defined( $target_mask);
+
   do_cmd(@args);
   
   do_cmd('transformix', '-tp',  "$out_dir/TransformParameters.0.txt",
