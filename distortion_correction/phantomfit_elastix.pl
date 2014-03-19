@@ -23,6 +23,57 @@ use Getopt::Tabular;
 use File::Basename;
 use File::Temp qw/ tempdir /;
 
+
+my $elastix_fast= <<ELX1;
+(FixedInternalImagePixelType "float")
+(MovingInternalImagePixelType "float")
+(FixedImageDimension 3)
+(MovingImageDimension 3)
+(UseDirectionCosines "true")
+
+(Registration "MultiResolutionRegistration")
+(Interpolator "BSplineInterpolator" )
+(ResampleInterpolator "FinalBSplineInterpolator" )
+(Resampler "DefaultResampler" )
+
+(FixedImagePyramid  "FixedSmoothingImagePyramid")
+(MovingImagePyramid "MovingSmoothingImagePyramid")
+
+(Optimizer "AdaptiveStochasticGradientDescent")
+(Transform "BSplineTransform")
+(Metric "AdvancedNormalizedCorrelation")
+
+(FinalGridSpacingInPhysicalUnits 12)
+
+(HowToCombineTransforms "Compose")
+
+(ErodeMask "false")
+
+(NumberOfResolutions 3)
+
+(ImagePyramidSchedule 8 8 8  4 4 4  2 2 2)
+
+(MaximumNumberOfIterations 2000)
+(MaximumNumberOfSamplingAttempts 3)
+
+(NumberOfSpatialSamples 4096)
+
+(NewSamplesEveryIteration "true")
+(ImageSampler "RandomSparseMask" )
+
+(BSplineInterpolationOrder 1)
+
+(FinalBSplineInterpolationOrder 3)
+
+(DefaultPixelValue 0)
+
+(WriteResultImage "false")
+
+// The pixel type and format of the resulting deformed moving image
+(ResultImagePixelType "float")
+(ResultImageFormat "mnc")
+ELX1
+
 my $elastix_par= <<ELX;
 (FixedInternalImagePixelType "float")
 (MovingInternalImagePixelType "float")
@@ -188,11 +239,6 @@ unless($opt{work_dir})
   do_cmd('mkdir','-p',$tmpdir);
 }
 
-# write out elastix parameters
-open EL, ">$tmpdir/elastix_parameters.txt" or die;
-print EL $elastix_par;
-close EL;
-
 # set up filename base
 my($i, $s_base, $t_base, $tmp_xfm, $tmp_grid, $tmp_source, $tmp_target, $prev_grid, $prev_xfm);
 my @grids;
@@ -204,31 +250,7 @@ for(my $k=0;$k<=$#source;$k++)
   $s_base =~ s/\.gz$//;
   $s_base =~ s/\.mnc$//;
 
-  do_cmd('mkdir', '-p', "$tmpdir/$s_base");
-
-  @args = ('elastix',
-    '-f',  $source[$k],
-    '-m',  $target[$k],
-    '-fMask',  $source_mask[$k],  
-    '-mMask',  $target_mask[$k], 
-    '-out',  "$tmpdir/$s_base/", 
-    '-p',  "$tmpdir/elastix_parameters.txt",
-    '-threads',4 );
-  
-  do_cmd(@args);
-  
-  do_cmd('transformix', '-tp',  "$tmpdir/$s_base/TransformParameters.0.txt",
-    '-def',  'all', '-out',  "$tmpdir/$s_base/");
-
-  $tmp_grid = "$tmpdir/$s_base/deformationField.mnc";
-  $tmp_xfm  = "$tmpdir/$s_base/deformationField.xfm";
-  #   
-  open XFM, ">$tmp_xfm" or die;
-  print XFM "MNI Transform File\n";
-  print XFM "Transform_Type = Linear;\nLinear_Transform =\n 1 0 0 0\n 0 1 0 0\n 0 0 1 0;\n";
-  print XFM "Transform_Type = Grid_Transform;\n";
-  print XFM "Displacement_Volume = deformationField.mnc;";
-  close XFM;
+  $tmp_xfm=run_elastix($elastix_par,$source[$k],$target[$k],"$tmpdir/$s_base/",$source_mask[$k],$target_mask[$k]);
   
   do_cmd('mincresample','-like',$source_mask[$k],$target_mask[$k],'-transform',$tmp_xfm,"$tmpdir/$s_base/target_mask.mnc",'-nearest','-invert');
   do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],"$tmpdir/$s_base/target_mask.mnc","$tmpdir/$s_base/estimate_mask.mnc");
@@ -236,6 +258,7 @@ for(my $k=0;$k<=$#source;$k++)
   if($opt{outdir})
   {
     do_cmd('cp',"$tmpdir/$s_base/TransformParameters.0.txt","$opt{outdir}/${s_base}_elx.txt");
+
     do_cmd('itk_resample',
           '--labels',
           '--like',$source_mask[$k],
@@ -322,4 +345,41 @@ sub regularize_grids {
 
 sub check_file {
   die("${_[0]} exists!\n") if -e $_[0];
+}
+
+
+
+sub run_elastix {
+  my ($parameters,$source,$target,$out_dir,$source_mask,$target_mask)=@_;
+
+  do_cmd('mkdir', '-p', $out_dir);
+
+  open EL, ">$out_dir/elastix_parameters.txt" or die;
+  print EL $parameters;
+  close EL;
+
+  my @args = ('elastix',
+    '-f',  $source,
+    '-m',  $target,
+    '-fMask',  $source_mask, 
+    '-mMask',  $target_mask, 
+    '-out',  $out_dir, 
+    '-p',  "$out_dir/elastix_parameters.txt",
+    '-threads',4 );
+  
+  do_cmd(@args);
+  
+  do_cmd('transformix', '-tp',  "$out_dir/TransformParameters.0.txt",
+    '-def',  'all', '-out',  "$out_dir/");
+
+  $tmp_grid = "$out_dir/deformationField.mnc";
+  $tmp_xfm  = "$out_dir/deformationField.xfm";
+  #   
+  open XFM, ">$tmp_xfm" or die;
+  print XFM "MNI Transform File\n";
+  print XFM "Transform_Type = Linear;\nLinear_Transform =\n 1 0 0 0\n 0 1 0 0\n 0 0 1 0;\n";
+  print XFM "Transform_Type = Grid_Transform;\n";
+  print XFM "Displacement_Volume = deformationField.mnc;";
+  close XFM;
+  return $tmp_xfm;
 }
