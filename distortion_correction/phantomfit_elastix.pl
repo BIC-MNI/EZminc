@@ -42,22 +42,23 @@ my $elastix_par= <<ELX;
 (Transform "BSplineTransform")
 (Metric "AdvancedNormalizedCorrelation")
 
-(FinalGridSpacingInPhysicalUnits 10)
+(FinalGridSpacingInPhysicalUnits 4)
 
 (HowToCombineTransforms "Compose")
 
-//(ErodeMask "true")
+(ErodeMask "false")
 
 (NumberOfResolutions 4)
 
 (ImagePyramidSchedule 8 8 8  4 4 4  2 2 2  1 1 1 )
 
-(MaximumNumberOfIterations 2000)
+(MaximumNumberOfIterations 8000)
+(MaximumNumberOfSamplingAttempts 3)
 
 (NumberOfSpatialSamples 4096)
 
 (NewSamplesEveryIteration "true")
-(ImageSampler "Random" "Random")
+(ImageSampler "RandomSparseMask" )
 
 (BSplineInterpolationOrder 1)
 
@@ -208,10 +209,11 @@ for(my $k=0;$k<=$#source;$k++)
   @args = ('elastix',
     '-f',  $source[$k],
     '-m',  $target[$k],
-#    '-fMask',  $target_mask[$k], 
-#    '-mMask',  $source_mask[$k],  
+    '-fMask',  $source_mask[$k],  
+    '-mMask',  $target_mask[$k], 
     '-out',  "$tmpdir/$s_base/", 
-    '-p',  "$tmpdir/elastix_parameters.txt");
+    '-p',  "$tmpdir/elastix_parameters.txt",
+    '-threads',4 );
   
   do_cmd(@args);
   
