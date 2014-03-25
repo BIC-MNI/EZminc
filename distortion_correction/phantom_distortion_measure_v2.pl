@@ -201,7 +201,7 @@ for ($i=0;$i<=$#scans;$i+=1) {
 
   unless(-e "$work_dir/ideal_mask_${name}" )
   {
-    do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[4] E[2]', 
+    do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[6] E[2]', 
            "$work_dir/ideal_${name}", "$tmpdir/ideal_mask_${name}");
     
     do_cmd('mincresample',$mask,"$tmpdir/ideal_mask2_${name}",
@@ -226,7 +226,7 @@ for ($i=0;$i<=$#scans;$i+=1) {
   unless(-e "$work_dir/mask_${name}")
   {
       
-      do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[4] E[2]', "$work_dir/${name}", "$tmpdir/mask_${name}");
+      do_cmd('itk_morph', '--threshold', '50', '--exp', 'D[6] E[2]', "$work_dir/${name}", "$tmpdir/mask_${name}");
       do_cmd('mincresample','-nearest','-like', "$tmpdir/mask_${name}", $scan_mask, "$tmpdir/mask2_${name}");
       do_cmd('minccalc', '-express', 'A[0]>0.5&&A[1]>0.5?1:0', '-byte', 
         "$tmpdir/mask_${name}", "$tmpdir/mask2_${name}", "$work_dir/mask_${name}");

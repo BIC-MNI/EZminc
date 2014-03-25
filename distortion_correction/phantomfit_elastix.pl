@@ -53,13 +53,13 @@ my $elastix_fast= <<ELX1;
 
 (ImagePyramidSchedule 8 8 8  4 4 4  2 2 2)
 
-(MaximumNumberOfIterations 2000)
+(MaximumNumberOfIterations 1000)
 (MaximumNumberOfSamplingAttempts 3)
 
 (NumberOfSpatialSamples 4096)
 
 (NewSamplesEveryIteration "true")
-(ImageSampler "RandomSparseMask" )
+(ImageSampler "Random" )
 
 (BSplineInterpolationOrder 1)
 
@@ -93,7 +93,7 @@ my $elastix_par= <<ELX;
 (Transform "BSplineTransform")
 (Metric "AdvancedNormalizedCorrelation")
 
-(FinalGridSpacingInPhysicalUnits 4)
+(FinalGridSpacingInPhysicalUnits 12)
 
 (HowToCombineTransforms "Compose")
 
@@ -101,15 +101,15 @@ my $elastix_par= <<ELX;
 
 (NumberOfResolutions 4)
 
-(ImagePyramidSchedule 8 8 8  4 4 4  2 2 2  1 1 1 )
+(ImagePyramidSchedule 8 8 8  4 4 4  2 2 2 1 1 1 )
 
-(MaximumNumberOfIterations 8000)
+(MaximumNumberOfIterations 2000 2000 2000 8000)
 (MaximumNumberOfSamplingAttempts 3)
 
 (NumberOfSpatialSamples 4096)
 
 (NewSamplesEveryIteration "true")
-(ImageSampler "RandomSparseMask" )
+(ImageSampler "Random" )
 
 (BSplineInterpolationOrder 1)
 
@@ -244,6 +244,7 @@ my($i, $s_base, $t_base, $tmp_xfm, $tmp_grid, $tmp_source, $tmp_target, $prev_gr
 my @grids;
 my @masks;
 # a fitting we shall go...
+# TODO: make this parallel?
 for(my $k=0;$k<=$#source;$k++)
 {
   $s_base = basename($source[$k]);
@@ -251,18 +252,23 @@ for(my $k=0;$k<=$#source;$k++)
   $s_base =~ s/\.mnc$//;
   
   # 1 refine masks to avoid fitting in areas where information is missing
-  my $fast_xfm=run_elastix($elastix_fast,$source[$k],$target[$k],"$tmpdir/${s_base}_fast/");
+#  my $fast_xfm=run_elastix($elastix_fast,$source[$k],$target[$k],"$tmpdir/${s_base}_fast/");
   
-  do_cmd('itk_resample','--like',$source_mask[$k],$target_mask[$k],'--transform',$fast_xfm,"$tmpdir/${s_base}_fast/target_mask.mnc",'--labels','--invert');
-  do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],"$tmpdir/${s_base}_fast/target_mask.mnc","$tmpdir/${s_base}_fast/new_source_mask.mnc");
-  do_cmd('itk_resample','--like',$target_mask[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc",'--transform',$fast_xfm,"$tmpdir/${s_base}_fast/new_target_mask.mnc",'--labels');
+#  do_cmd('itk_resample','--like',$source_mask[$k],$target_mask[$k],'--transform',$fast_xfm,"$tmpdir/${s_base}_fast/target_mask.mnc",'--labels','--invert');
+  do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],$target_mask[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc");
+#  do_cmd('itk_resample','--like',$target_mask[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc",'--transform',$fast_xfm,"$tmpdir/${s_base}_fast/new_target_mask.mnc",'--labels');
+  
+  # zero out background
+  
+  do_cmd('minccalc','-express','A[1]>0.5?A[0]:0',$source[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc","$tmpdir/${s_base}_fast/new_source.mnc");
+  do_cmd('minccalc','-express','A[1]>0.5?A[0]:0',$target[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc","$tmpdir/${s_base}_fast/new_target.mnc");
 
   # 2 run real fit
-  $tmp_xfm=run_elastix($elastix_par,$source[$k],$target[$k],"$tmpdir/$s_base/","$tmpdir/${s_base}_fast/new_source_mask.mnc","$tmpdir/${s_base}_fast/new_target_mask.mnc");
-  
-  do_cmd('itk_resample','--like',$source_mask[$k],$target_mask[$k],'-transform',$tmp_xfm,"$tmpdir/$s_base/target_mask.mnc",'--labels','--invert');
+  $tmp_xfm=run_elastix($elastix_par,"$tmpdir/${s_base}_fast/new_source.mnc","$tmpdir/${s_base}_fast/new_target.mnc","$tmpdir/$s_base/");#,"$tmpdir/${s_base}_fast/new_source_mask.mnc","$tmpdir/${s_base}_fast/new_target_mask.mnc"
+
+  do_cmd('itk_resample','--like',$source_mask[$k],$target_mask[$k],'--transform',$tmp_xfm,"$tmpdir/$s_base/target_mask.mnc",'--labels','--invert');
   do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],"$tmpdir/$s_base/target_mask.mnc","$tmpdir/$s_base/estimate_mask.mnc");
-  
+
   if($opt{outdir})
   {
     do_cmd('cp',"$tmpdir/$s_base/TransformParameters.0.txt","$opt{outdir}/${s_base}_elx.txt");
@@ -273,6 +279,8 @@ for(my $k=0;$k<=$#source;$k++)
           '--transform',$tmp_xfm,
           '--invert_transform',$bricks[$k],
           "$opt{outdir}/${s_base}_bricks.mnc");
+
+    do_cmd('cp',"$tmpdir/$s_base/estimate_mask.mnc","$opt{outdir}/${s_base}_estimate_mask.mnc");
   }
 
   push @masks,"$tmpdir/$s_base/estimate_mask.mnc";
