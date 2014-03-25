@@ -250,7 +250,7 @@ for ($i=0;$i<=$#scans;$i+=1) {
 unless( $only_roi )
 {
   # calculate parameters
-  @args=('phantomfit_elastix.pl',@args,'-order',$order,'-clobber');
+  @args=('/home/vfonov/src/minc-toolkit/EZminc/distortion_correction/phantomfit_elastix.pl',@args,'-order',$order,'-clobber');
   
   push @args,'-cylindric'        if $cylindric;
   push @args,'-keep',$keep       if $keep;

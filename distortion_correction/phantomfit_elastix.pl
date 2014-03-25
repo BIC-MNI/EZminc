@@ -42,7 +42,7 @@ my $elastix_par= <<ELX;
 (Transform "BSplineTransform")
 (Metric "AdvancedNormalizedCorrelation")
 
-(FinalGridSpacingInPhysicalUnits 10)
+(FinalGridSpacingInPhysicalUnits 4)
 
 (HowToCombineTransforms "Compose")
 
@@ -52,7 +52,7 @@ my $elastix_par= <<ELX;
 
 (ImagePyramidSchedule 8 8 8  4 4 4  2 2 2  1 1 1 )
 
-(MaximumNumberOfIterations 2000)
+(MaximumNumberOfIterations 8000)
 
 (NumberOfSpatialSamples 4096)
 
@@ -207,25 +207,27 @@ for(my $k=0;$k<=$#source;$k++)
     '-fMask',  $source_mask[$k], 
     '-mMask',  $target_mask[$k],  
     '-out',  "$tmpdir/$s_base/", 
-    '-p',  "$tmpdir/elastix_parameters");
-  
+    '-p',  "$tmpdir/elastix_parameters",
+    '-threads',4);
+
   do_cmd(@args);
-  
-  do_cmd('transformix', '-tp',  "$tmpdir/$s_base/TransformParameters.0.txt",
-    '-def',  'all', '-out',  "$tmpdir/$s_base/");
+
+  do_cmd('transformix', 
+         '-tp',   "$tmpdir/$s_base/TransformParameters.0.txt",
+         '-def',  'all', 
+         '-out',  "$tmpdir/$s_base/");
 
   $tmp_grid = "$tmpdir/$s_base/deformationField.mnc";
 
   push @grids,$tmp_grid;
 }
 
-regularize_grids(\@grids,\@source_mask,$opt{order},"$tmpdir/regularize.xfm",1);
+regularize_grids(\@grids, \@source_mask, $opt{order}, "$tmpdir/regularize.xfm",1);
 cleanup_grids(\@grids) unless $opt{debug};
 
-$prev_xfm = "$tmpdir/regularize.xfm";
+$prev_xfm =  "$tmpdir/regularize.xfm";
 $prev_grid = "$tmpdir/regularize_grid_0.mnc";
-    
-    
+
 do_cmd('cp',"$tmpdir/regularize.par",$opt{par}) if $opt{par};
 do_cmd('xfminvert',$prev_xfm,$outxfm);
 
