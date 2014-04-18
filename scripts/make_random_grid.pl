@@ -76,13 +76,13 @@ if($edge_smooth && $mask)
   chomp($step);
   $step*=$edge_smooth;
   do_cmd('itk_morph','--exp',"E[${edge_smooth}]","$tmpdir/mask.mnc","$tmpdir/mask.mnc",'--clobber'); #itk_morph can overwrite input
-  do_cmd('mincblur','-fwhm',$step,'-no_apodize',"$tmpdir/mask.mnc","$tmpdir/mask");
+  do_cmd('fast_blur','--fwhm',$step,"$tmpdir/mask.mnc","$tmpdir/mask_blur.mnc");
   do_cmd('minccalc','-express','clamp(A[0],0,1)',"$tmpdir/mask_blur.mnc","$tmpdir/smooth.mnc");
 }
 
 for($iter=0;$iter<3;$iter++){
   do_cmd('random_volume',$sample,"${tmpdir}/${iter}.mnc",'--float');
-  do_cmd('mincblur','-fwhm',$fwhm, "${tmpdir}/${iter}.mnc", "${tmpdir}/${iter}");
+  do_cmd('fast_blur','--fwhm',$fwhm, "${tmpdir}/${iter}.mnc", "${tmpdir}/${iter}_blur.mnc");
   if($mask) 
   {
     do_cmd('mincresample','-nearest',"${tmpdir}/${iter}_blur.mnc","${tmpdir}/${iter}_blur_.mnc",'-like',$mask);
