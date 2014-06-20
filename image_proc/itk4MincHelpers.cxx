@@ -772,6 +772,7 @@ namespace minc
     old_history+=history;
     itk::EncapsulateMetaData( dst->GetMetaDataDictionary(),"history",old_history);
   }
+
 };//minc
 
 std::string minc_timestamp(int argc,char **argv)

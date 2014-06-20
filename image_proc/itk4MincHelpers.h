@@ -302,6 +302,7 @@ namespace minc
     typename itk::ImageFileWriter< T >::Pointer writer = itk::ImageFileWriter<T>::New();
     writer->SetFileName(file);
     writer->SetInput( img );
+    writer->SetUseCompression( true ); //TODO check environment variables here?
     writer->Update();
   } 
   

@@ -28,6 +28,7 @@
 #include <limits>
 #include <unistd.h>
 #include <algorithm>
+#include <stdlib.h>
 
 #include <itkVector.h>
 #include <itkResampleImageFilter.h>
@@ -433,6 +434,9 @@ void resample_image(
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());
   
+  if( getenv("MINC_COMPRESS") != NULL)
+    writer->SetUseCompression( true );
+  
 #ifdef HAVE_MINC4ITK
   if(store_float)
   {
@@ -685,6 +689,10 @@ void resample_label_image (
 #endif
 
   writer->SetInput( LabelImage );
+  
+  if( getenv("MINC_COMPRESS") != NULL)
+    writer->SetUseCompression( true );
+  
   writer->Update();
 }
 
@@ -788,7 +796,6 @@ void resample_vector_image(
   typename ImageOut::Pointer out=filter->GetOutput();
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());
-  
   minc::copy_metadata(out,in);
   minc::append_history(out,history);
   
@@ -819,6 +826,10 @@ void resample_vector_image(
 #endif
 
   writer->SetInput( out );
+  
+  if( getenv("MINC_COMPRESS") != NULL)
+    writer->SetUseCompression( true );
+  
   writer->Update();
 }
 
