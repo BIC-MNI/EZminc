@@ -34,6 +34,7 @@
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkImageConstIterator.h>
 #include <itkSmoothingRecursiveGaussianImageFilter.h>
+#include <itkMultiplyImageFilter.h>
 
 #include <unistd.h>
 #include <getopt.h>
@@ -55,57 +56,51 @@
 
 typedef itk::ImageBase<3>           Image3DBase;
 typedef itk::Image<float,3>         Float3DImage;
-typedef itk::Image<short,3>         Int3DImage;
-
-
-typedef itk::ImageIOBase          IOBase;
-typedef itk::SmartPointer<IOBase> IOBasePointer;
+typedef itk::Image<int,3>           Int3DImage;
+typedef itk::Image<short,3>         Short3DImage;
+typedef itk::Image<unsigned char,3> Byte3DImage;
 
 typedef itk::BSplineInterpolateImageFunction< Float3DImage, double, double >  InterpolatorType;
-typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NNInterpolatorType;
-typedef itk::ResampleImageFilter<Float3DImage, Float3DImage> FloatFilterType;
-typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
-
-typedef itk::<double> Euler3DTransform;
+typedef itk::NearestNeighborInterpolateImageFunction< Float3DImage, double >    NNInterpolatorType;
+typedef itk::Euler3DTransform<double> RigidTransformType;
 
 using namespace  std;
 
 void show_usage (const char * prog)
 {
   std::cerr 
-    << "Usage: "<<prog<<" <input> <output.mnc> " << std::endl
+    << "Usage: "<<prog<<" <input.tag> <input_brick.mnc> <output.mnc> " << std::endl
     << "--clobber overwrite files"    << std::endl
     << "--like <example> (default behaviour analogous to use_input_sampling)"<<std::endl
     << "--order <n> spline order, default 2 "<<std::endl
     << "--labels - assume that input data is discrete labels, will use Nearest-Neighbour interpolator"<<std::endl
-    << "--byte  - store image in byte  voxels minc file"<<std::endl
-    << "--short - store image in short voxels minc file"<<std::endl
-    << "--float - store image in float voxels minc file"<<std::endl
-    << "--aa <fwhm> apply anti-aliasing filter to labels before resampling (only usable for order > 0 )"<<std::endl;
+    << "--byte    - store image in byte  voxels minc file"<<std::endl
+    << "--short   - store image in short voxels minc file"<<std::endl
+    << "--float   - store image in float voxels minc file"<<std::endl
+    << "--aa <fwhm> apply anti-aliasing filter to input image before resampling"<<std::endl;
 }
 
 
 template<class Image,class ImageOut,class Interpolator> 
-void resample_image(
+void assemble_bricks(
    const std::string& input_f,
    const std::string& output_f,
    const std::string& like_f,
-   const tag_points& tags, 
-   std::vector<int>& tag_labels,
-   const char* history,
+   const minc::tag_points& tags, 
+   const std::vector<int>& tag_labels,
+   const std::string& history,
    bool store_float,
    bool store_short,
    bool store_byte,
-   Interpolator* interpolator )
+   Interpolator* interpolator,
+   double aa=0.0
+                    )
 {
   typedef typename itk::ResampleImageFilter<Image, ImageOut> ResampleFilterType;
   typedef typename itk::ImageFileReader<Image >   ImageReaderType;
   typedef typename itk::ImageFileWriter<ImageOut >   ImageWriterType;
   typedef typename Image::PixelType InputPixelType;
-  
   typedef typename itk::MaximumImageFilter< ImageOut, ImageOut, ImageOut > MaxFilterType;
-  
-  typename ImageReaderType::Pointer reader = ImageReaderType::New();
 
   typename ImageReaderType::Pointer reader = ImageReaderType::New();
   reader->SetFileName(input_f.c_str());
@@ -115,8 +110,8 @@ void resample_image(
   input->DisconnectPipeline();
 
   //initializing the reader
-  typename ResampleFilterType::Pointer filter  = ResampleFilterType::New();
-  MaxFilterType::Pointer max_filter = MaxFilterType::New();
+  typename ResampleFilterType::Pointer filter = ResampleFilterType::New();
+  typename MaxFilterType::Pointer  max_filter = MaxFilterType::New();
 
   //creating coordinate transformation objects
   RigidTransformType::Pointer rigid_transform = RigidTransformType::New();
@@ -124,9 +119,6 @@ void resample_image(
   //creating the interpolator
   filter->SetInterpolator( interpolator );
   filter->SetDefaultPixelValue( 0 );
-
-  //this is for processing using batch system
-  filter->SetNumberOfThreads(1);
 
   typename Image::Pointer like=0;
   {
@@ -138,60 +130,65 @@ void resample_image(
     like->DisconnectPipeline();
   }
 
-  filter->SetOutputParametersFromImage( like->GetOutput() );
+  filter->SetOutputParametersFromImage( like );
   filter->SetOutputDirection( like->GetDirection() );
   filter->SetInput( input );
 
   typename ImageOut::RegionType region;
-  region.SetSize (like->GetSize());
-  region.SetIndex(like->GetOutputStartIndex());
+  region.SetSize ( like->GetLargestPossibleRegion().GetSize() );
+  region.SetIndex( like->GetLargestPossibleRegion().GetIndex() );
 
   typename ImageOut::Pointer out= ImageOut::New();
   
-  out->SetOrigin(like->GetOrigin());
-  out->SetSpacing(like->GetSpacing());
-  out->SetDirection(like->GetDirection());
+  out->SetOrigin( like->GetOrigin() );
+  out->SetSpacing( like->GetSpacing() );
+  out->SetDirection( like->GetDirection() );
 
-  out->SetLargestPossibleRegion(region);
-  out->SetBufferedRegion(region);
-  out->SetRequestedRegion(region);
+  out->SetLargestPossibleRegion( region );
+  out->SetBufferedRegion( region );
+  out->SetRequestedRegion( region );
   out->Allocate();
   out->FillBuffer(0);
 
   for(size_t i=0;i<tags.size();i++)
   {
     rigid_transform->SetIdentity();
+    
     if(tag_labels[i]>0) 
       rigid_transform->SetRotation(0,0,90.0);
-    RigidTransformType::OutputVectorType tr;
-    tr[0]=tags[i][0];tr[1]=tags[i][1];tr[2]=tags[i][2];
-    rigid_transform->SetTranslation(tr);
 
+    RigidTransformType::OutputVectorType tr;
+    //applying inverse transform
+    tr[0]=-tags[i][0];tr[1]=-tags[i][1];tr[2]=-tags[i][2];
+    rigid_transform->SetTranslation( tr );
+
+    std::cout<<"\t"<<i<<"\t"<<tr[0]<<","<<tr[1]<<","<<tr[2]<<"\t"<<tag_labels[i]<<std::endl;
     //TODO: force update transform here?
     filter->SetTransform( rigid_transform );
-    
+
     filter->Update();
-    max_filter->SetInput(0,filter->GetOutput);
-    max_filter->SetInput(1,out);
+    max_filter->SetInput( 0, filter->GetOutput() );
+    max_filter->SetInput( 1, out );
     max_filter->Update();
-    out=max_filter->Output();
+
+    out=max_filter->GetOutput();
     out->DisconnectPipeline();
   }
-  
-  minc::copy_metadata(out,in);
-  minc::append_history(out,history);
+
+  minc::copy_metadata( out , input );
+  minc::append_history( out , history );
 
   //correct dimension order
-  if(like.IsNotNull())
-    minc::copy_dimorder(out,like);
-    
+  if( like.IsNotNull() )
+    minc::copy_dimorder( out , like );
+
   //generic file writer
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
-  writer->SetFileName(output_f.c_str());
-  
+  writer->SetFileName( output_f.c_str() );
+
   if( getenv("MINC_COMPRESS") != NULL)
     writer->SetUseCompression( true );
-  
+
 #ifdef HAVE_MINC4ITK
   if(store_float)
   {
@@ -216,81 +213,48 @@ void resample_image(
   writer->Update();
 }
 
-template<class Image,class TmpImage,class ImageOut,class Interpolator> 
-void resample_label_image (
+
+template<class Image,class ImageOut,class Interpolator> 
+void assemble_bricks_labels (
    const std::string& input_f,
    const std::string& output_f,
    const std::string& like_f,
-   const tag_points& tags, 
-   std::vector<int>& labels,
-   const char* history,
+   const minc::tag_points& tags, 
+   const std::vector<int>& tag_labels,
+   const std::string& history,
    bool store_float,
    bool store_short,
    bool store_byte,
    Interpolator* interpolator,
-   double aa_fwhm=0.0 )
+   double aa=0.0 )
 {
-  typedef typename itk::ResampleImageFilter<TmpImage, TmpImage> ResampleFilterType;
+  typedef typename itk::ResampleImageFilter<Float3DImage, Float3DImage> ResampleFilterType;
   typedef typename itk::ImageFileReader<Image >                 ImageReaderType;
+  typedef typename itk::ImageFileReader<Float3DImage >          FloatImageReaderType;
   typedef typename itk::ImageFileWriter<ImageOut >              ImageWriterType;
-  typedef itk::ImageRegionConstIterator<Image>                  ConstInputImageIteratorType;
-  typedef itk::ImageRegionConstIterator<TmpImage>               ConstTmpImageIteratorType;
-  typedef itk::ImageRegionIterator<TmpImage>                    TmpImageIteratorType;
+  
+  typedef typename itk::MultiplyImageFilter<ImageOut, ImageOut, ImageOut > MultiplyImageFilterType;
+  typedef typename itk::MaximumImageFilter< ImageOut, ImageOut, ImageOut > MaxFilterType;
 
-  typedef itk::ImageRegionIterator<ImageOut>                    ImageOutIteratorType;
-  typedef itk::BinaryThresholdImageFilter<Image,TmpImage>       ThresholdFilterType;
-  typedef itk::SmoothingRecursiveGaussianImageFilter<TmpImage,TmpImage>  BlurFilterType;
+  typedef typename itk::SmoothingRecursiveGaussianImageFilter<Float3DImage,Float3DImage> SmoothingFilterType;
+  typedef typename itk::BinaryThresholdImageFilter< Float3DImage, ImageOut > ThresholdFilterType;
 
   typedef typename Image::PixelType InputPixelType;
-  typename ImageReaderType::Pointer reader = ImageReaderType::New();
+  typename FloatImageReaderType::Pointer reader = FloatImageReaderType::New();
 
-  double aa_sigma=aa_fwhm/(2.0*sqrt(2*log(2.0)));
-  
   //initializing the reader
-  reader->SetImageIO(base);
-  reader->SetFileName(base->GetFileName());
+  reader->SetFileName(input_f);
   reader->Update();
 
-  typename Image::Pointer in=reader->GetOutput();
+  typename Float3DImage::Pointer input=reader->GetOutput();
   
-  if(!label_map.empty())
-  {
-    for(itk::ImageRegionIterator<Image> it(in, in->GetBufferedRegion()); !it.IsAtEnd(); ++it)
-    {
-      std::map<int,int>::const_iterator pos=label_map.find(static_cast<int>(it.Get()));
-      if(pos==label_map.end())
-        it.Set(0); //set to BG
-      else
-        it.Set(static_cast<InputPixelType>((*pos).second));
-    }
-  }
-
-  typename ResampleFilterType::Pointer  filter           = ResampleFilterType::New();
+  typename ResampleFilterType::Pointer  filter  = ResampleFilterType::New();
+  typename MaxFilterType::Pointer  max_filter   = MaxFilterType::New();
+  typename MultiplyImageFilterType::Pointer mul_filter = MultiplyImageFilterType::New();
+  RigidTransformType::Pointer rigid_transform = RigidTransformType::New();
+  
+  typename SmoothingFilterType::Pointer smoothing_filter = SmoothingFilterType::New();
   typename ThresholdFilterType::Pointer threshold_filter = ThresholdFilterType::New();
-  typename BlurFilterType::Pointer      blur_filter     = BlurFilterType::New();
-
-  //creating coordinate transformation objects
-  TransformType::Pointer transform = TransformType::New();
-  if(!xfm_f.empty())
-  {
-#if ( ITK_VERSION_MAJOR < 4 )
-    //reading a minc style xfm file
-    transform->OpenXfm(xfm_f.c_str());
-    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
-    filter->SetTransform( transform );
-#else
-    transform->OpenXfm(xfm_f.c_str());
-    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
-    filter->SetTransform( transform );
-#endif
-  }
-
-  //creating the interpolator
-  filter->SetInterpolator( interpolator );
-  filter->SetDefaultPixelValue( 0 );
-  
-  //this is for processing using batch system
-  filter->SetNumberOfThreads(1);
 
   typename Image::Pointer like=0;
 
@@ -299,62 +263,92 @@ void resample_label_image (
     typename ImageReaderType::Pointer reader = ImageReaderType::New();
     reader->SetFileName(like_f.c_str());
     reader->Update();
-    
+
     like=reader->GetOutput();
     like->DisconnectPipeline();
   }
+
+  filter->SetOutputParametersFromImage( like );
+  filter->SetOutputDirection( like->GetDirection() );
+  filter->SetInterpolator( interpolator );
+  filter->SetDefaultPixelValue( 0.0 );
+
+  if(aa==0.0)
+  {
+    filter->SetInput( input );
+  } else {
+    smoothing_filter->SetSigma(aa/(2.0*sqrt(2*log(2.0))));
+    smoothing_filter->SetInput( input );
+    smoothing_filter->Update();
+    
+    filter->SetInput( smoothing_filter->GetOutput());
+  }
   
+  
+  //filter->SetNumberOfThreads(1);
+
   typename ImageOut::RegionType region;
-  region.SetSize (like->GetSize());
-  region.SetIndex(like->GetOutputStartIndex());
+  region.SetSize (like->GetLargestPossibleRegion().GetSize());
+  region.SetIndex(like->GetLargestPossibleRegion().GetIndex());
+
+  typename ImageOut::Pointer out= ImageOut::New();
+  out->SetOrigin(like->GetOrigin());
+  out->SetSpacing(like->GetSpacing());
+  out->SetDirection(like->GetDirection());
+
+  out->SetLargestPossibleRegion(region);
+  out->SetBufferedRegion(region);
+  out->SetRequestedRegion(region);
+  out->Allocate();
+  out->FillBuffer(0);
   
-  typename ImageOut::Pointer LabelImage= ImageOut::New();
-  LabelImage->SetOrigin(like->GetOrigin());
-  LabelImage->SetSpacing(like->GetSpacing());
-  LabelImage->SetDirection(like->GetDirection());
-  
-  LabelImage->SetLargestPossibleRegion(region);
-  LabelImage->SetBufferedRegion(region);
-  LabelImage->SetRequestedRegion(region);
-  LabelImage->Allocate();
-  
-  
+  for(size_t i=0;i<tags.size();i++)
+  {
+    rigid_transform->SetIdentity();
+    
+    if(tag_labels[i]>0) 
+      rigid_transform->SetRotation(0,0,90.0);
+
+    RigidTransformType::OutputVectorType tr;
+    //applying inverse transform
+    tr[0]=-tags[i][0];tr[1]=-tags[i][1];tr[2]=-tags[i][2];
+    rigid_transform->SetTranslation( tr );
+
+    std::cout<<"\t"<<i<<"\t"<<tr[0]<<","<<tr[1]<<","<<tr[2]<<"\t"<<tag_labels[i]<<std::endl;
+    //TODO: force update transform here?
+    filter->SetTransform( rigid_transform );
+    threshold_filter->SetInput(filter->GetOutput());
+    threshold_filter->SetLowerThreshold(0.5);
+    threshold_filter->SetUpperThreshold(100);
+    threshold_filter->SetInsideValue(1);
+    threshold_filter->SetOutsideValue(0);
+
+    mul_filter->SetConstant((i+1));
+    mul_filter->SetInput( threshold_filter->GetOutput() );
+    max_filter->SetInput( 0, mul_filter->GetOutput() );
+    max_filter->SetInput( 1, out );
+    max_filter->Update();
+
+    out=max_filter->GetOutput();
+    out->DisconnectPipeline();
+  }
+
   //typename ImageOut::Pointer out=filter->GetOutput();
-  minc::copy_metadata(LabelImage,in);
-  minc::append_history(LabelImage,history);
-  
+  minc::copy_metadata( out,input );
+  minc::append_history( out,history );
+
   //correct dimension order
   if(like.IsNotNull())
-    minc::copy_dimorder(LabelImage,like);
-    
+    minc::copy_dimorder(out,like);
+
   //generic file writer
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());
-  
-#ifdef HAVE_MINC4ITK
-  if(store_float)
-  {
-    minc::set_minc_storage_type(LabelImage,NC_FLOAT,true);
-  } else if(store_short) {
-    minc::set_minc_storage_type(LabelImage,NC_SHORT,true);
-  } else if(store_byte) {
-    minc::set_minc_storage_type(LabelImage,NC_BYTE,false);
-  }
-#else  
-  if(store_float)
-  {
-    minc::set_minc_storage_type(LabelImage,typeid(float).name());
-  } else if(store_short) {
-    minc::set_minc_storage_type(LabelImage,typeid(unsigned short).name());
-  } else if(store_byte) {
-    minc::set_minc_storage_type(LabelImage,typeid(unsigned char).name());
-  }
-#endif
 
-  writer->SetInput( LabelImage );
+  writer->SetInput( out );
   if( getenv("MINC_COMPRESS") != NULL)
     writer->SetUseCompression( true );
-  
+
   writer->Update();
 }
 
@@ -368,15 +362,11 @@ int main (int argc, char **argv)
   
   int verbose=0, clobber=0,skip_grid=0;
   int order=2;
-  std::string like_f,xfm_f,output_f,input_f;
-  double uniformize=0.0;
-  double unistep=0.0;
-  int normalize=0;
+  std::string like_f,xfm_f,output_f,brick_f,tag_f;
+  
   int invert=0;
   int labels=0;
   std::string history;
-  std::string map_f,map_str;
-  std::map<int,int> label_map;
   double aa_fwhm=0.0;
   
   
@@ -435,16 +425,15 @@ int main (int argc, char **argv)
       }
     }
 
-  if(normalize && ! order_was_set) //perform nearest neighbour interpolation in this case
-    order=0;
-
-  if ((argc - optind) < 2) {
+  if ((argc - optind) < 3) {
     show_usage(argv[0]);
     return 1;
   }
-  input_f=argv[optind];
-  output_f=argv[optind+1];
-  
+
+  tag_f   =argv[optind];
+  brick_f =argv[optind+1];
+  output_f=argv[optind+2];
+
   if (!clobber && !access (output_f.c_str (), F_OK))
   {
     std::cerr << output_f.c_str () << " Exists!" << std::endl;
@@ -457,28 +446,71 @@ int main (int argc, char **argv)
 #if ( ITK_VERSION_MAJOR < 4 )  
     itk::RegisterMincIO();
 #endif    
-    
+    minc::tag_points tags;
+    std::vector<int> tag_labels;
+
+    minc::read_tags(tags,tag_labels,tag_f.c_str());
+
     if(labels)
     {
       if(order==0 || !order_was_set)
       {
-        //creating the interpolator
         NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
+
         if(store_byte)
-          resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
+          assemble_bricks_labels<Int3DImage,Byte3DImage,NNInterpolatorType> ( brick_f,output_f,like_f,
+                                                                      tags,tag_labels,history,
+                                                                      store_float,store_short,store_byte,
+                                                                      interpolator,
+                                                                      aa_fwhm
+                                                                            );
         else if(store_short)
-          resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
+          assemble_bricks_labels<Int3DImage,Short3DImage,NNInterpolatorType>( brick_f,output_f,like_f,
+                                                                      tags,tag_labels,history,
+                                                                      store_float,store_short,store_byte,
+                                                                      interpolator,
+                                                                      aa_fwhm
+                                                                            );
         else
-          resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
-      } else { //using slow algorithm
+          assemble_bricks_labels<Int3DImage,Int3DImage,NNInterpolatorType>  ( brick_f, output_f, like_f,
+                                                                      tags, tag_labels, history,
+                                                                      store_float, store_short, store_byte,
+                                                                      interpolator,
+                                                                      aa_fwhm
+                                                                            );
+      } else {
         InterpolatorType::Pointer interpolator = InterpolatorType::New();
         interpolator->SetSplineOrder(order);
-        resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
+        
+        if(store_byte)
+          assemble_bricks_labels<Int3DImage,Byte3DImage,InterpolatorType> ( brick_f,output_f,like_f,
+                                                                      tags,tag_labels,history,
+                                                                      store_float,store_short,store_byte,
+                                                                      interpolator,
+                                                                      aa_fwhm
+                                                                            );
+        else if(store_short)
+          assemble_bricks_labels<Int3DImage,Short3DImage,InterpolatorType>( brick_f,output_f,like_f,
+                                                                      tags,tag_labels,history,
+                                                                      store_float,store_short,store_byte,
+                                                                      interpolator,
+                                                                      aa_fwhm
+                                                                            );
+        else
+          assemble_bricks_labels<Int3DImage,Int3DImage,InterpolatorType>  ( brick_f, output_f, like_f,
+                                                                      tags, tag_labels, history,
+                                                                      store_float, store_short, store_byte,
+                                                                      interpolator,
+                                                                      aa_fwhm
+                                                                            );
       }
     } else {
       InterpolatorType::Pointer interpolator = InterpolatorType::New();
       interpolator->SetSplineOrder(order);
-      resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+      assemble_bricks<Float3DImage,Float3DImage,InterpolatorType>( brick_f, output_f, like_f,
+                                                                   tags, tag_labels, history,
+                                                                   store_float, store_short, store_byte,
+                                                                   interpolator );
     }
     return 0;
   } 

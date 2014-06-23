@@ -74,12 +74,14 @@ TARGET_LINK_LIBRARIES(c_param2grid
   ${ITK_LIBRARIES}
   )
 
-#ADD_EXECUTABLE( itk_assemble_bricks
-#                itk_assemble_bricks.cpp )
+ADD_EXECUTABLE( itk_assemble_bricks
+                itk_assemble_bricks.cpp 
+                ../image_proc/itk4MincHelpers.cxx
+              )
                 
-#TARGET_LINK_LIBRARIES( itk_assemble_bricks 
-#  ${ITK_LIBRARIES}
-#  )
+TARGET_LINK_LIBRARIES( itk_assemble_bricks 
+  ${ITK_LIBRARIES} 
+  )
 
 
 INSTALL(TARGETS 
@@ -88,7 +90,7 @@ INSTALL(TARGETS
     fit_harmonics_grids_regularize
     param2grid
     c_param2grid
-#    itk_assemble_bricks
+    itk_assemble_bricks
     RUNTIME DESTINATION bin )
 
 INSTALL(PROGRAMS 
