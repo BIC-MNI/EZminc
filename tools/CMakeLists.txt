@@ -8,7 +8,7 @@ IF(GSL_FOUND AND HAVE_MINC1)
   ADD_EXECUTABLE( random_volume
                   random_volume.cpp )
 
-	TARGET_LINK_LIBRARIES(random_volume ${EZMINC_LIBRARIES}  ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY})
+  TARGET_LINK_LIBRARIES(random_volume ${EZMINC_LIBRARIES}  ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY})
 
  
   ADD_EXECUTABLE( fdr_threshold
@@ -86,9 +86,40 @@ IF(ITK_FOUND)
                   itk_morph.cpp )
   TARGET_LINK_LIBRARIES( itk_morph   ${ITK_LIBRARIES})
 
+ 
   ADD_EXECUTABLE( itk_g_morph
                   itk_g_morph.cpp )
   TARGET_LINK_LIBRARIES( itk_g_morph   ${ITK_LIBRARIES} )
+
+  
+  ADD_EXECUTABLE( itk_laplacian_sharpening
+                  itk_laplacian_sharpening.cpp )
+                  
+  TARGET_LINK_LIBRARIES( itk_laplacian_sharpening  ${ITK_LIBRARIES})
+
+
+  ADD_EXECUTABLE( itk_laplace
+                  itk_laplace.cpp )
+                  
+  TARGET_LINK_LIBRARIES( itk_laplace  ${ITK_LIBRARIES})
+
+  ADD_EXECUTABLE( itk_vesselness
+                  itk_vesselness.cpp
+                  )
+                  
+  TARGET_LINK_LIBRARIES( itk_vesselness  ${ITK_LIBRARIES})
+
+
+  ADD_EXECUTABLE( itk_fill_hole
+                  itk_fill_hole.cpp )
+                  
+  TARGET_LINK_LIBRARIES( itk_fill_hole  ${ITK_LIBRARIES})
+
+
+  ADD_EXECUTABLE( itk_diffusion
+                  itk_diffusion.cpp )
+                  
+  TARGET_LINK_LIBRARIES( itk_diffusion  ${ITK_LIBRARIES})
 
   IF(HAVE_MINC1)
     ADD_EXECUTABLE( resample_grid
@@ -101,11 +132,21 @@ IF(ITK_FOUND)
     TARGET_LINK_LIBRARIES( dircos_to_xfm itk4MincHelpers  ${ITK_LIBRARIES} )
     
     INSTALL(TARGETS dircos_to_xfm resample_grid RUNTIME DESTINATION bin)
-  
   ENDIF(HAVE_MINC1)
   
   INSTALL(TARGETS 
-    multiple_volume_similarity itk_distance itk_similarity itk_resample  itk_convert itk_morph itk_g_morph
+    multiple_volume_similarity 
+    itk_distance 
+    itk_similarity 
+    itk_resample  
+    itk_convert 
+    itk_morph 
+    itk_g_morph
+    itk_laplace
+    itk_laplacian_sharpening
+    itk_diffusion
+    itk_vesselness
+    itk_fill_hole
    RUNTIME DESTINATION bin )
 
 ENDIF(ITK_FOUND)

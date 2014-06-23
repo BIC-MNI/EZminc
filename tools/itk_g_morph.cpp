@@ -179,61 +179,62 @@ ImageFilter::Pointer construct(ImageType::Pointer input, const std::string& par)
 
 int main (int argc, char **argv)
 {
-  int verbose=1;
-  int clobber=0;
-  double threshold=1e10;
-  int bimodal=0;
-  std::string operations;
 #if ( ITK_VERSION_MAJOR < 4 )
   char *_history = time_stamp(argc, argv); 
   std::string history=_history;
   free(_history);
 #else
   std::string history= minc_timestamp(argc,argv);  
-#endif
+#endif  
   
+  int verbose=1;
+  int clobber=0;
+  double threshold=1e10;
+  int bimodal=0;
+  std::string operations;
+
   static struct option long_options[] = { 
     {"verbose", no_argument, &verbose, 1},
     {"quiet", no_argument, &verbose, 0},
     {"clobber", no_argument, &clobber, 1},
-		{"exp",  required_argument, 0, 'e'},
+    {"exp",  required_argument, 0, 'e'},
     {"threshold",  required_argument, 0, 't'},
     {"bimodal", no_argument, &bimodal, 1},
-		{0, 0, 0, 0}
-		};
-	int c;
-	for (;;)
-	{
-		/* getopt_long stores the option index here. */
-		int
-		option_index = 0;
+    {0, 0, 0, 0}
+    };
+  int c;
+  for (;;)
+  {
+    /* getopt_long stores the option index here. */
+    int
+    option_index = 0;
 
-		c = getopt_long (argc, argv, "s:t:", long_options, &option_index);
+    c = getopt_long (argc, argv, "s:t:", long_options, &option_index);
 
-		/* Detect the end of the options. */
-		if (c == -1)
-			break;
+    /* Detect the end of the options. */
+    if (c == -1)
+      break;
 
-		switch (c)
-		{
-		case 0:
-			break;
-		case 'e':
-			operations = optarg;
-			break;
-		case 't':
-			threshold = atof(optarg);
-			break;
-		case 'v':
-			cout << "Version: 1.0" << endl;
-			return 0;
-		case '?':
-			/* getopt_long already printed an error message. */
-		default:
-			show_usage (argv[0]);
-			return 1;
-		}
-	}
+    switch (c)
+    {
+    case 0:
+      break;
+    case 'e':
+      operations = optarg;
+      break;
+    case 't':
+      threshold = atof(optarg);
+      break;
+    case 'v':
+      cout << "Version: 1.0" << endl;
+      return 0;
+    case '?':
+      /* getopt_long already printed an error message. */
+    default:
+      show_usage (argv[0]);
+      return 1;
+    }
+  }
   
   if((argc - optind)<2)
   {
@@ -325,5 +326,5 @@ int main (int argc, char **argv)
     std::cerr << err << std::endl; 
     return 2;
   } 
-  
+  return 0;
 }

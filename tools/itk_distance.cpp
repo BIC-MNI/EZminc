@@ -1,6 +1,6 @@
 /* ----------------------------- MNI Header -----------------------------------
-@NAME       : 
-@DESCRIPTION: 
+@NAME       : itk_distance
+@DESCRIPTION: caclulcate distance function
 @COPYRIGHT  :
               Copyright 2006 Vladimir Fonov, McConnell Brain Imaging Centre, 
               Montreal Neurological Institute, McGill University.

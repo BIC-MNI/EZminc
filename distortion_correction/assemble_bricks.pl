@@ -81,6 +81,7 @@ my $b;
 my $j=1;
 my @bricks;
 do_cmd('minccalc','-expression',0,$like,"$tmpdir/brick_tmp.mnc",'-byte');
+
 if($cont) {
   
   foreach $b(@xfm)

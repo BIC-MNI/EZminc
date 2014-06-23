@@ -1,4 +1,5 @@
 LINK_DIRECTORIES(${ITK_LIBRARY_DIRS})
+
 INCLUDE_DIRECTORIES(${ITK_INCLUDE_DIRS} ${MINC4ITK_INCLUDE_DIRS})  
 
 ADD_LIBRARY(spherical_harmonics
@@ -21,7 +22,6 @@ IF( ITK_VERSION_MAJOR VERSION_EQUAL 4 )
   )
 ENDIF( ITK_VERSION_MAJOR VERSION_EQUAL 4 )
 
-    
     
 ADD_EXECUTABLE( fit_harmonics_grids
                 fit_harmonics_grids.cpp )
@@ -73,7 +73,14 @@ TARGET_LINK_LIBRARIES(c_param2grid
   spherical_harmonics 
   ${ITK_LIBRARIES}
   )
-                  
+
+#ADD_EXECUTABLE( itk_assemble_bricks
+#                itk_assemble_bricks.cpp )
+                
+#TARGET_LINK_LIBRARIES( itk_assemble_bricks 
+#  ${ITK_LIBRARIES}
+#  )
+
 
 INSTALL(TARGETS 
     fit_harmonics_grids
@@ -81,6 +88,7 @@ INSTALL(TARGETS
     fit_harmonics_grids_regularize
     param2grid
     c_param2grid
+#    itk_assemble_bricks
     RUNTIME DESTINATION bin )
 
 INSTALL(PROGRAMS 
