@@ -27,7 +27,7 @@
 #include <stdlib.h>
 
 #include <itkResampleImageFilter.h>
-#include <itkRigid3DTransform.h>
+#include <itkEuler3DTransform.h>
 
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkBSplineInterpolateImageFunction.h>
@@ -66,7 +66,7 @@ typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NN
 typedef itk::ResampleImageFilter<Float3DImage, Float3DImage> FloatFilterType;
 typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
 
-typedef itk::Rigid3DTransform<double> RigidTransformType;
+typedef itk::<double> Euler3DTransform;
 
 using namespace  std;
 
@@ -90,6 +90,8 @@ void resample_image(
    const std::string& input_f,
    const std::string& output_f,
    const std::string& like_f,
+   const tag_points& tags, 
+   std::vector<int>& tag_labels,
    const char* history,
    bool store_float,
    bool store_short,
@@ -139,7 +141,6 @@ void resample_image(
   filter->SetOutputParametersFromImage( like->GetOutput() );
   filter->SetOutputDirection( like->GetDirection() );
   filter->SetInput( input );
-  filter->SetTransform( rigid_transform );
 
   typename ImageOut::RegionType region;
   region.SetSize (like->GetSize());
@@ -157,9 +158,26 @@ void resample_image(
   out->Allocate();
   out->FillBuffer(0);
 
+  for(size_t i=0;i<tags.size();i++)
+  {
+    rigid_transform->SetIdentity();
+    if(tag_labels[i]>0) 
+      rigid_transform->SetRotation(0,0,90.0);
+    RigidTransformType::OutputVectorType tr;
+    tr[0]=tags[i][0];tr[1]=tags[i][1];tr[2]=tags[i][2];
+    rigid_transform->SetTranslation(tr);
+
+    //TODO: force update transform here?
+    filter->SetTransform( rigid_transform );
+    
+    filter->Update();
+    max_filter->SetInput(0,filter->GetOutput);
+    max_filter->SetInput(1,out);
+    max_filter->Update();
+    out=max_filter->Output();
+    out->DisconnectPipeline();
+  }
   
-
-
   minc::copy_metadata(out,in);
   minc::append_history(out,history);
 
@@ -200,9 +218,11 @@ void resample_image(
 
 template<class Image,class TmpImage,class ImageOut,class Interpolator> 
 void resample_label_image (
-   IOBase* base,
+   const std::string& input_f,
    const std::string& output_f,
    const std::string& like_f,
+   const tag_points& tags, 
+   std::vector<int>& labels,
    const char* history,
    bool store_float,
    bool store_short,
