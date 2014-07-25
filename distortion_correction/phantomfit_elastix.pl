@@ -255,6 +255,7 @@ for(my $k=0;$k<=$#source;$k++)
 #  my $fast_xfm=run_elastix($elastix_fast,$source[$k],$target[$k],"$tmpdir/${s_base}_fast/");
   
 #  do_cmd('itk_resample','--like',$source_mask[$k],$target_mask[$k],'--transform',$fast_xfm,"$tmpdir/${s_base}_fast/target_mask.mnc",'--labels','--invert');
+  do_cmd('mkdir','-p',"$tmpdir/${s_base}_fast/");
   do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],$target_mask[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc");
 #  do_cmd('itk_resample','--like',$target_mask[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc",'--transform',$fast_xfm,"$tmpdir/${s_base}_fast/new_target_mask.mnc",'--labels');
   
