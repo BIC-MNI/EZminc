@@ -23,6 +23,57 @@ use Getopt::Tabular;
 use File::Basename;
 use File::Temp qw/ tempdir /;
 
+
+my $elastix_fast= <<ELX1;
+(FixedInternalImagePixelType "float")
+(MovingInternalImagePixelType "float")
+(FixedImageDimension 3)
+(MovingImageDimension 3)
+(UseDirectionCosines "true")
+
+(Registration "MultiResolutionRegistration")
+(Interpolator "BSplineInterpolator" )
+(ResampleInterpolator "FinalBSplineInterpolator" )
+(Resampler "DefaultResampler" )
+
+(FixedImagePyramid  "FixedSmoothingImagePyramid")
+(MovingImagePyramid "MovingSmoothingImagePyramid")
+
+(Optimizer "AdaptiveStochasticGradientDescent")
+(Transform "BSplineTransform")
+(Metric "AdvancedNormalizedCorrelation")
+
+(FinalGridSpacingInPhysicalUnits 12)
+
+(HowToCombineTransforms "Compose")
+
+(ErodeMask "false")
+
+(NumberOfResolutions 3)
+
+(ImagePyramidSchedule 8 8 8  4 4 4  2 2 2)
+
+(MaximumNumberOfIterations 1000)
+(MaximumNumberOfSamplingAttempts 3)
+
+(NumberOfSpatialSamples 4096)
+
+(NewSamplesEveryIteration "true")
+(ImageSampler "Random" )
+
+(BSplineInterpolationOrder 1)
+
+(FinalBSplineInterpolationOrder 3)
+
+(DefaultPixelValue 0)
+
+(WriteResultImage "false")
+
+// The pixel type and format of the resulting deformed moving image
+(ResultImagePixelType "float")
+(ResultImageFormat "mnc")
+ELX1
+
 my $elastix_par= <<ELX;
 (FixedInternalImagePixelType "float")
 (MovingInternalImagePixelType "float")
@@ -42,22 +93,23 @@ my $elastix_par= <<ELX;
 (Transform "BSplineTransform")
 (Metric "AdvancedNormalizedCorrelation")
 
-(FinalGridSpacingInPhysicalUnits 10)
+(FinalGridSpacingInPhysicalUnits 12)
 
 (HowToCombineTransforms "Compose")
 
-//(ErodeMask "true")
+(ErodeMask "false")
 
 (NumberOfResolutions 4)
 
-(ImagePyramidSchedule 8 8 8  4 4 4  2 2 2  1 1 1 )
+(ImagePyramidSchedule 8 8 8  4 4 4  2 2 2 1 1 1 )
 
-(MaximumNumberOfIterations 2000)
+(MaximumNumberOfIterations 2000 2000 2000 8000)
+(MaximumNumberOfSamplingAttempts 3)
 
 (NumberOfSpatialSamples 4096)
 
 (NewSamplesEveryIteration "true")
-(ImageSampler "Random" "Random")
+(ImageSampler "Random" )
 
 (BSplineInterpolationOrder 1)
 
@@ -187,61 +239,50 @@ unless($opt{work_dir})
   do_cmd('mkdir','-p',$tmpdir);
 }
 
-# write out elastix parameters
-open EL, ">$tmpdir/elastix_parameters.txt" or die;
-print EL $elastix_par;
-close EL;
-
 # set up filename base
 my($i, $s_base, $t_base, $tmp_xfm, $tmp_grid, $tmp_source, $tmp_target, $prev_grid, $prev_xfm);
 my @grids;
 my @masks;
 # a fitting we shall go...
+# TODO: make this parallel?
 for(my $k=0;$k<=$#source;$k++)
 {
   $s_base = basename($source[$k]);
   $s_base =~ s/\.gz$//;
   $s_base =~ s/\.mnc$//;
-
-  do_cmd('mkdir', '-p', "$tmpdir/$s_base");
-
-  @args = ('elastix',
-    '-f',  $source[$k],
-    '-m',  $target[$k],
-#    '-fMask',  $target_mask[$k], 
-#    '-mMask',  $source_mask[$k],  
-    '-out',  "$tmpdir/$s_base/", 
-    '-p',  "$tmpdir/elastix_parameters.txt");
   
-  do_cmd(@args);
+  # 1 refine masks to avoid fitting in areas where information is missing
+#  my $fast_xfm=run_elastix($elastix_fast,$source[$k],$target[$k],"$tmpdir/${s_base}_fast/");
   
-  do_cmd('transformix', '-tp',  "$tmpdir/$s_base/TransformParameters.0.txt",
-    '-def',  'all', '-out',  "$tmpdir/$s_base/");
+#  do_cmd('itk_resample','--like',$source_mask[$k],$target_mask[$k],'--transform',$fast_xfm,"$tmpdir/${s_base}_fast/target_mask.mnc",'--labels','--invert');
+  do_cmd('mkdir','-p',"$tmpdir/${s_base}_fast/");
+  do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],$target_mask[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc");
+#  do_cmd('itk_resample','--like',$target_mask[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc",'--transform',$fast_xfm,"$tmpdir/${s_base}_fast/new_target_mask.mnc",'--labels');
+  
+  # zero out background
+  
+  do_cmd('minccalc','-express','A[1]>0.5?A[0]:0',$source[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc","$tmpdir/${s_base}_fast/new_source.mnc");
+  do_cmd('minccalc','-express','A[1]>0.5?A[0]:0',$target[$k],"$tmpdir/${s_base}_fast/new_source_mask.mnc","$tmpdir/${s_base}_fast/new_target.mnc");
 
-  $tmp_grid = "$tmpdir/$s_base/deformationField.mnc";
-  $tmp_xfm  = "$tmpdir/$s_base/deformationField.xfm";
-  #   
-  open XFM, ">$tmp_xfm" or die;
-  print XFM "MNI Transform File\n";
-  print XFM "Transform_Type = Linear;\nLinear_Transform =\n 1 0 0 0\n 0 1 0 0\n 0 0 1 0;\n";
-  print XFM "Transform_Type = Grid_Transform;\n";
-  print XFM "Displacement_Volume = deformationField.mnc;";
-  close XFM;
-  
-  do_cmd('mincresample','-like',$source_mask[$k],$target_mask[$k],'-transform',$tmp_xfm,"$tmpdir/$s_base/target_mask.mnc",'-nearest','-invert');
+  # 2 run real fit
+  $tmp_xfm=run_elastix($elastix_par,"$tmpdir/${s_base}_fast/new_source.mnc","$tmpdir/${s_base}_fast/new_target.mnc","$tmpdir/$s_base/");#,"$tmpdir/${s_base}_fast/new_source_mask.mnc","$tmpdir/${s_base}_fast/new_target_mask.mnc"
+
+  do_cmd('itk_resample','--like',$source_mask[$k],$target_mask[$k],'--transform',$tmp_xfm,"$tmpdir/$s_base/target_mask.mnc",'--labels','--invert');
   do_cmd('minccalc','-express','A[0]>0.5&&A[1]>0.5?1:0',$source_mask[$k],"$tmpdir/$s_base/target_mask.mnc","$tmpdir/$s_base/estimate_mask.mnc");
-  
+
   if($opt{outdir})
   {
     do_cmd('cp',"$tmpdir/$s_base/TransformParameters.0.txt","$opt{outdir}/${s_base}_elx.txt");
+
     do_cmd('itk_resample',
           '--labels',
           '--like',$source_mask[$k],
           '--transform',$tmp_xfm,
           '--invert_transform',$bricks[$k],
           "$opt{outdir}/${s_base}_bricks.mnc");
+
+    do_cmd('cp',"$tmpdir/$s_base/estimate_mask.mnc","$opt{outdir}/${s_base}_estimate_mask.mnc");
   }
-  
 
   push @masks,"$tmpdir/$s_base/estimate_mask.mnc";
   push @grids,$tmp_grid;
@@ -320,4 +361,42 @@ sub regularize_grids {
 
 sub check_file {
   die("${_[0]} exists!\n") if -e $_[0];
+}
+
+
+
+sub run_elastix {
+  my ($parameters,$source,$target,$out_dir,$source_mask,$target_mask)=@_;
+
+  do_cmd('mkdir', '-p', $out_dir);
+
+  open EL, ">$out_dir/elastix_parameters.txt" or die;
+  print EL $parameters;
+  close EL;
+
+  my @args = ('elastix',
+    '-f',  $source,
+    '-m',  $target,
+    '-out',  $out_dir, 
+    '-p',  "$out_dir/elastix_parameters.txt",
+    '-threads',4 );
+ 
+  push (@args,'-fMask', $source_mask) if defined( $source_mask);
+  push (@args,'-mMask',  $target_mask) if defined( $target_mask);
+
+  do_cmd(@args);
+  
+  do_cmd('transformix', '-tp',  "$out_dir/TransformParameters.0.txt",
+    '-def',  'all', '-out',  "$out_dir/");
+
+  $tmp_grid = "$out_dir/deformationField.mnc";
+  $tmp_xfm  = "$out_dir/deformationField.xfm";
+  #   
+  open XFM, ">$tmp_xfm" or die;
+  print XFM "MNI Transform File\n";
+  print XFM "Transform_Type = Linear;\nLinear_Transform =\n 1 0 0 0\n 0 1 0 0\n 0 0 1 0;\n";
+  print XFM "Transform_Type = Grid_Transform;\n";
+  print XFM "Displacement_Volume = deformationField.mnc;";
+  close XFM;
+  return $tmp_xfm;
 }
