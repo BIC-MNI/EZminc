@@ -24,6 +24,7 @@
 #include <getopt.h>
 #include <map>
 #include <set>
+#include <stdlib.h>
 
 #if ( ITK_VERSION_MAJOR < 4 )
 #include <time_stamp.h>    // for creating minc style history entry
@@ -465,16 +466,27 @@ int main(int argc,char **argv)
     if(!majority_f.empty())
     {
       WriterType::Pointer writer=WriterType::New();
+      
+      if( getenv("MINC_COMPRESS") != NULL)
+        writer->SetUseCompression( true );
+        
       writer->SetFileName(majority_f.c_str());
       writer->SetInput(majority);
+      
+      
       writer->Update();
     }
     
     if(!overlap_f.empty())
     {
       RealWriterType::Pointer writer=RealWriterType::New();
+      
+      if( getenv("MINC_COMPRESS") != NULL)
+        writer->SetUseCompression( true );
+        
       writer->SetFileName(overlap_f.c_str());
       writer->SetInput(overlap);
+        
       writer->Update();
     }
     
