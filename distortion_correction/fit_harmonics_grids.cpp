@@ -41,7 +41,7 @@ void print_coeff (std::ostream & out, const std::vector < double >&coeff2)
 	{
 		out << coeff2[i] << " ";
 		if(!out.good())
-			REPORT_ERROR("Can't write to file");
+			ITK_REPORT_ERROR("Can't write to file");
 		
 	}
 	out << std::endl;
@@ -55,7 +55,7 @@ void save_coeff (std::ostream & out, const std::vector < double >&coeff2)
 	{
 		out << coeff2[i] << endl;
 		if(!out.good())
-			REPORT_ERROR("Can't write to file");
+			ITK_REPORT_ERROR("Can't write to file");
 		
 	}
 }
@@ -147,9 +147,9 @@ class Tag_fit
     void fit_coeff(bool condition=false)
     {
       if(ideal.size()!=measured.size())
-        REPORT_ERROR("Mismatching number of points!");
+        ITK_REPORT_ERROR("Mismatching number of points!");
       if(ideal.size()!=mask.size())
-        REPORT_ERROR("Mismatching number of points!");
+        ITK_REPORT_ERROR("Mismatching number of points!");
     
       reset_index();
       coeff.resize(3);
@@ -327,7 +327,7 @@ class Tag_fit
     {
       _last_distance=0.0;
       if(measured.size()!=ideal.size()) 
-        REPORT_ERROR("Mismatching number of tags!");
+        ITK_REPORT_ERROR("Mismatching number of tags!");
       mask.resize(ideal.size(),false);
       calculate_basis();
       int i=0;
@@ -487,7 +487,7 @@ int main (int argc, char **argv)
     std::ofstream cf(output.c_str());
     
     if(!cf.good())
-      REPORT_ERROR("Can't open file for writing!");
+      ITK_REPORT_ERROR("Can't open file for writing!");
     
     save_coeff(cf,fit.coeff[0]);
     save_coeff(cf,fit.coeff[1]);

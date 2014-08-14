@@ -134,7 +134,7 @@ template <class TInputImage, class TOutputImage>
 void 
 VelocityFieldLieBracketFilter<TInputImage,TOutputImage>
 ::ThreadedGenerateData( const OutputFieldRegionType &outputRegionForThread,
-                        int threadId)
+                        ThreadIdType threadId)
 {
   // Get the input and output pointers
   InputFieldConstPointer leftField = this->GetInput(0);

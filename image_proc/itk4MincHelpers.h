@@ -27,15 +27,18 @@
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
 #include "itkImageIOFactory.h"
-
+#include <itkExceptionObject.h>
 #include <minc_io_fixed_vector.h>
+//#include <minc_io_exceptions.h>
 
 /** 
   * \brief various helper functions for interacting with minc library
   */
-#ifndef REPORT_ERROR
-#define REPORT_ERROR(MSG) itkDebugMacro(MSG)
-#endif
+
+#ifndef ITK_REPORT_ERROR
+#define ITK_REPORT_ERROR(MSG) throw itk::ExceptionObject(__FILE__,__LINE__,MSG)
+#endif //ITK_REPORT_ERROR
+
 
 namespace minc
 {

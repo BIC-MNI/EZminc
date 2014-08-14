@@ -24,8 +24,6 @@ namespace minc
   
   void calculate_gaussian(std::vector<complex_f>& res,double sigma,bool dx)
   {
-    double pi=2*atan2(1.0,0.0);
-  
     double a=1.0/(2.0*sigma*sigma);
   
     int n=res.size();
@@ -37,12 +35,12 @@ namespace minc
       {
         double k=(i<n/2.0?i:i-n);
         
-        sum+=exp(-k*k/(2.0*sigma*sigma));
+        sum+=exp(-k*k*a);
 
         if(dx)
-          res[i]=-k/(sigma*sigma)*exp(-k*k/(2.0*sigma*sigma));
+          res[i]=-k/(sigma*sigma)*exp(-k*k*a);
         else
-          res[i]=exp(-k*k/(2.0*sigma*sigma));
+          res[i]=exp(-k*k*a);
       } else {
         res[i]=0.0;
       }

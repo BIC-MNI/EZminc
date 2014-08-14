@@ -225,7 +225,7 @@ void resample_image(
     minc::set_minc_storage_type(out,NC_BYTE,false);
   }
 #else
-  mincify(out,minc_history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),in);
+  mincify(out,history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),in);
 #endif
 
   writer->SetFileName(output_f.c_str());
@@ -241,7 +241,7 @@ int main (int argc, char **argv)
   int store_short=0;
   int store_byte=0;  
 
-  int verbose=0, clobber=0,skip_grid=0;
+  int verbose=0, clobber=0;
   int order=2;
   std::string like_f,xfm_f,output_f,input_f;
   double uniformize=0.0;
@@ -336,8 +336,6 @@ int main (int argc, char **argv)
 
     size_t nd = io->GetNumberOfDimensions();
     size_t nc = io->GetNumberOfComponents();
-    itk::ImageIOBase::IOComponentType  ct = io->GetComponentType();
-    itk::ImageIOBase::IOComponentType  oct = ct;
     
     if(nc!=1) //not supported right now
       throw itk::ExceptionObject("Currently only 1 component images are supported");

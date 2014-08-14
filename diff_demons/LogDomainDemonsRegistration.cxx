@@ -30,6 +30,8 @@
 
 #if ( ITK_VERSION_MAJOR > 3 ) 
 #include <itkTransformToDisplacementFieldSource.h>
+#include "itk4MincHelpers.h"
+#include "itkMINCTransformAdapter.h"
 #else
 #include <itkTransformToDeformationFieldSource.h>
 #endif
@@ -821,20 +823,22 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
       std::string dumb1,dumb2;
       if(parse_xfm_file_name(args.inputTransformFile,dumb1,dumb2) ) //we are deling with .XFM filename
       {
-#ifdef HAVE_MINC1 
         if( args.verbosity>0 )
           std::cout<<"Reading Deformations from XFM file..."<<std::endl;
         
-        typedef typename minc::XfmTransform<double,Dimension,Dimension>  XfmTransformType;
+#if ( ITK_VERSION_MAJOR < 4 )
+        typedef minc::XfmTransform<double,Dimension,Dimension>  TransformType;
+#else
+        typedef itk::MINCTransformAdapter<double,Dimension,Dimension> TransformType;
+#endif
 
-        typename XfmTransformType::Pointer transform=XfmTransformType::New();
+        typename TransformType::Pointer transform=TransformType::New();
         
         transform->OpenXfm(args.inputTransformFile.c_str());
         
         SimpleCommandProgressUpdate::Pointer observer=SimpleCommandProgressUpdate::New();
 	
-  
-      #if ( ITK_VERSION_MAJOR > 3 ) 
+      #if ( ITK_VERSION_MAJOR > 3 )
         typedef typename itk::TransformToDisplacementFieldSource<DeformationFieldType,double> TransformToDeformationSource;
       #else  
         typedef typename itk::TransformToDeformationFieldSource<DeformationFieldType,double> TransformToDeformationSource;
@@ -867,10 +871,7 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
         
         if( args.verbosity>0 )
           std::cout<<"Done..."<<std::endl;
-#else
-          std::cerr<<"Warning, XFM reader is not implemented in ITK4 yet!"<<std::endl;
-#endif
-          
+        
       } else {
         typedef typename TransformReaderType::TransformType BaseTransformType;
         typename TransformReaderType::Pointer transformReader= TransformReaderType::New();

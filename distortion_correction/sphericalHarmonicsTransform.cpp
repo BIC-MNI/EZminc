@@ -63,7 +63,7 @@ namespace minc
     //std::cerr << "gsl_sf_legendre_sphPlm_e("<<n << "," << m << "," << costheta << ")" << std::endl;
 		if(gsl_sf_legendre_sphPlm_e(n, m, costheta, &tmp) != GSL_SUCCESS)
     {
-      REPORT_ERROR("Error in gsl_sf_legendre_sphPlm_e");
+      ITK_REPORT_ERROR("Error in gsl_sf_legendre_sphPlm_e");
     }
 		if(part)
 			return rr*tmp.val*sinphi;
@@ -74,7 +74,7 @@ namespace minc
 	
 	double SphericalFunctions::operator() (int n, tag_point p) const
 	{
-    REPORT_ERROR("Intentionally not implemented!");
+    ITK_REPORT_ERROR("Intentionally not implemented!");
 	}
   
 	void SphericalFunctions::generate_basis(basis_vector &basis, int order, tag_point p)
@@ -109,13 +109,13 @@ namespace minc
     {
       gsl_sf_result tmp;
       if(gsl_sf_legendre_sphPlm_e(n, j, costheta, &tmp) != GSL_SUCCESS)
-        REPORT_ERROR("Error in gsl_sf_legendre_sphPlm_e");
+        ITK_REPORT_ERROR("Error in gsl_sf_legendre_sphPlm_e");
       basis[c]=  rr*tmp.val*cosphi;
       c++;
       if(j)
       {
        if(c>=order)
-         REPORT_ERROR("Out of bounds!");
+         ITK_REPORT_ERROR("Out of bounds!");
        basis[c]=rr*tmp.val*sinphi;
        c++;
       }
@@ -153,7 +153,7 @@ namespace minc
       if(j)
       {
        if(c>=order)
-         REPORT_ERROR("Out of bounds!");
+         ITK_REPORT_ERROR("Out of bounds!");
        
        basis[c]= legendre_coeff* n*n*n*n *(n+1)*(n+1)*(n+1)*(n+1);
        std::cout<<basis[c]<<"\t";
@@ -204,7 +204,7 @@ namespace minc
     {
       gsl_sf_result tmp;
       if(gsl_sf_legendre_sphPlm_e(n, j, costheta, &tmp) != GSL_SUCCESS)
-        REPORT_ERROR("Error in gsl_sf_legendre_sphPlm_e");
+        ITK_REPORT_ERROR("Error in gsl_sf_legendre_sphPlm_e");
       basis[c]=  rr*tmp.val;
       j++;
       if(j==(n+1)) 

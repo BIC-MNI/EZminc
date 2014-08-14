@@ -42,6 +42,7 @@
 #include "mincVectorBSplineInterpolate.h"
 #include <itkImageConstIterator.h>
 #include <itkSmoothingRecursiveGaussianImageFilter.h>
+#include <itkAntiAliasBinaryImageFilter.h>
 
 #include <unistd.h>
 #include <getopt.h>
@@ -75,7 +76,6 @@ typedef itk::Image<int,3>           Int3DImage;
 typedef itk::Image<short,3>         Short3DImage;
 typedef itk::Image<unsigned char,3> Byte3DImage;
 typedef itk::Image<itk::Vector<float,3>, 3>  Vector3DImage;
-//typedef itk::VectorImage<float, 3>  Vector3DImage;
 
 
 typedef itk::ImageIOBase          IOBase;
@@ -83,11 +83,9 @@ typedef itk::SmartPointer<IOBase> IOBasePointer;
 
 typedef itk::BSplineInterpolateImageFunction< Float3DImage, double, double >  InterpolatorType;
 typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NNInterpolatorType;
-//typedef minc::VariableVectorBSplineInterpolate<Vector3DImage,double>      VectorInterpolatorType;
 typedef minc::mincVectorBSplineInterpolate<Vector3DImage,double>      VectorInterpolatorType;
 typedef itk::ResampleImageFilter<Float3DImage, Float3DImage> FloatFilterType;
 typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
-//typedef itk::VariableVectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
 typedef itk::VectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
 typedef itk::IdentityTransform<double,3> IdentityTransformType;
   
@@ -118,8 +116,9 @@ void show_usage (const char * prog)
     << "--relabel map.txt apply relabeling map"<<std::endl
     << "--lut map.txt  apply relabeling map"<<std::endl
     << "--lut-string \"a b;c d;....\" apply lut string in command line"<<std::endl
-    << "--aa <fwhm> apply anti-aliasing filter to labels before resampling (only usable for order > 0 )"<<std::endl;
-    
+    << "--aa <fwhm> apply anti-aliasing filter to labels before resampling  (only usable for order > 0 )"<<std::endl
+    << "--baa apply binary anti-aliasing filter to labels before resampling (only usable for order > 0 )"<<std::endl;
+  
 }
 
 template<class T,class I> void generate_uniform_sampling(T* flt, const I* img,double step)
@@ -477,7 +476,8 @@ void resample_label_image (
    bool store_byte,
    Interpolator* interpolator,
    const std::map<int,int>& label_map=std::map<int,int>(),
-   double aa_fwhm=0.0 )
+   double aa_fwhm=0.0,
+   bool baa_smooth=false)
 {
   typedef typename itk::ResampleImageFilter<TmpImage, TmpImage> ResampleFilterType;
   typedef typename itk::ImageFileReader<Image >                 ImageReaderType;
@@ -489,6 +489,7 @@ void resample_label_image (
   typedef itk::ImageRegionIterator<ImageOut>                    ImageOutIteratorType;
   typedef itk::BinaryThresholdImageFilter<Image,TmpImage>       ThresholdFilterType;
   typedef itk::SmoothingRecursiveGaussianImageFilter<TmpImage,TmpImage>  BlurFilterType;
+  typedef itk::AntiAliasBinaryImageFilter<TmpImage,TmpImage>    BAAFilterType;
 
   typedef typename Image::PixelType InputPixelType;
   typename ImageReaderType::Pointer reader = ImageReaderType::New();
@@ -517,6 +518,7 @@ void resample_label_image (
   typename ResampleFilterType::Pointer  filter           = ResampleFilterType::New();
   typename ThresholdFilterType::Pointer threshold_filter = ThresholdFilterType::New();
   typename BlurFilterType::Pointer      blur_filter     = BlurFilterType::New();
+  typename BAAFilterType::Pointer       baa_filter      = BAAFilterType::New();
 
   //creating coordinate transformation objects
   TransformType::Pointer transform = TransformType::New();
@@ -633,6 +635,10 @@ void resample_label_image (
       blur_filter->SetSigma(aa_sigma);
       blur_filter->SetInput(threshold_filter->GetOutput());
       filter->SetInput(blur_filter->GetOutput());
+    } else if(baa_smooth) {
+      //baa_filter->SetMaximumRMSChange(baa_smooth);
+      baa_filter->SetInput(threshold_filter->GetOutput());
+      filter->SetInput(baa_filter->GetOutput());
     } else {
       filter->SetInput(threshold_filter->GetOutput());
     }
@@ -840,7 +846,7 @@ int main (int argc, char **argv)
   int store_short=0;
   int store_byte=0;
   
-  int verbose=0, clobber=0,skip_grid=0;
+  int verbose=0, clobber=0;
   int order=2;
   std::string like_f,xfm_f,output_f,input_f;
   double uniformize=0.0;
@@ -852,7 +858,7 @@ int main (int argc, char **argv)
   std::string map_f,map_str;
   std::map<int,int> label_map;
   double aa_fwhm=0.0;
-  
+  int baa_smooth=0;
   
 #ifdef HAVE_MINC4ITK
   char *_history = time_stamp(argc, argv); 
@@ -882,6 +888,7 @@ int main (int argc, char **argv)
     {"lut", required_argument,      0,'L'},
     {"lut-string", required_argument,      0,'s'},
     {"aa", required_argument,      0,'a'},
+		{"baa", no_argument,       &baa_smooth, 1},
     {0, 0, 0, 0}
     };
   
@@ -1009,8 +1016,6 @@ int main (int argc, char **argv)
 
     size_t nd = io->GetNumberOfDimensions();
     size_t nc = io->GetNumberOfComponents();
-    itk::ImageIOBase::IOComponentType  ct = io->GetComponentType();
-    itk::ImageIOBase::IOComponentType  oct = ct;
    
     if(verbose)
     {
@@ -1041,11 +1046,11 @@ int main (int argc, char **argv)
           interpolator->SetSplineOrder(order);
           
           if(store_byte)
-            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
+            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm,baa_smooth);
           else if(store_short)
-            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
+            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm,baa_smooth);
           else
-            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm);
+            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm,baa_smooth);
         }
       } else {
         InterpolatorType::Pointer interpolator = InterpolatorType::New();

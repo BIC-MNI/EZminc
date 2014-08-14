@@ -42,7 +42,7 @@ template< class TVelocityField, class TInputDisplacementField, class TOutputDisp
 void
 VelocityFieldExponentialComposedWithDisplacementFieldFilter< TVelocityField, TInputDisplacementField,
                                                              TOutputDisplacementField >
-::ThreadedGenerateData(const OutputImageRegionType & outputRegionForThread, int threadId)
+::ThreadedGenerateData(const OutputImageRegionType & outputRegionForThread, ThreadIdType threadId)
 {
   typename InputImageType::ConstPointer inputField = this->GetInput();
   typename OutputImageType::Pointer     outputField = this->GetOutput();

@@ -13,6 +13,9 @@
               express or implied warranty.
 ---------------------------------------------------------------------------- */
 #include <math.h>
+
+#include "minc_io_exceptions.h"
+
 #include "itk4MincHelpers.h"
 
 #include <itkMetaDataObject.h>
@@ -28,6 +31,7 @@ using namespace std;
 
 namespace minc
 {
+  
 	int get_image_limits (image3d::Pointer img, voxel_type &min,voxel_type &max)
 	{
 		//1. get min, max
@@ -110,7 +114,8 @@ namespace minc
 	void write_tags(const tag_points& tags, const char * file)
 	{
 		std::ofstream out(file);
-		if(!out.good()) REPORT_ERROR("Can't open file!");
+		if(!out.good())
+      ITK_REPORT_ERROR("Can't open file!");
 		out<<"MNI Tag Point File"<<std::endl;
 		out<<"Volumes = 1;"<<std::endl<<std::endl;
 		out<<"Points =";
@@ -118,7 +123,8 @@ namespace minc
 		for(tag_points::const_iterator i=tags.begin();i!=tags.end();i++)
 		{
 			out<<std::endl<<(*i)[0]<<" "<<(*i)[1]<< " "<<(*i)[2] <<" \"\"";
-			if(!out.good()) REPORT_ERROR("Can't write to file!");
+			if(!out.good())
+        ITK_REPORT_ERROR("Can't write to file!");
 		}
 		out << ";" << std::endl;
 	}
@@ -126,7 +132,8 @@ namespace minc
 	void write_tags(const tag_points& tags,const std::vector<int>& labels, const char * file)
 	{
 		std::ofstream out(file);
-		if(!out.good()) REPORT_ERROR("Can't open file!");
+		if(!out.good())
+      ITK_REPORT_ERROR("Can't open file!");
 		out<<"MNI Tag Point File"<<std::endl;
 		out<<"Volumes = 1;"<<std::endl<<std::endl;
 		out<<"Points =";
@@ -136,7 +143,8 @@ namespace minc
 		for(i=tags.begin(),j=labels.begin();i!=tags.end()&&j!=labels.end();i++,j++)
 		{
 			out<<std::endl<<(*i)[0]<<" "<<(*i)[1]<< " "<<(*i)[2] <<" \""<<*j<<"\"";
-			if(!out.good()) REPORT_ERROR("Can't write to file!");
+			if(!out.good())
+        ITK_REPORT_ERROR("Can't write to file!");
 		}
 		out << ";" << std::endl;
 	}
@@ -144,7 +152,8 @@ namespace minc
   void write_tags(const tag_points& tags,const std::vector<float>& values, const char * file)
   {
 		std::ofstream out(file);
-		if(!out.good()) REPORT_ERROR("Can't open file!");
+		if(!out.good())
+      ITK_REPORT_ERROR("Can't open file!");
 		out<<"MNI Tag Point File"<<std::endl;
 		out<<"Volumes = 1;"<<std::endl<<std::endl;
 		out<<"Points =";
@@ -154,7 +163,8 @@ namespace minc
 		for(i=tags.begin(),j=values.begin();i!=tags.end()&&j!=values.end();i++,j++)
 		{
 			out<<std::endl<<(*i)[0]<<" "<<(*i)[1]<< " "<<(*i)[2] <<" \""<<*j<<"\"";
-			if(!out.good()) REPORT_ERROR("Can't write to file!");
+			if(!out.good())
+        ITK_REPORT_ERROR("Can't write to file!");
 		}
 		out << ";" << std::endl;
     
@@ -163,7 +173,8 @@ namespace minc
   void write_tags(const tag_points& tags,const std::vector<double>& values, const char * file)
   {
     std::ofstream out(file);
-    if(!out.good()) REPORT_ERROR("Can't open file!");
+    if(!out.good())
+      ITK_REPORT_ERROR("Can't open file!");
     out<<"MNI Tag Point File"<<std::endl;
     out<<"Volumes = 1;"<<std::endl<<std::endl;
     out<<"Points =";
@@ -173,7 +184,7 @@ namespace minc
     for(i=tags.begin(),j=values.begin();i!=tags.end()&&j!=values.end();i++,j++)
     {
       out<<std::endl<<(*i)[0]<<" "<<(*i)[1]<< " "<<(*i)[2] <<" \""<<*j<<"\"";
-      if(!out.good()) REPORT_ERROR("Can't write to file!");
+      if(!out.good()) ITK_REPORT_ERROR("Can't write to file!");
     }
     out << ";" << std::endl;
     
@@ -182,10 +193,10 @@ namespace minc
   void write_2tags(const tag_points& tags,const tag_points& tags2, const char * file)
 	{
 		if(tags.size()!=tags2.size()) 
-			REPORT_ERROR("Mismatching number of tags!");
+			ITK_REPORT_ERROR("Mismatching number of tags!");
 		
 		std::ofstream out(file);
-		if(!out.good()) REPORT_ERROR("Can't open file!");
+		if(!out.good()) ITK_REPORT_ERROR("Can't open file!");
 		out<<"MNI Tag Point File"<<std::endl;
 		out<<"Volumes = 2;"<<std::endl<<std::endl;
 		out<<"Points =";
@@ -195,7 +206,7 @@ namespace minc
 		for(;i!=tags.end();i++,j++)
 		{
 			out<<std::endl<<(*i)[0]<<" "<<(*i)[1]<< " "<<(*i)[2]<<" "<<(*j)[0]<<" "<<(*j)[1]<< " "<<(*j)[2] <<" \"\"";
-			if(!out.good()) REPORT_ERROR("Can't write to file!");
+			if(!out.good()) ITK_REPORT_ERROR("Can't write to file!");
 		}
 		out << ";" << std::endl;
 	}
@@ -215,7 +226,7 @@ namespace minc
 	void read_tags(tag_points& tags, const char * file,int vol)
 	{
 		ifstream in(file);
-		if(!in.good()) REPORT_ERROR("Can't open file!");
+		if(!in.good()) ITK_REPORT_ERROR("Can't open file!");
 		//tags.clear();
 		bool seen_points=false;
 		const int _buffer_len=4095;
@@ -260,7 +271,7 @@ namespace minc
 	void read_tags(tag_points& tags, std::vector<int>& labels, const char * file, int vol)
 	{
 		ifstream in(file);
-		if(!in.good()) REPORT_ERROR("Can't open file!");
+		if(!in.good()) ITK_REPORT_ERROR("Can't open file!");
 		//tags.clear();
 		bool seen_points=false;
 		const int _buffer_len=4095;
@@ -325,7 +336,7 @@ namespace minc
   void read_tags(tag_points& tags, std::vector<double>& labels, const char * file, int vol)
   {
     ifstream in(file);
-    if(!in.good()) REPORT_ERROR("Can't open file!");
+    if(!in.good()) ITK_REPORT_ERROR("Can't open file!");
 		//tags.clear();
     bool seen_points=false;
     const int _buffer_len=4095;
@@ -388,7 +399,7 @@ namespace minc
   void read_tags(tag_points& tags, std::vector<float>& labels, const char * file, int vol)
   {
     ifstream in(file);
-    if(!in.good()) REPORT_ERROR("Can't open file!");
+    if(!in.good()) ITK_REPORT_ERROR("Can't open file!");
 		//tags.clear();
     bool seen_points=false;
     const int _buffer_len=4095;
@@ -451,7 +462,7 @@ namespace minc
   void read_tags(tag_points& tag1, tag_points& tag2,std::vector<double>& labels, const char * file)
   {
     ifstream in(file);
-    if(!in.good()) REPORT_ERROR("Can't open file!");
+    if(!in.good()) ITK_REPORT_ERROR("Can't open file!");
     //tags.clear();
     bool seen_points=false;
     const int _buffer_len=4095;
@@ -524,10 +535,10 @@ namespace minc
     std::vector<double> p;
     ifstream in(file);
     if(!in.good()) 
-      REPORT_ERROR("Can't open the file for reading!");
+      ITK_REPORT_ERROR("Can't open the file for reading!");
     copy(istream_iterator<double>(in), istream_iterator<double>(), back_inserter(p));
     if(p.empty()) // probably this is not right!
-      REPORT_ERROR("Can't read parameters!");
+      ITK_REPORT_ERROR("Can't read parameters!");
     param.SetSize(p.size());
     for(size_t i=0;i<p.size();i++)
       param[i]=p[i];
@@ -538,10 +549,10 @@ namespace minc
     std::vector<double> p;
     ifstream in(file);
     if(!in.good()) 
-      REPORT_ERROR("Can't open the file for reading!");
+      ITK_REPORT_ERROR("Can't open the file for reading!");
     copy(istream_iterator<double>(in), istream_iterator<double>(), back_inserter(p));
     if(p.empty()) // probably this is not right!
-      REPORT_ERROR("Can't read parameters!");
+      ITK_REPORT_ERROR("Can't read parameters!");
     param.SetSize(n);
     param.Fill(0);
     
@@ -554,7 +565,7 @@ namespace minc
     std::vector<double> p;
     ofstream out(file);
     if(!out.good())
-      REPORT_ERROR("Can't open the file for writing!");
+      ITK_REPORT_ERROR("Can't open the file for writing!");
     out.precision(40);
     for(size_t i=0;i<param.Size();i++)
       out<<param[i]<<endl;

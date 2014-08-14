@@ -122,12 +122,12 @@ int main (int argc, char **argv)
   
     ofstream out(argv[optind+1]);
     if(out.bad())
-      REPORT_ERROR ("can't open file");
+      ITK_REPORT_ERROR ("can't open file");
 
     image3d_iterator it(img,img->GetLargestPossibleRegion());
     if(!terse) out<<"x,y,z,I"<<endl;
     if(out.bad())
-      REPORT_ERROR ("can't write to file");
+      ITK_REPORT_ERROR ("can't write to file");
     
     mask3d::IndexType idx;
     
@@ -147,7 +147,7 @@ int main (int argc, char **argv)
       else
       out<<p[0]<<","<<p[1]<<","<<p[2]<<","<<it.Value()<<endl;
       if(out.bad())
-        REPORT_ERROR ("can't write to file");
+        ITK_REPORT_ERROR ("can't write to file");
     }
 		return 0;
 	} 
