@@ -176,7 +176,11 @@ void resample_image(
 
   filter->SetInterpolator( interpolator );
   filter->SetEdgePaddingValue( 0 );
+#if ITK_VERSION_MAJOR >= 4
+  filter->SetDisplacementField(input_def_field);
+#else
   filter->SetDeformationField(input_def_field);
+#endif
   filter->SetNumberOfThreads(1);
   
   if(!like_f.empty())
