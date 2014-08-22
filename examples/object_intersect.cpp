@@ -26,8 +26,9 @@
 using namespace  std;
 using namespace  minc;
 
-typedef itk::Image<float,3> image3d;
+//typedef itk::Image<float,3> image3d;
 typedef itk::BSplineInterpolateImageFunction< image3d, double, double >  InterpolatorType;
+
 
 
 void show_usage (const char * prog)
