@@ -13,9 +13,9 @@ my $me=basename($0);
 my $debug=0;
 my @image_range;
 my @ovl_range;
-my $coronal=116;
-my $sagittal=93;
-my $axial=76;
+my @coronal=(116);
+my @sagittal=(93);
+my @axial=(76);
 my $overlay;
 my $separate;
 my $out_coronal;
@@ -37,6 +37,7 @@ my $background='black';
 my $foreground='white';
 my $title;
 my $pointsize;
+my $noresample=0;
 
 GetOptions (    
           "verbose"          => \$verbose,
@@ -47,9 +48,9 @@ GetOptions (
           "mask=s"           => \$mask,
           "scale=n"          => \$scale,
           'separate'         => \$separate,
-          'coronal=n'        => \$coronal,
-          'sagittal=n'       => \$sagittal,
-          'axial=n'          => \$axial,
+          'coronal=n{,}'     => \@coronal,
+          'sagittal=n{,}'    => \@sagittal,
+          'axial=n{,}'       => \@axial,
           'max'              => \$max,
           'over'             => \$over,
           'red=s'            => \$red,
@@ -70,6 +71,7 @@ GetOptions (
           'foreground=s'     => \$foreground,
           'title=s'          => \$title,
           'pointsize=n'      => \$pointsize,
+          'noresample'      => \$noresample,
           );
           
 die <<END  if $#ARGV<1;
@@ -82,9 +84,9 @@ Usage: $me <scan_in> <scan_out>
   --separate
   --mask <mask for overlay>
   --scale <n>
-  --coronal <n>
-  --axial <n>
-  --sagittal <n>
+  --coronal <n1[,n2,]>
+  --axial <n1[,n2]>
+  --sagittal <n1[,n2,]>
   --max - use max to combine images
   --red <mnc> - use overlay in red
   --green <mnc> - overlay in green
@@ -111,6 +113,7 @@ END
 my ($in,$out)=@ARGV;
 
 if($separate) {
+  
   $out_coronal=$out."_coronal.png";
   $out_axial=$out."_axial.png";
   $out_sagittal=$out."_sagittal.png";
@@ -118,12 +121,17 @@ if($separate) {
   check_file($out_coronal) unless $clobber;
   check_file($out_axial) unless $clobber;
   check_file($out_sagittal) unless $clobber;
+  
 } else {
   check_file($out) unless $clobber;
 }
 my $tmpdir = &tempdir( "$me-XXXXXXXX", TMPDIR => 1, CLEANUP => 1 );
 
 delete $ENV{MINC_COMPRESS} if $ENV{MINC_COMPRESS};
+
+my @coronal_=@coronal;
+my @axial_=@axial;
+my @sagittal_=@sagittal;
 
 if($trim_x || $trim_y || $trim_z)
 {
@@ -146,11 +154,13 @@ if($trim_x || $trim_y || $trim_z)
   $in="$tmpdir/in.mnc";
   if($adjust)
   {
-      $coronal-=$trim_y;
-      $sagittal-=$trim_x;
-      $axial-=$trim_z;
+    my $i;
+      for($i=0;$i<=$#coronal;$i+=1) { $coronal_[$i]=$coronal[$i]-$trim_y; }
+      for($i=0;$i<=$#axial;$i+=1)   { $axial_[$i]=$axial[$i]-$trim_z;   }
+      for($i=0;$i<=$#sagittal;$i+=1){ $sagittal_[$i]=$sagittal[$i]-$trim_x; }
   }
 }
+
 
 #produce RGB images
 my @args=("minclookup",$in,"$tmpdir/gray.mnc",'-gray','-byte');
@@ -161,8 +171,12 @@ if($overlay)
 {
 #   my $rr=`mincstats -q -min -max $overlay`;
 #   my @range=split("\n",$rr);
-  
+  if($noresample)
+  {
+    do_cmd('cp',$overlay,"$tmpdir/overlay.mnc");
+  } else {
   do_cmd('mincresample',$overlay,'-like',$in,"$tmpdir/overlay.mnc",'-float');
+  }
   if($mask)
   {
     do_cmd('mincresample',$mask,'-like',$in,'-nearest',"$tmpdir/mask.mnc");
@@ -294,49 +308,90 @@ if($red || $green || $blue)
   do_cmd('mv',"$tmpdir/gray_.mnc","$tmpdir/gray.mnc");
 }
 
+
+my $i;
+my @pics;
+
 # produce individual slices
-@args=('mincpik',"$tmpdir/gray.mnc","$tmpdir/coronal.miff",'-coronal','-slice',$coronal);
-push @args,'-scale',$scale if $scale;
-do_cmd(@args);
+for($i=0;$i<=$#coronal;$i+=1)
+{
+  @args=('mincpik',"$tmpdir/gray.mnc","$tmpdir/coronal_$i.miff",'-coronal','-slice',$coronal_[$i]);
+  push @args,'-scale',$scale if $scale;
+  do_cmd(@args);
+  push @pics,"$tmpdir/coronal_$i.miff";
+}
 
-@args=('mincpik',"$tmpdir/gray.mnc","$tmpdir/axial.miff",'-axial','-slice',$axial);
-push @args,'-scale',$scale if $scale;
-do_cmd(@args);
+for($i=0;$i<=$#axial;$i+=1)
+{
+  @args=('mincpik',"$tmpdir/gray.mnc","$tmpdir/axial_$i.miff",'-axial','-slice',$axial_[$i]);
+  push @args,'-scale',$scale if $scale;
+  do_cmd(@args);
+  push @pics,"$tmpdir/axial_$i.miff";
+}
 
-@args=('mincpik',"$tmpdir/gray.mnc","$tmpdir/sagittal.miff",'-sagittal','-slice',$sagittal);
-push @args,'-scale',$scale if $scale;
-do_cmd(@args);
+for($i=0;$i<=$#sagittal;$i+=1)
+{
+  @args=('mincpik',"$tmpdir/gray.mnc","$tmpdir/sagittal_$i.miff",'-sagittal','-slice',$sagittal_[$i]);
+  push @args,'-scale',$scale if $scale;
+  do_cmd(@args);
+  push @pics,"$tmpdir/sagittal_$i.miff";
+}
 
 if($separate)
 {
-  do_cmd("convert","$tmpdir/coronal.miff",$out_coronal);
-  do_cmd("convert","$tmpdir/axial.miff",$out_axial);
-  do_cmd("convert","$tmpdir/sagittal.miff",$out_sagittal);
+
+  if($#coronal==0)
+  {
+    do_cmd("convert","$tmpdir/coronal_0.miff",$out_coronal);
+  } else {
+    for($i=0;$i<=$#coronal;$i+=1)
+    {
+      do_cmd("convert","$tmpdir/coronal_$i.miff","${out}_coronal_$coronal[$i].png");
+    }
+  }
+
+  if($#axial==0)
+  {
+    do_cmd("convert","$tmpdir/axial_0.miff",$out_axial);
+  } else {
+    for($i=0;$i<=$#axial;$i+=1)
+    {
+      do_cmd("convert","$tmpdir/axial_$i.miff","${out}_axial_$axial[$i].png");
+    }
+  }
+
+  if($#sagittal==0)
+  {
+    do_cmd("convert","$tmpdir/sagittal_0.miff",$out_sagittal);
+  } else {
+    for($i=0;$i<=$#sagittal;$i+=1)
+    {
+      do_cmd("convert","$tmpdir/sagittal_$i.miff","${out}_sagittal_$sagittal[$i].png");
+    }
+  }
+
+
 } else {
   my $geo='+0+0';
 
   if($vertical)
   {
-    equalize_width("$tmpdir/axial.miff",
-         "$tmpdir/sagittal.miff",
-         "$tmpdir/coronal.miff");
+    equalize_width(@pics);
   } else {
-    equalize_height("$tmpdir/axial.miff",
-         "$tmpdir/sagittal.miff",
-         "$tmpdir/coronal.miff");
+    equalize_height(@pics);
   }
+  
+  my $lines=floor(($#pics+2)/3);
   #chomp($geo);
   my @args=('montage','-depth',8,#'-texture','rose:',
-          '-tile',$vertical?'1x3':'3x1',
+          '-tile',$vertical?"${lines}x3":"3x$lines",
           '-geometry',$geo,'-gravity','North',
           '-background' ,$background,
           '-bordercolor',$background,
           '-mattecolor',$background,
           '-fill',$foreground,
           '-stroke',$foreground,
-         "$tmpdir/axial.miff",
-         "$tmpdir/sagittal.miff",
-         "$tmpdir/coronal.miff");
+         @pics);
   push @args,'-pointsize',$pointsize if $pointsize;
   push @args,'-title',$title if $title;
   push @args,$out;
