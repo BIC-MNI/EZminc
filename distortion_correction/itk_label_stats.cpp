@@ -25,6 +25,9 @@
 #include <itkImageRegionConstIteratorWithIndex.h>
 #include <unistd.h>
 
+#include "strtok.h"
+
+
 using namespace  std;
 using namespace  minc;
 
@@ -41,7 +44,9 @@ void show_usage (const char *name)
     << "--mask <initial_mask.mnc> "<<endl
     << "--invert-mask invert mask" << endl
     << "--bg include background (label 0)"<< endl
-    << "--volume <input.mnc> calculate per volume means for this volume"<<endl;
+    << "--volume <input.mnc> calculate per volume means for this volume"<<endl
+    << "--labels <l.csv> use label id's and names from the csv file" << endl
+    << "--skip-empty skip labels with zero volume"<<endl;
 }
 
 int main (int argc, char **argv)
@@ -53,16 +58,19 @@ int main (int argc, char **argv)
   int invert_mask=0;
   int include_bg=0;
   int clobber=0;
+  int skip_empty=0;
   std::string out_f,mask_f;
-  std::string vol_f;
+  std::string vol_f,label_f;
   
   static struct option long_options[] = { 
     {"verbose", no_argument, &verbose,1},
+    {"skip-empty", no_argument, &skip_empty,1},
     {"clobber", no_argument, &clobber,1},
     {"mask",    required_argument, 0, 'm'},
     {"volume",    required_argument, 0, 'v'},
     {"invert-mask",no_argument, &invert_mask,1},
     {"bg",no_argument, &include_bg,1},
+    {"labels",  required_argument, 0, 'l'},
     {0, 0, 0, 0}};
 
   for (;;)
@@ -70,7 +78,7 @@ int main (int argc, char **argv)
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "vm:", long_options, &option_index);
+    c = getopt_long (argc, argv, "v:m:l:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -85,6 +93,9 @@ int main (int argc, char **argv)
       break;
     case 'v':
       vol_f=optarg;
+      break;
+    case 'l':
+      label_f=optarg;
       break;
     case '?':
     default:
@@ -153,6 +164,35 @@ int main (int argc, char **argv)
       allocate_same<Float3DImage,Int3DImage>(vol,img);
       vol->FillBuffer(0.0);
     }
+
+    std::vector<int> req_labels;
+    std::vector<std::string> label_names;
+    
+    if(!label_f.empty())
+    {
+      std::ifstream in_csv(label_f.c_str());
+
+      while(!in_csv.eof() && in_csv.good())
+      {
+        int l1;
+        char tmp[1024];
+        std::vector<std::string> ln;
+        in_csv.getline(tmp,sizeof(tmp));
+        if(!strlen(tmp)) break;
+        stringtok(ln,tmp,",");
+        if( ln.size()!=2 )
+        {
+          std::cerr<<"Unexpected line format:\""<<tmp<<"\""<<std::endl;
+          std::cerr<<"ln.size()="<<ln.size()<<std::endl;
+          std::cerr<<"Line number:"<<req_labels.size()+1<<std::endl;
+          return 1;
+        }
+
+        req_labels.push_back(atoi(ln[0].c_str()));
+        label_names.push_back(ln[1]);
+      }
+    }
+
     
     itk::ImageRegionConstIteratorWithIndex<Byte3DImage>   it(mask, mask->GetRequestedRegion());
     itk::ImageRegionConstIteratorWithIndex<Int3DImage>   iti(img, img->GetRequestedRegion());
@@ -200,23 +240,58 @@ int main (int argc, char **argv)
       *out<<",val";
     
     *out<<std::endl;
-
-    for(std::map<int,double>::const_iterator i=label_map.begin();i!=label_map.end();++i)
+    if(!label_f.empty())
     {
-      int label=(*i).first;
-      double vol=(*i).second;
-      *out<<label<<","
-               <<vol<<","
-               <<x_map[label]/vol<<","
-               <<y_map[label]/vol<<","
-               <<z_map[label]/vol;
-               
-      if(!vol_f.empty())
-        *out<<val_map[label]/vol<<",";
-      
-      *out<<std::endl;
-    }
-    
+      for(size_t i=0;i<req_labels.size();++i)
+      {
+        int label=req_labels[i];
+        const char *label_name=label_names[i].c_str();
+        std::map<int,double>::const_iterator ll=label_map.find(label);
+        if(ll!=label_map.end())
+        {
+
+          double vol=(*ll).second;
+          *out<<label_name<<","
+                  <<vol<<","
+                  <<x_map[label]/vol<<","
+                  <<y_map[label]/vol<<","
+                  <<z_map[label]/vol;
+
+          if(!vol_f.empty())
+            *out<<val_map[label]/vol<<",";
+          *out<<std::endl;
+        } else {
+          if(!skip_empty)
+          {
+            *out<<label_name<<","
+                    <<0<<","
+                    <<0<<","
+                    <<0<<","
+                    <<0;
+
+            if(!vol_f.empty())
+              *out<<0<<",";
+            *out<<std::endl;
+          }
+        }
+      }
+    } else {
+      for(std::map<int,double>::const_iterator i=label_map.begin();i!=label_map.end();++i)
+      {
+        int label=(*i).first;
+        double vol=(*i).second;
+        *out<<label<<","
+                <<vol<<","
+                <<x_map[label]/vol<<","
+                <<y_map[label]/vol<<","
+                <<z_map[label]/vol;
+
+        if(!vol_f.empty())
+          *out<<val_map[label]/vol<<",";
+
+        *out<<std::endl;
+      }
+    }    
     if(!output.empty())
       delete out;
     return 0;
