@@ -23,7 +23,8 @@
 #include <itkTransformFileReader.h>
 
 #if ( ITK_VERSION_MAJOR > 3 ) 
-#include <itkTransformToDisplacementFieldSource.h>
+/*#include <itkTransformToDisplacementFieldSource.h>*/
+#include <itkTransformToDisplacementFieldFilter.h>
 #else
 #include <itkTransformToDeformationFieldSource.h>
 #endif
@@ -777,7 +778,8 @@ void DemonsRegistrationFunction ( arguments args )
         transform->OpenXfm(args.inputTransformFile.c_str());
         
 #if ( ITK_VERSION_MAJOR > 3 ) 
-        typedef typename itk::TransformToDisplacementFieldSource<DeformationFieldType,double> TransformToDeformationSource;
+        //typedef typename itk::TransformToDisplacementFieldSource<DeformationFieldType,double> TransformToDeformationSource;
+        typedef typename itk::TransformToDisplacementFieldFilter<DeformationFieldType,double> TransformToDeformationSource;
 #else  
         typedef typename itk::TransformToDeformationFieldSource<DeformationFieldType,double> TransformToDeformationSource;
 #endif
@@ -841,7 +843,8 @@ void DemonsRegistrationFunction ( arguments args )
 
         // Set up the TransformToDeformationFieldFilter
       #if ( ITK_VERSION_MAJOR > 3 ) 
-        typedef itk::TransformToDisplacementFieldSource <DeformationFieldType> FieldGeneratorType;
+        //typedef itk::TransformToDisplacementFieldSource <DeformationFieldType> FieldGeneratorType;
+        typedef itk::TransformToDisplacementFieldFilter <DeformationFieldType,double> FieldGeneratorType;
       #else  
         typedef itk::TransformToDeformationFieldSource <DeformationFieldType> FieldGeneratorType;
       #endif
@@ -861,9 +864,9 @@ void DemonsRegistrationFunction ( arguments args )
         fieldGenerator->SetTransform ( trsf );
         //fieldGenerator->SetOutputRegion(
         //   fixedImageReader->GetOutput()->GetRequestedRegion());
-        fieldGenerator->SetOutputSize (
+        fieldGenerator->SetSize (
           fixedImageReader->GetOutput()->GetRequestedRegion().GetSize() );
-        fieldGenerator->SetOutputIndex (
+        fieldGenerator->SetOutputStartIndex  (
           fixedImageReader->GetOutput()->GetRequestedRegion().GetIndex() );
         fieldGenerator->SetOutputSpacing (
           fixedImageReader->GetOutput()->GetSpacing() );

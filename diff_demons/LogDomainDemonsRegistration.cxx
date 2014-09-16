@@ -29,7 +29,7 @@
 
 
 #if ( ITK_VERSION_MAJOR > 3 ) 
-#include <itkTransformToDisplacementFieldSource.h>
+#include <itkTransformToDisplacementFieldFilter.h>
 #include "itk4MincHelpers.h"
 #include "itkMINCTransformAdapter.h"
 #else
@@ -839,13 +839,14 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
         SimpleCommandProgressUpdate::Pointer observer=SimpleCommandProgressUpdate::New();
 	
       #if ( ITK_VERSION_MAJOR > 3 )
-        typedef typename itk::TransformToDisplacementFieldSource<DeformationFieldType,double> TransformToDeformationSource;
-      #else  
+        typedef typename itk::TransformToDisplacementFieldFilter<DeformationFieldType,double> TransformToDeformationSource;
+      #else
         typedef typename itk::TransformToDeformationFieldSource<DeformationFieldType,double> TransformToDeformationSource;
       #endif
         
         typename TransformToDeformationSource::Pointer transform_to_def=TransformToDeformationSource::New();
-        transform_to_def->SetOutputParametersFromImage ( fixedImageReader->GetOutput() );
+        transform_to_def->UseReferenceImageOn();
+        transform_to_def->SetReferenceImage ( fixedImageReader->GetOutput() );
         transform_to_def->SetTransform(transform);
         transform_to_def->SetNumberOfThreads(1);
         
