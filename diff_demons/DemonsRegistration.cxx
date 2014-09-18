@@ -23,7 +23,6 @@
 #include <itkTransformFileReader.h>
 
 #if ( ITK_VERSION_MAJOR > 3 ) 
-/*#include <itkTransformToDisplacementFieldSource.h>*/
 #include <itkTransformToDisplacementFieldFilter.h>
 #else
 #include <itkTransformToDeformationFieldSource.h>
