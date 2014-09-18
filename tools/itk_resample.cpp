@@ -87,7 +87,8 @@ typedef minc::mincVectorBSplineInterpolate<Vector3DImage,double>      VectorInte
 typedef itk::ResampleImageFilter<Float3DImage, Float3DImage> FloatFilterType;
 typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
 typedef itk::VectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
-typedef itk::IdentityTransform<double,3> IdentityTransformType;
+typedef itk::Transform<double,3,3>           TransformBaseType;
+typedef itk::IdentityTransform<double,3>     IdentityTransformType;
   
 #if ( ITK_VERSION_MAJOR < 4 )
 typedef minc::XfmTransform<double,3,3>  TransformType;
@@ -108,6 +109,7 @@ void show_usage (const char * prog)
     << "--uniformize <step> - will make a volume with uniform step size and no direction cosines" << std::endl
     << "--unistep <step> - will make a volume with the same step size and preserve direction cosines" << std::endl
     << "--normalize - outputs volume with right-hand direction cosines and positive step-sizes, uses NN interpolation" << std::endl
+    << "--transform-bbox apply transformation to the bounding box for the final sampling, use with uniformize" << std::endl
     << "--invert_transform  - apply inverted transform"<<std::endl
     << "--labels - assume that input data is discrete labels, will use Nearest-Neighbour interpolator"<<std::endl
     << "--byte  - store image in byte  voxels minc file"<<std::endl
@@ -123,12 +125,12 @@ void show_usage (const char * prog)
 
 struct resample_options
 {
-  int   invert;
+  int    invert;
   double uniformize;
   double unistep;
-  int   transform_bbox;
+  int    transform_bbox;
   
-  int normalize;
+  int    normalize;
   
   std::string history;
   int store_float;
@@ -148,22 +150,27 @@ struct resample_options
   {}
 };
 
-template<class T,class I> void generate_uniform_sampling(T* flt, const I* img,double step)
+template<class T,class I> void generate_uniform_sampling(T* flt, const I* img,double step, TransformBaseType * tfm)
 {
   //obtain physical coordinats of all image corners
   typename I::RegionType r=img->GetLargestPossibleRegion();
   std::vector<double> corner[3];
+  
   for(int i=0;i<8;i++)
   {
     typename I::IndexType idx;
-    typename I::PointType c;
+    typename I::PointType c,o;
     idx[0]=r.GetIndex()[0]+r.GetSize()[0]*(i%2);
     idx[1]=r.GetIndex()[1]+r.GetSize()[1]*((i/2)%2);
     idx[2]=r.GetIndex()[2]+r.GetSize()[2]*((i/4)%2);
     img->TransformIndexToPhysicalPoint(idx,c);
+    
+    o=tfm->TransformPoint(c);
+    
     for(int j=0;j<3;j++)
-      corner[j].push_back(c[j]);
+      corner[j].push_back(o[j]);
   }
+  
   typename I::IndexType start;
   typename T::SizeType size;
   typename T::OriginPointType org;
@@ -337,13 +344,13 @@ void resample_image(
    const std::string& like_f,
    Interpolator* interpolator,
    const resample_options &opt
-                   )
+  )
 {
   typedef typename itk::ResampleImageFilter<Image, ImageOut> ResampleFilterType;
-  typedef typename itk::ImageFileReader<Image >   ImageReaderType;
-  typedef typename itk::ImageFileWriter<ImageOut >   ImageWriterType;
-  typedef typename Image::PixelType InputPixelType;
-  typename ImageReaderType::Pointer reader = ImageReaderType::New();
+  typedef typename itk::ImageFileReader<Image >              ImageReaderType;
+  typedef typename itk::ImageFileWriter<ImageOut >           ImageWriterType;
+  typedef typename Image::PixelType                          InputPixelType;
+  typename ImageReaderType::Pointer                 reader = ImageReaderType::New();
   
   //initializing the reader
   reader->SetImageIO(base);
@@ -400,7 +407,7 @@ void resample_image(
     reader->Update();
     if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize);
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer() );
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.unistep);
     } else if(opt.normalize) {
@@ -414,7 +421,7 @@ void resample_image(
   } else {
     if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,opt.uniformize);
+      generate_uniform_sampling<ResampleFilterType,Image>(filter, in, opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer() );
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,in,opt.unistep);
     } else if(opt.normalize) {
@@ -531,6 +538,8 @@ void resample_label_image (
 
   //creating coordinate transformation objects
   TransformType::Pointer transform = TransformType::New();
+  IdentityTransformType::Pointer identity_transform = IdentityTransformType::New();
+  
   if(!xfm_f.empty())
   {
 #if ( ITK_VERSION_MAJOR < 4 )
@@ -562,7 +571,7 @@ void resample_label_image (
     reader->Update();
     if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize);
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer());
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.unistep);
     } else if(opt.normalize) {
@@ -578,7 +587,7 @@ void resample_label_image (
   {
     if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,opt.uniformize);
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer());
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,in,opt.unistep);
     } else if(opt.normalize) {
@@ -741,6 +750,8 @@ void resample_vector_image(
   
   //creating coordinate transformation objects
   TransformType::Pointer transform = TransformType::New();
+  IdentityTransformType::Pointer identity_transform = IdentityTransformType::New();
+  
   if(!xfm_f.empty())
   {
     //reading a minc style xfm file
@@ -771,7 +782,7 @@ void resample_vector_image(
     reader->Update();
     if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize);
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer());
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.unistep);
     } else if(opt.normalize) {
@@ -788,7 +799,7 @@ void resample_vector_image(
   {
     if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,opt.uniformize);
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer());
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,in,opt.unistep);
     } else if(opt.normalize) {
@@ -874,17 +885,18 @@ int main (int argc, char **argv)
     {"order",        required_argument, 0, 'o'},
     {"uniformize",   required_argument, 0, 'u'},
     {"unistep",      required_argument, 0, 'U'},
-    {"invert_transform", no_argument, &opt.invert, 1},
-    {"normalize",    no_argument, &opt.normalize, 1},
-    {"labels",       no_argument, &labels, 1},
-    {"float",        no_argument, &opt.store_float, 1},
-    {"short",        no_argument, &opt.store_short, 1},
-    {"byte",         no_argument, &opt.store_byte,  1},
+    {"invert_transform", no_argument,   &opt.invert, 1},
+    {"normalize",    no_argument,       &opt.normalize, 1},
+    {"labels",       no_argument,       &labels, 1},
+    {"float",        no_argument,       &opt.store_float, 1},
+    {"short",        no_argument,       &opt.store_short, 1},
+    {"byte",         no_argument,       &opt.store_byte,  1},
     {"relabel",      required_argument,      0,'L'},
     {"lut",          required_argument,      0,'L'},
     {"lut-string",   required_argument,      0,'s'},
     {"aa",           required_argument,      0,'a'},
-		{"baa",          no_argument,       &opt.baa_smooth, 1},
+    {"baa",          no_argument,       &opt.baa_smooth, 1},
+    {"transform-bbox",no_argument,      &opt.transform_bbox, 1},
     {0, 0, 0, 0}
     };
   
