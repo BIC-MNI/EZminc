@@ -117,9 +117,36 @@ void show_usage (const char * prog)
     << "--lut map.txt  apply relabeling map"<<std::endl
     << "--lut-string \"a b;c d;....\" apply lut string in command line"<<std::endl
     << "--aa <fwhm> apply anti-aliasing filter to labels before resampling  (only usable for order > 0 )"<<std::endl
-    << "--baa apply binary anti-aliasing filter to labels before resampling (only usable for order > 0 )"<<std::endl;
-  
+    << "--baa apply binary anti-aliasing filter to labels before resampling (only usable for order > 0 )"<<std::endl; 
 }
+
+
+struct resample_options
+{
+  int   invert;
+  double uniformize;
+  double unistep;
+  int   transform_bbox;
+  
+  int normalize;
+  
+  std::string history;
+  int store_float;
+  int store_short;
+  int store_byte;
+  std::map<int,int> label_map;
+  
+  double aa_fwhm;
+  int baa_smooth;
+  
+  resample_options():
+    invert(0),
+    uniformize(0),unistep(0),
+    transform_bbox(0),
+    store_float(0),store_short(0),store_byte(0),
+    aa_fwhm(0), baa_smooth(0) 
+  {}
+};
 
 template<class T,class I> void generate_uniform_sampling(T* flt, const I* img,double step)
 {
@@ -308,16 +335,8 @@ void resample_image(
    const std::string& output_f,
    const std::string& xfm_f,
    const std::string& like_f,
-   bool invert,
-   double uniformize,
-   double unistep,
-   bool normalize,
-   const char* history,
-   bool store_float,
-   bool store_short,
-   bool store_byte,
    Interpolator* interpolator,
-   const std::map<int,int>& label_map=std::map<int,int>()
+   const resample_options &opt
                    )
 {
   typedef typename itk::ResampleImageFilter<Image, ImageOut> ResampleFilterType;
@@ -333,12 +352,12 @@ void resample_image(
   
   typename Image::Pointer in=reader->GetOutput();
   
-  if(!label_map.empty())
+  if(!opt.label_map.empty())
   {
     for(itk::ImageRegionIterator<Image> it(in, in->GetBufferedRegion()); !it.IsAtEnd(); ++it)
     {
-      std::map<int,int>::const_iterator pos=label_map.find(static_cast<int>(it.Get()));
-      if(pos==label_map.end())
+      std::map<int,int>::const_iterator pos=opt.label_map.find(static_cast<int>(it.Get()));
+      if(pos==opt.label_map.end())
         it.Set(0); //set to BG
       else
         it.Set(static_cast<InputPixelType>((*pos).second));
@@ -356,11 +375,11 @@ void resample_image(
 #ifdef HAVE_MINC4ITK
     //reading a minc style xfm file
     transform->OpenXfm(xfm_f.c_str());
-    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
 #else
     transform->OpenXfm(xfm_f.c_str());
-    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
 #endif    
   } else {
@@ -379,12 +398,12 @@ void resample_image(
     typename ImageReaderType::Pointer reader = ImageReaderType::New();
     reader->SetFileName(like_f.c_str());
     reader->Update();
-    if(uniformize!=0.0)
+    if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),uniformize);
-    } else if(unistep!=0.0) {
-      generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),unistep);
-    } else if(normalize) {
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize);
+    } else if(opt.unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.unistep);
+    } else if(opt.normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,reader->GetOutput());
     } else {
       filter->SetOutputParametersFromImage(reader->GetOutput());
@@ -393,12 +412,12 @@ void resample_image(
     like=reader->GetOutput();
     like->DisconnectPipeline();
   } else {
-    if(uniformize!=0.0)
+    if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,uniformize);
-    } else if(unistep!=0.0) {
-      generate_unistep_sampling<ResampleFilterType,Image>(filter,in,unistep);
-    } else if(normalize) {
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,opt.uniformize);
+    } else if(opt.unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,in,opt.unistep);
+    } else if(opt.normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,in);
     } else {
       //we are using original sampling
@@ -423,7 +442,7 @@ void resample_image(
   typename ImageOut::Pointer out=filter->GetOutput();
   
   minc::copy_metadata(out,in);
-  minc::append_history(out,history);
+  minc::append_history(out,opt.history);
   
   //correct dimension order
   if(like.IsNotNull())
@@ -437,21 +456,21 @@ void resample_image(
     writer->SetUseCompression( true );
   
 #ifdef HAVE_MINC4ITK
-  if(store_float)
+  if(opt.store_float)
   {
     minc::set_minc_storage_type(out,NC_FLOAT,true);
-  } else if(store_short) {
+  } else if(opt.store_short) {
     minc::set_minc_storage_type(out,NC_SHORT,true);
-  } else if(store_byte) {
+  } else if(opt.store_byte) {
     minc::set_minc_storage_type(out,NC_BYTE,false);
   }
 #else
-  if(store_float)
+  if(opt.store_float)
   {
     minc::set_minc_storage_type(out,typeid(float).name());
-  } else if(store_short) {
+  } else if(opt.store_short) {
     minc::set_minc_storage_type(out,typeid(unsigned short).name());
-  } else if(store_byte) {
+  } else if(opt.store_byte) {
     minc::set_minc_storage_type(out,typeid(unsigned char).name());
   }
 #endif
@@ -466,18 +485,8 @@ void resample_label_image (
    const std::string& output_f,
    const std::string& xfm_f,
    const std::string& like_f,
-   bool invert,
-   double uniformize,
-   double unistep,
-   bool normalize,
-   const char* history,
-   bool store_float,
-   bool store_short,
-   bool store_byte,
    Interpolator* interpolator,
-   const std::map<int,int>& label_map=std::map<int,int>(),
-   double aa_fwhm=0.0,
-   bool baa_smooth=false)
+   const resample_options &opt )
 {
   typedef typename itk::ResampleImageFilter<TmpImage, TmpImage> ResampleFilterType;
   typedef typename itk::ImageFileReader<Image >                 ImageReaderType;
@@ -494,7 +503,7 @@ void resample_label_image (
   typedef typename Image::PixelType InputPixelType;
   typename ImageReaderType::Pointer reader = ImageReaderType::New();
 
-  double aa_sigma=aa_fwhm/(2.0*sqrt(2*log(2.0)));
+  double aa_sigma=opt.aa_fwhm/(2.0*sqrt(2*log(2.0)));
   
   //initializing the reader
   reader->SetImageIO(base);
@@ -503,12 +512,12 @@ void resample_label_image (
 
   typename Image::Pointer in=reader->GetOutput();
   
-  if(!label_map.empty())
+  if(!opt.label_map.empty())
   {
     for(itk::ImageRegionIterator<Image> it(in, in->GetBufferedRegion()); !it.IsAtEnd(); ++it)
     {
-      std::map<int,int>::const_iterator pos=label_map.find(static_cast<int>(it.Get()));
-      if(pos==label_map.end())
+      std::map<int,int>::const_iterator pos=opt.label_map.find(static_cast<int>(it.Get()));
+      if(pos==opt.label_map.end())
         it.Set(0); //set to BG
       else
         it.Set(static_cast<InputPixelType>((*pos).second));
@@ -527,11 +536,11 @@ void resample_label_image (
 #if ( ITK_VERSION_MAJOR < 4 )
     //reading a minc style xfm file
     transform->OpenXfm(xfm_f.c_str());
-    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
 #else
     transform->OpenXfm(xfm_f.c_str());
-    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
 #endif
   }
@@ -551,12 +560,12 @@ void resample_label_image (
     typename ImageReaderType::Pointer reader = ImageReaderType::New();
     reader->SetFileName(like_f.c_str());
     reader->Update();
-    if(uniformize!=0.0)
+    if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),uniformize);
-    } else if(unistep!=0.0) {
-      generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),unistep);
-    } else if(normalize) {
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize);
+    } else if(opt.unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.unistep);
+    } else if(opt.normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,reader->GetOutput());
     } else {
       filter->SetOutputParametersFromImage(reader->GetOutput());
@@ -567,12 +576,12 @@ void resample_label_image (
   }
   else
   {
-    if(uniformize!=0.0)
+    if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,uniformize);
-    } else if(unistep!=0.0) {
-      generate_unistep_sampling<ResampleFilterType,Image>(filter,in,unistep);
-    }else if(normalize) {
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,opt.uniformize);
+    } else if(opt.unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,in,opt.unistep);
+    } else if(opt.normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,in);
     } else {
       //we are using original sampling
@@ -629,13 +638,13 @@ void resample_label_image (
     threshold_filter->SetOutsideValue(0.0);
     threshold_filter->SetInput(in);
     
-    if(aa_fwhm>0.0)
+    if(opt.aa_fwhm>0.0)
     {
       //blur_filter->SetUseImageSpacing(true);
       blur_filter->SetSigma(aa_sigma);
       blur_filter->SetInput(threshold_filter->GetOutput());
       filter->SetInput(blur_filter->GetOutput());
-    } else if(baa_smooth) {
+    } else if(opt.baa_smooth) {
       //baa_filter->SetMaximumRMSChange(baa_smooth);
       baa_filter->SetInput(threshold_filter->GetOutput());
       filter->SetInput(baa_filter->GetOutput());
@@ -664,7 +673,7 @@ void resample_label_image (
   
   //typename ImageOut::Pointer out=filter->GetOutput();
   minc::copy_metadata(LabelImage,in);
-  minc::append_history(LabelImage,history);
+  minc::append_history(LabelImage,opt.history);
   
   //correct dimension order
   if(like.IsNotNull())
@@ -675,21 +684,21 @@ void resample_label_image (
   writer->SetFileName(output_f.c_str());
   
 #ifdef HAVE_MINC4ITK
-  if(store_float)
+  if(opt.store_float)
   {
     minc::set_minc_storage_type(LabelImage,NC_FLOAT,true);
-  } else if(store_short) {
+  } else if(opt.store_short) {
     minc::set_minc_storage_type(LabelImage,NC_SHORT,true);
-  } else if(store_byte) {
+  } else if(opt.store_byte) {
     minc::set_minc_storage_type(LabelImage,NC_BYTE,false);
   }
 #else  
-  if(store_float)
+  if(opt.store_float)
   {
     minc::set_minc_storage_type(LabelImage,typeid(float).name());
-  } else if(store_short) {
+  } else if(opt.store_short) {
     minc::set_minc_storage_type(LabelImage,typeid(unsigned short).name());
-  } else if(store_byte) {
+  } else if(opt.store_byte) {
     minc::set_minc_storage_type(LabelImage,typeid(unsigned char).name());
   }
 #endif
@@ -710,15 +719,9 @@ void resample_vector_image(
    const std::string& output_f,
    const std::string& xfm_f,
    const std::string& like_f,
-   bool invert,
-   double uniformize,
-   double unistep,
-   bool normalize,
-   const char* history,
-   bool store_float,
-   bool store_short,
-   bool store_byte,
-   Interpolator* interpolator)
+   Interpolator* interpolator,
+   const resample_options &opt
+   )
 {
   //typedef typename itk::VariableVectorResampleImageFilter<Image, ImageOut> ResampleFilterType;
   typedef typename itk::VectorResampleImageFilter<Image, ImageOut> ResampleFilterType;
@@ -743,11 +746,11 @@ void resample_vector_image(
     //reading a minc style xfm file
 #ifdef HAVE_MINC4ITK
     transform->OpenXfm(xfm_f.c_str());
-    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
 #else
     transform->OpenXfm(xfm_f.c_str());
-    if(!invert) transform->Invert(); //should be inverted by default to walk through target space
+    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
     filter->SetTransform( transform );
 #endif
   }
@@ -766,12 +769,12 @@ void resample_vector_image(
     typename ImageReaderType::Pointer reader = ImageReaderType::New();
     reader->SetFileName(like_f.c_str());
     reader->Update();
-    if(uniformize!=0.0)
+    if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),uniformize);
-    } else if(unistep!=0.0) {
-      generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),unistep);
-    } else if(normalize) {
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize);
+    } else if(opt.unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.unistep);
+    } else if(opt.normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,reader->GetOutput());
     } else {
       filter->SetOutputSpacing(reader->GetOutput()->GetSpacing());
@@ -783,12 +786,12 @@ void resample_vector_image(
   }
   else
   {
-    if(uniformize!=0.0)
+    if(opt.uniformize!=0.0)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,uniformize);
-    } else if(unistep!=0.0) {
-      generate_unistep_sampling<ResampleFilterType,Image>(filter,in,unistep);
-    } else if(normalize) {
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,opt.uniformize);
+    } else if(opt.unistep!=0.0) {
+      generate_unistep_sampling<ResampleFilterType,Image>(filter,in,opt.unistep);
+    } else if(opt.normalize) {
       generate_normalized_sampling<ResampleFilterType,Image>(filter,in);
     } else {
       //we are using original sampling
@@ -803,7 +806,7 @@ void resample_vector_image(
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());
   minc::copy_metadata(out,in);
-  minc::append_history(out,history);
+  minc::append_history(out,opt.history);
   
   //correct dimension order
   if(like.IsNotNull())
@@ -812,21 +815,21 @@ void resample_vector_image(
   //generic file writer
   
 #ifdef HAVE_MINC4ITK
-  if(store_float)
+  if(opt.store_float)
   {
     minc::set_minc_storage_type(out,NC_FLOAT,true);
-  } else if(store_short) {
+  } else if(opt.store_short) {
     minc::set_minc_storage_type(out,NC_SHORT,true);
-  } else if(store_byte) {
+  } else if(opt.store_byte) {
     minc::set_minc_storage_type(out,NC_BYTE,false);
   }
 #else
-  if(store_float)
+  if(opt.store_float)
   {
     minc::set_minc_storage_type(out,typeid(float).name());
-  } else if(store_short) {
+  } else if(opt.store_short) {
     minc::set_minc_storage_type(out,typeid(unsigned short).name());
-  } else if(store_byte) {
+  } else if(opt.store_byte) {
     minc::set_minc_storage_type(out,typeid(unsigned char).name());
   }
 #endif
@@ -842,53 +845,46 @@ void resample_vector_image(
 
 int main (int argc, char **argv)
 {
-  int store_float=0;
-  int store_short=0;
-  int store_byte=0;
   
+  
+  resample_options opt;
+    
   int verbose=0, clobber=0;
   int order=2;
-  std::string like_f,xfm_f,output_f,input_f;
-  double uniformize=0.0;
-  double unistep=0.0;
-  int normalize=0;
-  int invert=0;
   int labels=0;
-  std::string history;
+  
+  std::string like_f,xfm_f,output_f,input_f;
   std::string map_f,map_str;
-  std::map<int,int> label_map;
-  double aa_fwhm=0.0;
-  int baa_smooth=0;
   
 #ifdef HAVE_MINC4ITK
   char *_history = time_stamp(argc, argv); 
-  history=_history;
+  opt.history=_history;
   free(_history);
 #else
-  history = minc_timestamp(argc,argv);
+  opt.history = minc_timestamp(argc,argv);
 #endif  
   bool order_was_set=false;
   
   static struct option long_options[] = {
-		{"verbose", no_argument,       &verbose, 1},
-		{"quiet",   no_argument,       &verbose, 0},
-		{"clobber", no_argument,       &clobber, 1},
-		{"like",    required_argument, 0, 'l'},
+		{"verbose",      no_argument,       &verbose, 1},
+		{"quiet",        no_argument,       &verbose, 0},
+		{"clobber",      no_argument,       &clobber, 1},
+		{"like",         required_argument, 0, 'l'},
 		{"transform",    required_argument, 0, 't'},
-    {"order",    required_argument, 0, 'o'},
-    {"uniformize",    required_argument, 0, 'u'},
-    {"unistep",    required_argument, 0, 'U'},
-    {"invert_transform", no_argument, &invert, 1},
-    {"normalize", no_argument, &normalize, 1},
-    {"labels",no_argument, &labels, 1},
-    {"float",   no_argument, &store_float, 1},
-    {"short",   no_argument, &store_short, 1},
-    {"byte",    no_argument, &store_byte,  1},
-    {"relabel", required_argument,      0,'L'},
-    {"lut", required_argument,      0,'L'},
-    {"lut-string", required_argument,      0,'s'},
-    {"aa", required_argument,      0,'a'},
-		{"baa", no_argument,       &baa_smooth, 1},
+    {"order",        required_argument, 0, 'o'},
+    {"uniformize",   required_argument, 0, 'u'},
+    {"unistep",      required_argument, 0, 'U'},
+    {"invert_transform", no_argument, &opt.invert, 1},
+    {"normalize",    no_argument, &opt.normalize, 1},
+    {"labels",       no_argument, &labels, 1},
+    {"float",        no_argument, &opt.store_float, 1},
+    {"short",        no_argument, &opt.store_short, 1},
+    {"byte",         no_argument, &opt.store_byte,  1},
+    {"relabel",      required_argument,      0,'L'},
+    {"lut",          required_argument,      0,'L'},
+    {"lut-string",   required_argument,      0,'s'},
+    {"aa",           required_argument,      0,'a'},
+		{"baa",          no_argument,       &opt.baa_smooth, 1},
     {0, 0, 0, 0}
     };
   
@@ -909,7 +905,7 @@ int main (int argc, char **argv)
 				cout << "Version: 0.8" << endl;
 				return 0;
       case 'a':
-        aa_fwhm=atof(optarg);break;
+        opt.aa_fwhm=atof(optarg);break;
       case 'l':
         like_f=optarg; break;
       case 't':
@@ -919,9 +915,9 @@ int main (int argc, char **argv)
         order_was_set=true;
         break;
       case 'u':
-        uniformize=atof(optarg);break;
+        opt.uniformize=atof(optarg);break;
       case 'U':
-        unistep=atof(optarg);break;
+        opt.unistep=atof(optarg);break;
       case 'L':
         map_f=optarg;break;
       case 's':
@@ -934,7 +930,7 @@ int main (int argc, char **argv)
 			}
     }
 
-  if(normalize && ! order_was_set) //perform nearest neighbour interpolation in this case
+  if(opt.normalize && ! order_was_set) //perform nearest neighbour interpolation in this case
     order=0;
   
 	if ((argc - optind) < 2) {
@@ -960,10 +956,10 @@ int main (int argc, char **argv)
     {
       int l1,l2;
       in_map>>l1>>l2;
-      std::map<int,int>::iterator pos=label_map.find(l1);
-      if(pos==label_map.end())
-        label_map[l1]=l2;
-      else if(label_map[l1]!=l2 and verbose)
+      std::map<int,int>::iterator pos=opt.label_map.find(l1);
+      if(pos==opt.label_map.end())
+        opt.label_map[l1]=l2;
+      else if(opt.label_map[l1]!=l2 and verbose)
       {
         std::cerr<<"Warning: label "<<l1<<" mapped more then once!"<<std::endl;
         std::cerr<<"Previous map:"<<(*pos).second<<" New map:"<<l2<<std::endl;
@@ -987,10 +983,10 @@ int main (int argc, char **argv)
       {
         std::cerr<<"Unrecognized lut string:"<<tok1<<std::endl;
       } else {
-        std::map<int,int>::iterator pos=label_map.find(l1);
-        if(pos==label_map.end())
-          label_map[l1]=l2;
-        else if(label_map[l1]!=l2 and verbose)
+        std::map<int,int>::iterator pos=opt.label_map.find(l1);
+        if(pos==opt.label_map.end())
+          opt.label_map[l1]=l2;
+        else if(opt.label_map[l1]!=l2 and verbose)
         {
           std::cerr<<"Warning: label "<<l1<<" mapped more then once!"<<std::endl;
           std::cerr<<"Previous map:"<<(*pos).second<<" New map:"<<l2<<std::endl;
@@ -1019,11 +1015,11 @@ int main (int argc, char **argv)
    
     if(verbose)
     {
-      if(uniformize!=0.0)
-        std::cout<<"Making uniform sampling, step size="<<uniformize<<std::endl;
-      else if(unistep) 
-        std::cout<<"Making same step size, new step size="<<unistep<<std::endl;
-      else if(normalize)
+      if(opt.uniformize!=0.0)
+        std::cout<<"Making uniform sampling, step size="<<opt.uniformize<<std::endl;
+      else if(opt.unistep) 
+        std::cout<<"Making same step size, new step size="<<opt.unistep<<std::endl;
+      else if(opt.normalize)
         std::cout<<"Performin direction cosine normalization"<<std::endl;
     }
     
@@ -1035,32 +1031,32 @@ int main (int argc, char **argv)
         {
           //creating the interpolator
           NNInterpolatorType::Pointer interpolator = NNInterpolatorType::New();
-          if(store_byte)
-            resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
-          else if(store_short)
-            resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
+          if(opt.store_byte)
+            resample_image<Int3DImage,Byte3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,interpolator,opt);
+          else if(opt.store_short)
+            resample_image<Int3DImage,Short3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,interpolator,opt);
           else
-            resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map);
+            resample_image<Int3DImage,Int3DImage,NNInterpolatorType>(io,output_f,xfm_f,like_f,interpolator,opt);
         } else { //using slow algorithm
           InterpolatorType::Pointer interpolator = InterpolatorType::New();
           interpolator->SetSplineOrder(order);
           
-          if(store_byte)
-            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm,baa_smooth);
-          else if(store_short)
-            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm,baa_smooth);
+          if(opt.store_byte)
+            resample_label_image<Int3DImage,Float3DImage,Byte3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,interpolator,opt);
+          else if(opt.store_short)
+            resample_label_image<Int3DImage,Float3DImage,Short3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,interpolator,opt);
           else
-            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator,label_map,aa_fwhm,baa_smooth);
+            resample_label_image<Int3DImage,Float3DImage,Int3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,interpolator,opt);
         }
       } else {
         InterpolatorType::Pointer interpolator = InterpolatorType::New();
         interpolator->SetSplineOrder(order);
-        resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+        resample_image<Float3DImage,Float3DImage,InterpolatorType>(io,output_f,xfm_f,like_f,interpolator,opt);
       }
      } else if( nd==3 && nc==3 )  { // deal with this case as vector image 
        VectorInterpolatorType::Pointer interpolator = VectorInterpolatorType::New();
        interpolator->SetSplineOrder(order);
-       resample_vector_image<Vector3DImage,Vector3DImage,VectorInterpolatorType>(io,output_f,xfm_f,like_f,invert,uniformize,unistep,normalize,history.c_str(),store_float,store_short,store_byte,interpolator);
+       resample_vector_image<Vector3DImage,Vector3DImage,VectorInterpolatorType>(io,output_f,xfm_f,like_f,interpolator,opt);
     } else {
       throw itk::ExceptionObject("This number of dimensions is not supported currently");
     }
