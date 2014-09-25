@@ -61,6 +61,10 @@ namespace minc
     static double scale(int n,double);
     void generate_basis(basis_vector &basis, int order, tag_point p);
     void generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff);
+    void set_scaling(double s)
+    {
+      _scaling=s;
+    }
   };
   
   class CylindricalFunctions
@@ -278,6 +282,10 @@ namespace minc
       _cache_on=on;
     }
     
+    void SetScaling(double s)
+    {
+      basis.set_scaling(s);
+    }
     
   protected:
   SphericalHarmonicsTransform():  
