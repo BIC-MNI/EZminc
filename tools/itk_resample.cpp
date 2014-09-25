@@ -150,11 +150,16 @@ struct resample_options
   {}
 };
 
-template<class T,class I> void generate_uniform_sampling(T* flt, const I* img,double step, TransformBaseType * tfm)
+template<class T,class I> void generate_uniform_sampling(T* flt, const I* img, double step, TransformBaseType * tfm)
 {
   //obtain physical coordinats of all image corners
   typename I::RegionType r=img->GetLargestPossibleRegion();
   std::vector<double> corner[3];
+
+  if(step==0) //assume we want minimum reasonable step size
+    step=std::min<double>(std::min<double>(::fabs(img->GetSpacing()[0]),
+                          ::fabs(img->GetSpacing()[1])),
+                          ::fabs(img->GetSpacing()[2]));
   
   for(int i=0;i<8;i++)
   {
@@ -382,12 +387,8 @@ void resample_image(
 #ifdef HAVE_MINC4ITK
     //reading a minc style xfm file
     transform->OpenXfm(xfm_f.c_str());
-    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
-    filter->SetTransform( transform );
 #else
     transform->OpenXfm(xfm_f.c_str());
-    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
-    filter->SetTransform( transform );
 #endif    
   } else {
     filter->SetTransform( identity_transform );
@@ -400,12 +401,17 @@ void resample_image(
   filter->SetNumberOfThreads(1);
 
   typename Image::Pointer like=0;
+
+  if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
+    transform->Invert();
+  
   if(!like_f.empty())
   {
     typename ImageReaderType::Pointer reader = ImageReaderType::New();
     reader->SetFileName(like_f.c_str());
     reader->Update();
-    if(opt.uniformize!=0.0)
+    
+    if(opt.uniformize!=0.0 || opt.transform_bbox )
     {
       generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer() );
     } else if(opt.unistep!=0.0) {
@@ -419,7 +425,7 @@ void resample_image(
     like=reader->GetOutput();
     like->DisconnectPipeline();
   } else {
-    if(opt.uniformize!=0.0)
+    if(opt.uniformize!=0.0 || opt.transform_bbox)
     {
       generate_uniform_sampling<ResampleFilterType,Image>(filter, in, opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer() );
     } else if(opt.unistep!=0.0) {
@@ -432,6 +438,13 @@ void resample_image(
       filter->SetOutputDirection(in->GetDirection());
     }
   }
+  
+  if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
+    transform->Invert();
+  
+  if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
+
+  filter->SetTransform( transform );
   
   filter->SetInput(in);
 
