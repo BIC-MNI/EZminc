@@ -379,19 +379,22 @@ void resample_image(
   typename ResampleFilterType::Pointer filter  = ResampleFilterType::New();
   
   //creating coordinate transformation objects
-  TransformType::Pointer transform = TransformType::New();  
+  TransformType::Pointer minc_transform = TransformType::New();
   IdentityTransformType::Pointer identity_transform = IdentityTransformType::New();
+  TransformBaseType* transform;
   
   if(!xfm_f.empty())
   {
 #ifdef HAVE_MINC4ITK
     //reading a minc style xfm file
-    transform->OpenXfm(xfm_f.c_str());
+    minc_transform->OpenXfm(xfm_f.c_str());
 #else
-    transform->OpenXfm(xfm_f.c_str());
-#endif    
+    minc_transform->OpenXfm(xfm_f.c_str());
+#endif
+    transform=minc_transform.GetPointer();
   } else {
     filter->SetTransform( identity_transform );
+    transform=identity_transform.GetPointer();
   }
 
   //creating the interpolator
@@ -403,7 +406,7 @@ void resample_image(
   typename Image::Pointer like=0;
 
   if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
-    transform->Invert();
+    minc_transform->Invert();
   
   if(!like_f.empty())
   {
@@ -413,7 +416,10 @@ void resample_image(
     
     if(opt.uniformize!=0.0 || opt.transform_bbox )
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer() );
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,
+        reader->GetOutput(),opt.uniformize,
+        opt.transform_bbox ? transform : (TransformBaseType*)identity_transform.GetPointer() );
+      
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.unistep);
     } else if(opt.normalize) {
@@ -427,7 +433,9 @@ void resample_image(
   } else {
     if(opt.uniformize!=0.0 || opt.transform_bbox)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter, in, opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer() );
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,
+        in, opt.uniformize,
+        opt.transform_bbox ? transform : (TransformBaseType*)identity_transform.GetPointer() );
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,in,opt.unistep);
     } else if(opt.normalize) {
@@ -440,9 +448,9 @@ void resample_image(
   }
   
   if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
-    transform->Invert();
+    minc_transform->Invert();
   
-  if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
+  if(!opt.invert && !xfm_f.empty() ) minc_transform->Invert(); //should be inverted by default to walk through target space
 
   filter->SetTransform( transform );
   
@@ -550,41 +558,47 @@ void resample_label_image (
   typename BAAFilterType::Pointer       baa_filter      = BAAFilterType::New();
 
   //creating coordinate transformation objects
-  TransformType::Pointer transform = TransformType::New();
+  TransformType::Pointer minc_transform = TransformType::New();
   IdentityTransformType::Pointer identity_transform = IdentityTransformType::New();
-  
+  TransformBaseType* transform;
+
   if(!xfm_f.empty())
   {
-#if ( ITK_VERSION_MAJOR < 4 )
+#ifdef HAVE_MINC4ITK
     //reading a minc style xfm file
-    transform->OpenXfm(xfm_f.c_str());
-    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
-    filter->SetTransform( transform );
+    minc_transform->OpenXfm(xfm_f.c_str());
 #else
-    transform->OpenXfm(xfm_f.c_str());
-    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
-    filter->SetTransform( transform );
+    minc_transform->OpenXfm(xfm_f.c_str());
 #endif
+    transform=minc_transform.GetPointer();
+  } else {
+    filter->SetTransform( identity_transform );
+    transform=identity_transform.GetPointer();
   }
 
   //creating the interpolator
   filter->SetInterpolator( interpolator );
   filter->SetDefaultPixelValue( 0 );
-  
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
 
   typename Image::Pointer like=0;
-  
-  
+
+  if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
+    minc_transform->Invert();
+
   if(!like_f.empty())
   {
     typename ImageReaderType::Pointer reader = ImageReaderType::New();
     reader->SetFileName(like_f.c_str());
     reader->Update();
-    if(opt.uniformize!=0.0)
+
+    if(opt.uniformize!=0.0 || opt.transform_bbox )
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer());
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,
+        reader->GetOutput(),opt.uniformize,
+        opt.transform_bbox ? transform : (TransformBaseType*)identity_transform.GetPointer() );
+
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.unistep);
     } else if(opt.normalize) {
@@ -595,12 +609,12 @@ void resample_label_image (
     }
     like=reader->GetOutput();
     like->DisconnectPipeline();
-  }
-  else
-  {
-    if(opt.uniformize!=0.0)
+  } else {
+    if(opt.uniformize!=0.0 || opt.transform_bbox)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer());
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,
+        in, opt.uniformize,
+        opt.transform_bbox ? transform : (TransformBaseType*)identity_transform.GetPointer() );
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,in,opt.unistep);
     } else if(opt.normalize) {
@@ -611,6 +625,14 @@ void resample_label_image (
       filter->SetOutputDirection(in->GetDirection());
     }
   }
+
+  if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
+    minc_transform->Invert();
+
+  if(!opt.invert && !xfm_f.empty() ) minc_transform->Invert(); //should be inverted by default to walk through target space
+
+  filter->SetTransform( transform );
+  
   typename TmpImage::RegionType region;
   region.SetSize (filter->GetSize());
   region.SetIndex(filter->GetOutputStartIndex());
@@ -762,40 +784,47 @@ void resample_vector_image(
   typename ResampleFilterType::Pointer filter  = ResampleFilterType::New();
   
   //creating coordinate transformation objects
-  TransformType::Pointer transform = TransformType::New();
+  TransformType::Pointer minc_transform = TransformType::New();
   IdentityTransformType::Pointer identity_transform = IdentityTransformType::New();
-  
+  TransformBaseType* transform;
+
   if(!xfm_f.empty())
   {
-    //reading a minc style xfm file
 #ifdef HAVE_MINC4ITK
-    transform->OpenXfm(xfm_f.c_str());
-    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
-    filter->SetTransform( transform );
+    //reading a minc style xfm file
+    minc_transform->OpenXfm(xfm_f.c_str());
 #else
-    transform->OpenXfm(xfm_f.c_str());
-    if(!opt.invert) transform->Invert(); //should be inverted by default to walk through target space
-    filter->SetTransform( transform );
+    minc_transform->OpenXfm(xfm_f.c_str());
 #endif
+    transform=minc_transform.GetPointer();
+  } else {
+    filter->SetTransform( identity_transform );
+    transform=identity_transform.GetPointer();
   }
 
   //creating the interpolator
-
   filter->SetInterpolator( interpolator );
   //filter->SetDefaultPixelValue( 0 );
-  
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
-  
+
   typename Image::Pointer like=0;
+
+  if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
+    minc_transform->Invert();
+
   if(!like_f.empty())
   {
     typename ImageReaderType::Pointer reader = ImageReaderType::New();
     reader->SetFileName(like_f.c_str());
     reader->Update();
-    if(opt.uniformize!=0.0)
+
+    if(opt.uniformize!=0.0 || opt.transform_bbox )
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer());
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,
+        reader->GetOutput(),opt.uniformize,
+        opt.transform_bbox ? transform : (TransformBaseType*)identity_transform.GetPointer() );
+
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,reader->GetOutput(),opt.unistep);
     } else if(opt.normalize) {
@@ -807,12 +836,12 @@ void resample_vector_image(
     }
     like=reader->GetOutput();
     like->DisconnectPipeline();
-  }
-  else
-  {
-    if(opt.uniformize!=0.0)
+  } else {
+    if(opt.uniformize!=0.0 || opt.transform_bbox)
     {
-      generate_uniform_sampling<ResampleFilterType,Image>(filter,in,opt.uniformize, opt.transform_bbox? (TransformBaseType*)transform.GetPointer() : (TransformBaseType*)identity_transform.GetPointer());
+      generate_uniform_sampling<ResampleFilterType,Image>(filter,
+        in, opt.uniformize,
+        opt.transform_bbox ? transform : (TransformBaseType*)identity_transform.GetPointer() );
     } else if(opt.unistep!=0.0) {
       generate_unistep_sampling<ResampleFilterType,Image>(filter,in,opt.unistep);
     } else if(opt.normalize) {
@@ -824,6 +853,14 @@ void resample_vector_image(
       filter->SetOutputDirection(in->GetDirection());
     }
   }
+
+  if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
+    minc_transform->Invert();
+
+  if(!opt.invert && !xfm_f.empty() ) minc_transform->Invert(); //should be inverted by default to walk through target space
+
+  filter->SetTransform( transform );
+  
   filter->SetInput(in);
   filter->Update();
   typename ImageOut::Pointer out=filter->GetOutput();
