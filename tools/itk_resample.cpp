@@ -156,24 +156,28 @@ template<class T,class I> void generate_uniform_sampling(T* flt, const I* img, d
   typename I::RegionType r=img->GetLargestPossibleRegion();
   std::vector<double> corner[3];
 
-  if(step==0) //assume we want minimum reasonable step size
-    step=std::min<double>(std::min<double>(::fabs(img->GetSpacing()[0]),
-                          ::fabs(img->GetSpacing()[1])),
-                          ::fabs(img->GetSpacing()[2]));
-  
-  for(int i=0;i<8;i++)
+  if( step==0.0 ) //assume we want minimum reasonable step size
+    step=std::min<double>(std::min<double>(
+                          ::fabs(img->GetSpacing()[0]),
+                          ::fabs(img->GetSpacing()[1]) ),
+                          ::fabs(img->GetSpacing()[2]) );
+    
+  //walk over all corners
+  for(int i=0; i<8; i++)
   {
     typename I::IndexType idx;
     typename I::PointType c,o;
-    idx[0]=r.GetIndex()[0]+r.GetSize()[0]*(i%2);
-    idx[1]=r.GetIndex()[1]+r.GetSize()[1]*((i/2)%2);
-    idx[2]=r.GetIndex()[2]+r.GetSize()[2]*((i/4)%2);
-    img->TransformIndexToPhysicalPoint(idx,c);
     
-    o=tfm->TransformPoint(c);
+    idx[0]=r.GetIndex()[0]+r.GetSize()[0]*(  i    % 2 );
+    idx[1]=r.GetIndex()[1]+r.GetSize()[1]*( (i/2) % 2 );
+    idx[2]=r.GetIndex()[2]+r.GetSize()[2]*( (i/4) % 2 );
     
-    for(int j=0;j<3;j++)
-      corner[j].push_back(o[j]);
+    img->TransformIndexToPhysicalPoint(idx, c );
+    
+    o=tfm->TransformPoint( c );
+    
+    for(int j=0; j<3; j++)
+      corner[j].push_back( o[j] );
   }
   
   typename I::IndexType start;
@@ -181,20 +185,25 @@ template<class T,class I> void generate_uniform_sampling(T* flt, const I* img, d
   typename T::OriginPointType org;
   typename I::SpacingType spc;
   spc.Fill(step);
+  
   for(int j=0;j<3;j++)
   {
-    std::sort(corner[j].begin(),corner[j].end());
-    size[j]=ceil((corner[j][7]-corner[j][0])/step);
+    std::sort(corner[j].begin(), corner[j].end());
+    
+    size[j]=ceil( (corner[j][7]-corner[j][0])/step );
+    
     org[j]=corner[j][0];
   }
+  
   Float3DImage::DirectionType identity;
   identity.SetIdentity();
   flt->SetOutputDirection(identity);
   start.Fill(0);
-  flt->SetOutputStartIndex(start);
-  flt->SetSize(size);
-  flt->SetOutputOrigin(org);
-  flt->SetOutputSpacing(spc);
+  
+  flt->SetOutputStartIndex( start );
+  flt->SetSize( size );
+  flt->SetOutputOrigin( org );
+  flt->SetOutputSpacing( spc );
 }
 
 template<class T,class I> void generate_unistep_sampling(T* flt, const I* img,double step)
@@ -487,7 +496,7 @@ void resample_image(
   if(opt.store_float)
   {
     minc::set_minc_storage_type(out,NC_FLOAT,true);
-  } else if(opt.store_short) {
+  } else if(opt.store_short) {or
     minc::set_minc_storage_type(out,NC_SHORT,true);
   } else if(opt.store_byte) {
     minc::set_minc_storage_type(out,NC_BYTE,false);
