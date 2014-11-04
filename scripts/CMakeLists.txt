@@ -14,7 +14,7 @@ INSTALL(PROGRAMS
         icc_mask.pl
         uniformize_minc.pl
         xfm_normalize.pl
-        xfmavg
+#        xfmavg
         lobe_segment.pl
         lobes_to_volumes.pl
         minc_qc2.pl
