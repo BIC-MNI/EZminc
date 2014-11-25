@@ -13,9 +13,9 @@ my $me=basename($0);
 my $debug=0;
 my @image_range;
 my @ovl_range;
-my @coronal=(116);
-my @sagittal=(93);
-my @axial=(76);
+my @coronal;
+my @sagittal;
+my @axial;
 my $overlay;
 my $separate;
 my $out_coronal;
@@ -112,6 +112,7 @@ END
 
 my ($in,$out)=@ARGV;
 
+
 if($separate) {
   
   $out_coronal=$out."_coronal.png";
@@ -128,6 +129,11 @@ if($separate) {
 my $tmpdir = &tempdir( "$me-XXXXXXXX", TMPDIR => 1, CLEANUP => 1 );
 
 delete $ENV{MINC_COMPRESS} if $ENV{MINC_COMPRESS};
+
+#@coronal=(116) if $#coronal==-1;
+#@sagittal=(93) if $#sagittal==-1;
+#@axial=(76)    if $#axial==-1;
+
 
 my @coronal_=@coronal;
 my @axial_=@axial;
