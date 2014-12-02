@@ -146,7 +146,7 @@ struct resample_options
     uniformize(0),unistep(0),
     transform_bbox(0),
     store_float(0),store_short(0),store_byte(0),
-    aa_fwhm(0), baa_smooth(0) 
+    aa_fwhm(0), baa_smooth(0) ,normalize(0)
   {}
 };
 
@@ -277,8 +277,10 @@ template<class T,class I> void generate_normalized_sampling(T* flt, const I* img
       dist[j]=corner.EuclideanDistanceTo(c2[j]);
       
       v[j]=(c2[j]-corner)/dist[j];
+      
       //sort according to orientation
-      size_t mp=std::max_element(v[j].GetDataPointer(),v[j].GetDataPointer()+3,abs_compare<typename VectorType::RealValueType>)-(v[j].GetDataPointer());
+      size_t mp=std::max_element(v[j].GetDataPointer(),v[j].GetDataPointer()+3,
+                                 abs_compare<typename VectorType::RealValueType>)-(v[j].GetDataPointer());
       
       if(rrmap[mp]==-1) //we have already found this axis?
       {
@@ -286,8 +288,8 @@ template<class T,class I> void generate_normalized_sampling(T* flt, const I* img
         rrmap[mp]=j;
         proj[j]=v[j][mp];
       } else {
-        std::cout<<"Failed to find max component!"<<std::endl;
-        std::cout<<"mp="<<mp<<std::endl;
+        std::cerr<<"Failed to find max component!"<<std::endl;
+        std::cerr<<"mp="<<mp<<std::endl;
       }
     }
     //check if all axis are mapped
@@ -296,7 +298,7 @@ template<class T,class I> void generate_normalized_sampling(T* flt, const I* img
       if(remap[j]==-1)//assign next available axis
       {
         int k;
-        for(k=0;k<3&&rrmap[k]!=-1;k++);
+        for(k=0; k<3&&rrmap[k]!=-1 ;k++);
         if(k==3) //abort?
           throw itk::ExceptionObject("Wierd orientation, can't figure out how to normalize it");
         remap[j]=k;
@@ -310,7 +312,7 @@ template<class T,class I> void generate_normalized_sampling(T* flt, const I* img
     
     //check if coordinate system is positive (right handed) i.e determinant is positive
     //and that projections on axes are posive
-    if(dot_product(vnl_cross_3d(xvec,yvec),zvec)>0 &&
+    if(dot_product( vnl_cross_3d(xvec,yvec), zvec ) > 0 &&
        proj[0]>0 &&
        proj[1]>0 &&
        proj[2]>0 )
@@ -331,8 +333,8 @@ template<class T,class I> void generate_normalized_sampling(T* flt, const I* img
         
         size[j]=r.GetSize()[rrmap[j]];
         
-        //spc[j]=dist[rrmap[j]]/size[j];//img->GetSpacing()[rrmap[j]];
-        spc[j]=img->GetSpacing()[rrmap[j]];
+        spc[j]=fabs( img->GetSpacing()[rrmap[j]] ); // have to make steps positive!
+        
       }
       flt->SetOutputDirection(dir);
       
@@ -346,6 +348,7 @@ template<class T,class I> void generate_normalized_sampling(T* flt, const I* img
       return;
     }
   }
+  // should report that didn't find anything ?
 }
 
 
@@ -482,8 +485,10 @@ void resample_image(
   minc::append_history(out,opt.history);
   
   //correct dimension order
-  if(like.IsNotNull())
+  if(like.IsNotNull() && opt.uniformize==0.0 && !opt.transform_bbox && !opt.normalize && opt.unistep==0.0)
     minc::copy_dimorder(out,like);
+  else if( opt.uniformize!=0.0 || opt.transform_bbox || opt.normalize || opt.unistep!=0.0)
+    minc::delete_dimorder(out);
     
   //generic file writer
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
@@ -729,8 +734,10 @@ void resample_label_image (
   minc::append_history(LabelImage,opt.history);
   
   //correct dimension order
-  if(like.IsNotNull())
+  if(like.IsNotNull() && opt.uniformize==0.0 && !opt.transform_bbox && !opt.normalize && opt.unistep==0.0)
     minc::copy_dimorder(LabelImage,like);
+  else if( opt.uniformize!=0.0 || opt.transform_bbox || opt.normalize || opt.unistep!=0.0)
+    minc::delete_dimorder(LabelImage);
     
   //generic file writer
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
@@ -879,8 +886,10 @@ void resample_vector_image(
   minc::append_history(out,opt.history);
   
   //correct dimension order
-  if(like.IsNotNull())
+  if(like.IsNotNull() && opt.uniformize==0.0 && !opt.transform_bbox && !opt.normalize && opt.unistep==0.0)
     minc::copy_dimorder(out,like);
+  else if( opt.uniformize!=0.0 || opt.transform_bbox || opt.normalize || opt.unistep!=0.0)
+    minc::delete_dimorder(out);
   
   //generic file writer
   
@@ -1001,7 +1010,7 @@ int main (int argc, char **argv)
 			}
     }
 
-  if(opt.normalize && ! order_was_set) //perform nearest neighbour interpolation in this case
+  if(opt.normalize && !order_was_set) //perform nearest neighbour interpolation in this case
     order=0;
   
 	if ((argc - optind) < 2) {
@@ -1091,7 +1100,7 @@ int main (int argc, char **argv)
       else if(opt.unistep) 
         std::cout<<"Making same step size, new step size="<<opt.unistep<<std::endl;
       else if(opt.normalize)
-        std::cout<<"Performin direction cosine normalization"<<std::endl;
+        std::cout<<"Performing direction cosine normalization"<<std::endl;
     }
     
     if( nc==1 && nd==3 ) //3D image, simple case
