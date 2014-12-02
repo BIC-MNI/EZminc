@@ -295,6 +295,9 @@ namespace minc
   
   //! copy minc dimension order
   void copy_dimorder(itk::Object* dst,itk::Object* src);
+
+  //! reset minc dimension order
+  void delete_dimorder(itk::Object* dst);
   
   //! append minc-style history
   void append_history(itk::Object* dst,const std::string& history);

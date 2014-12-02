@@ -776,6 +776,11 @@ namespace minc
     }
   }
   
+  void delete_dimorder(itk::Object* dst)
+  {
+    itk::EncapsulateMetaData(dst->GetMetaDataDictionary(),"dimension_order",std::string(""));
+  }
+  
   void append_history(itk::Object* dst,const std::string& history)
   {
     std::string old_history;
