@@ -1162,9 +1162,6 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
       typename CommandIterationUpdate<PixelType, Dimension>::Pointer multiresobserver =
         CommandIterationUpdate<PixelType, Dimension>::New();
       multires->AddObserver ( itk::IterationEvent(), multiresobserver );
-
-      std::cout<<filter;
-      std::cout<<multires;
     }
 
     // Compute the deformation field
