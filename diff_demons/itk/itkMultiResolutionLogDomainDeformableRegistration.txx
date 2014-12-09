@@ -15,7 +15,14 @@ MultiResolutionLogDomainDeformableRegistrationM<TFixedImage,TMovingImage,TField,
 ::MultiResolutionLogDomainDeformableRegistrationM()
 {
 
+#if (ITK_VERSION_MAJOR < 4)
     this->SetNumberOfRequiredInputs(2);
+#else
+    //HACK: This really should define the names of the required inputs.
+    this->SetNumberOfIndexedInputs(2);
+    // Primary input is optional in this filter
+    this->RemoveRequiredInputName( "Primary" );
+#endif
 
     typename DefaultRegistrationType::Pointer registrator =
         DefaultRegistrationType::New();

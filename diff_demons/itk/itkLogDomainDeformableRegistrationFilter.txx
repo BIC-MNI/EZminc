@@ -20,7 +20,14 @@ LogDomainDeformableRegistrationFilterM<TFixedImage,TMovingImage,TField,TMask>
 ::LogDomainDeformableRegistrationFilterM()
 {
 
+#if (ITK_VERSION_MAJOR < 4)
     this->SetNumberOfRequiredInputs(2);
+#else
+//HACK: This really should define the names of the required inputs.
+    this->SetNumberOfIndexedInputs(2);
+    // Primary input is optional in this filter
+    this->RemoveRequiredInputName( "Primary" );
+#endif
 
     this->SetNumberOfIterations(10);
 
@@ -278,17 +285,17 @@ LogDomainDeformableRegistrationFilterM<TFixedImage,TMovingImage,TField,TMask>
 
     if ( !f )
     {
-				//PrintSelf(std::cerr);
-				PrintSelf(std::cerr,Indent());
+        //PrintSelf(std::cerr);
+        PrintSelf(std::cerr,Indent());
         itkExceptionMacro(<<"FiniteDifferenceFunction not of type PDEDeformableRegistrationFunctionM");
     }
 
     f->SetFixedImage( fixedPtr );
     f->SetMovingImage( movingPtr );
 		
-		//set-up masks
-		f->SetFixedImageMask( m_FixedImageMask );
-		f->SetMovingImageMask( m_MovingImageMask );
+    //set-up masks
+    f->SetFixedImageMask( m_FixedImageMask );
+    f->SetMovingImageMask( m_MovingImageMask );
 
     this->Superclass::InitializeIteration();
 
@@ -403,16 +410,16 @@ LogDomainDeformableRegistrationFilterM<TFixedImage,TMovingImage,TField,TMask>
     
     
     if( m_MovingImageMask )
-		{
-			MaskImageType* msk=const_cast< MaskImageType *>(m_MovingImageMask.GetPointer());
-			msk->SetRequestedRegion( outputPtr->GetRequestedRegion() );
-		}
-		
+    {
+        MaskImageType* msk=const_cast< MaskImageType *>(m_MovingImageMask.GetPointer());
+        msk->SetRequestedRegion( outputPtr->GetRequestedRegion() );
+    }
+
     if( m_FixedImageMask )
-		{
-			MaskImageType* msk=const_cast< MaskImageType *>(m_FixedImageMask.GetPointer());
-			msk->SetRequestedRegion( outputPtr->GetRequestedRegion() );
-		}
+    {
+        MaskImageType* msk=const_cast< MaskImageType *>(m_FixedImageMask.GetPointer());
+        msk->SetRequestedRegion( outputPtr->GetRequestedRegion() );
+    }
 }
 
 

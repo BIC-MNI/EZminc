@@ -316,7 +316,7 @@ int main ( int argc, char *argv[] )
     VelocitorFilterType::Pointer velocitor = VelocitorFilterType::New();
     velocitor->SetInput ( input_field );
     velocitor->SetNumberOfIterations ( iter );
-    if(sigma>0.0)
+    if(sigma > 0.0)
     {
       velocitor->SmoothVelocityFieldOn();
       velocitor->SetSigma ( sigma );
