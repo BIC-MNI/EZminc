@@ -86,6 +86,26 @@ my @conf = (
     'blur_fwhm'    => 0.25,
     'iterations'   => 10,
     },
+
+    {'step'         => 0.25,
+    'blur_fwhm'    => 0.125,
+    'iterations'   => 10,
+    },
+
+    {'step'         => 0.125,
+    'blur_fwhm'    => 0.0625,
+    'iterations'   => 10,
+    },
+
+    {'step'         => 0.0625,
+    'blur_fwhm'    => 0.03125,
+    'iterations'   => 10,
+    },
+
+    {'step'         => 0.03125,
+    'blur_fwhm'    => 0.015625,
+    'iterations'   => 10,
+    },
     
    );
 
