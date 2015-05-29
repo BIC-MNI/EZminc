@@ -3,7 +3,7 @@
 use File::Basename;
 use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
-use POSIX qw(floor);
+use POSIX qw(floor ceil);
 use strict;
 
 my $fake=0;
@@ -38,6 +38,9 @@ my $foreground='white';
 my $title;
 my $pointsize;
 my $noresample=0;
+my $tile;
+my $geo="+0+0";
+my $compact;
 
 GetOptions (    
           "verbose"          => \$verbose,
@@ -71,7 +74,11 @@ GetOptions (
           'foreground=s'     => \$foreground,
           'title=s'          => \$title,
           'pointsize=n'      => \$pointsize,
-          'noresample'      => \$noresample,
+          'noresample'       => \$noresample,
+          'tile=s'           => \$tile,
+          'geo=s'            => \$geo,
+          'compact'          => \$compact,
+          'debug'            => \$debug
           );
           
 die <<END  if $#ARGV<1;
@@ -105,8 +112,10 @@ Usage: $me <scan_in> <scan_out>
   --discrete <use discrete labels for overlay>
   --background <color>, default black
   --foreground <color>, default white
-  --tile <title>
+  --title <title>
   --pointsize <n>
+  --tile XxY
+  --geo  +1+1
 ]
 END
 
@@ -126,7 +135,7 @@ if($separate) {
 } else {
   check_file($out) unless $clobber;
 }
-my $tmpdir = &tempdir( "$me-XXXXXXXX", TMPDIR => 1, CLEANUP => 1 );
+my $tmpdir = &tempdir( "$me-XXXXXXXX", TMPDIR => 1, CLEANUP => !$debug );
 
 delete $ENV{MINC_COMPRESS} if $ENV{MINC_COMPRESS};
 
@@ -378,20 +387,26 @@ if($separate)
 
 
 } else {
-  my $geo='+0+0';
-
-  if($vertical)
+  
+  unless($compact)
   {
-    equalize_width(@pics);
-  } else {
-    equalize_height(@pics);
+    if($vertical)
+    {
+      equalize_width(@pics);
+    } else {
+      equalize_height(@pics);
+    }
   }
   
-  my $lines=floor(($#pics+2)/3);
+  my $lines=ceil(($#pics+2)/3);
+  $tile=($vertical?"${lines}x3":"3x$lines") unless $tile;
+  
   #chomp($geo);
-  my @args=('montage','-depth',8,#'-texture','rose:',
-          '-tile',$vertical?"${lines}x3":"3x$lines",
-          '-geometry',$geo,'-gravity','North',
+  my @args=('montage',
+          '-depth',8,
+          '-tile',$tile,
+          '-geometry',$geo,
+          #'-gravity','North',
           '-background' ,$background,
           '-bordercolor',$background,
           '-mattecolor',$background,
@@ -418,7 +433,7 @@ sub check_file {
   {
     die("${_[0]} exists!\n");
     return 0;
-  }    
+  }
   return 1;
 }
 
