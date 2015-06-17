@@ -184,6 +184,10 @@ IF(HAVE_MINC1)
   ADD_EXECUTABLE( volume_similarity volume_similarity.cpp)
   TARGET_LINK_LIBRARIES(volume_similarity minc_image_proc ${EZMINC_LIBRARIES})
   
+  
+  ADD_EXECUTABLE( minc_taylor_reg minc_taylor_reg.c)
+  TARGET_LINK_LIBRARIES(minc_taylor_reg ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES})
+  
   INSTALL(TARGETS 
             volume_dwt
             minc_downsample
@@ -193,6 +197,7 @@ IF(HAVE_MINC1)
             fuzzy_volume_similarity
             volume_gtc_similarity
             volume_similarity
+            minc_taylor_reg
           RUNTIME DESTINATION bin )
 
 ENDIF(HAVE_MINC1)
