@@ -38,6 +38,15 @@ DiffeomorphicDemonsRegistrationFilterM<TFixedImage,TMovingImage,TDeformationFiel
   this->SetDifferenceFunction( static_cast<FiniteDifferenceFunctionType *>(
                                  drfp.GetPointer() ) );
 
+#if (ITK_VERSION_MAJOR < 4)
+  this->SetNumberOfRequiredInputs(2);
+#else
+  //HACK: This really should define the names of the required inputs.
+  this->SetNumberOfIndexedInputs(2);
+  // Primary input is optional in this filter
+  this->RemoveRequiredInputName( "Primary" );
+#endif  
+  
   m_Multiplier = MultiplyByConstantType::New();
   m_Multiplier->InPlaceOn();
 
