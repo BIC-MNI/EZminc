@@ -153,22 +153,22 @@ WriteTransform(typename itk::Transform<T, VImageDimension, VImageDimension>::Poi
   // if it's a displacement field transform
   try
     {
-    if( dispXfrm != ITK_NULLPTR )
-      {
-      typename DisplacementFieldType::Pointer dispField = dispXfrm->GetModifiableDisplacementField();
-      typename DisplacementFieldWriter::Pointer writer = DisplacementFieldWriter::New();
-      writer->SetInput(dispField);
-      writer->SetFileName(filename.c_str() );
-      writer->Update();
-      }
-    else
-    // regular transform
-      {
+//     if( dispXfrm != ITK_NULLPTR )
+//       {
+//       typename DisplacementFieldType::Pointer dispField = dispXfrm->GetModifiableDisplacementField();
+//       typename DisplacementFieldWriter::Pointer writer = DisplacementFieldWriter::New();
+//       writer->SetInput(dispField);
+//       writer->SetFileName(filename.c_str() );
+//       writer->Update();
+//       }
+//     else
+//     // regular transform
+//       {
       typename TransformWriterType::Pointer transformWriter = TransformWriterType::New();
       transformWriter->SetInput(xfrm);
       transformWriter->SetFileName(filename.c_str() );
       transformWriter->Update();
-      }
+//       }
     }
   catch( itk::ExceptionObject & err )
     {
@@ -179,6 +179,67 @@ WriteTransform(typename itk::Transform<T, VImageDimension, VImageDimension>::Poi
     }
   return EXIT_SUCCESS;
 }
+
+template <class T, unsigned int VImageDimension> 
+int
+ReadWriteTranform(const std::string & input,
+                  const std::string & output,
+                  bool decompose,
+                  bool verbose)
+{
+    typedef typename itk::Transform<T, VImageDimension, VImageDimension> _Transform;
+    typename _Transform::Pointer xfm=itk::ReadTransform<T, VImageDimension>(input.c_str());
+    
+    if(xfm.IsNotNull())
+    {
+      
+      if( decompose && xfm->GetNameOfClass()=="CompositeTransform")
+      {
+        std::string::size_type extpos=output.rfind(".");
+        std::string ext,base=output;
+        if(extpos!=std::string::npos)
+        {
+          base=output.substr(0,extpos);
+          ext=output.substr(extpos+1,std::string::npos);
+        }
+        
+        typename itk::CompositeTransform<T, VImageDimension>::Pointer tempComp =
+          dynamic_cast< itk::CompositeTransform<T, VImageDimension> *>( xfm.GetPointer() );
+        for( unsigned int i = 0; i < tempComp->GetNumberOfTransforms(); ++i )
+          {
+            std::stringstream tempstream;
+            tempstream << base << "_" << i << "."<<ext;
+            std::string out=tempstream.str();
+            typename _Transform::Pointer _xfm=tempComp->GetNthTransform( i );
+            
+            if(verbose)
+              std::cout<<"Tranform type="<<_xfm->GetNameOfClass()<<std::endl;
+            
+            if( itk::WriteTransform<T, VImageDimension>( _xfm, out )!=EXIT_SUCCESS )
+            {
+              std::cerr<<"Can't write:"<<tempstream.str()<<std::endl;
+              return 1;
+            }
+          }
+      } else {
+        if(verbose)
+          std::cout<<"Tranform type="<<xfm->GetNameOfClass()<<std::endl;
+        if(itk::WriteTransform<T, VImageDimension>(xfm,output)!=EXIT_SUCCESS)
+        {
+          std::cerr<<"Can't write:"<<output.c_str()<<std::endl;
+          return 1;
+        }
+      }
+    }
+    else
+    {
+      std::cerr<<"Can't read:"<<input.c_str()<<std::endl;
+      return 1;
+    }
+    return 0;
+}
+  
+  
 } // namespace itk
 
 
@@ -260,86 +321,16 @@ int main(int argc, char ** argv)
     {
       if(dimensions==3)
       {
-        typedef itk::Transform<float, 3, 3> Transform;
-        Transform::Pointer xfm=itk::ReadTransform<float,3>(input.c_str());
-        if(xfm.IsNotNull())
-        {
-          if(verbose)
-            std::cout<<"Tranform type="<<xfm->GetNameOfClass()<<std::endl;
-          
-          if(itk::WriteTransform<float,3>(xfm,output.c_str())!=EXIT_SUCCESS)
-          {
-            std::cerr<<"Can't write:"<<output.c_str()<<std::endl;
-            return 1;
-          }
-        }
-        else
-        {
-          std::cerr<<"Can't read:"<<input.c_str()<<std::endl;
-          return 1;
-        }
+        return itk::ReadWriteTranform<float,3>(input,output,decompose,verbose);
       } else if(dimensions==2) {
-        typedef itk::Transform<float, 2, 2> Transform;
-        
-        Transform::Pointer xfm=itk::ReadTransform<float,2>(input.c_str());
-        if(xfm.IsNotNull() )
-        {
-          if(itk::WriteTransform<float,2>(xfm,output.c_str())!=EXIT_SUCCESS)
-          {
-            std::cerr<<"Can't write:"<<output.c_str()<<std::endl;
-            return 1;
-          }
-        }
-        else
-        {
-          std::cerr<<"Can't read:"<<input.c_str()<<std::endl;
-          return 1;
-        }
-      } else {
-        std::cerr<<"Unsupported number of dimensions:"<<dimensions<<std::endl;
-        return 1;
+        return itk::ReadWriteTranform<float,2>(input,output,decompose,verbose);
       }
     } else {
       if(dimensions==3)
       {
-        typedef itk::Transform<double, 3, 3> Transform;
-        Transform::Pointer xfm=itk::ReadTransform<double,3>(input.c_str());
-        if(xfm.IsNotNull())
-        {
-          if(verbose)
-            std::cout<<"Tranform type="<<xfm->GetNameOfClass()<<std::endl;
-          
-          if(itk::WriteTransform<double,3>(xfm,output.c_str())!=EXIT_SUCCESS)
-          {
-            std::cerr<<"Can't write:"<<output.c_str()<<std::endl;
-            return 1;
-          }
-        }
-        else
-        {
-          std::cerr<<"Can't read:"<<input.c_str()<<std::endl;
-          return 1;
-        }
+        return itk::ReadWriteTranform<double,3>(input,output,decompose,verbose);
       } else if(dimensions==2) {
-        typedef itk::Transform<double, 2, 2> Transform;
-        
-        Transform::Pointer xfm=itk::ReadTransform<double,2>(input.c_str());
-        if(xfm.IsNotNull() )
-        {
-          if(itk::WriteTransform<double,2>(xfm,output.c_str())!=EXIT_SUCCESS)
-          {
-            std::cerr<<"Can't write:"<<output.c_str()<<std::endl;
-            return 1;
-          }
-        }
-        else
-        {
-          std::cerr<<"Can't read:"<<input.c_str()<<std::endl;
-          return 1;
-        }
-      } else {
-        std::cerr<<"Unsupported number of dimensions:"<<dimensions<<std::endl;
-        return 1;
+        return itk::ReadWriteTranform<double,2>(input,output,decompose,verbose);
       }
     }    
   }
