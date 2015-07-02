@@ -82,6 +82,9 @@ IF(ITK_FOUND)
   ADD_EXECUTABLE( itk_convert itk_convert.cpp )
   TARGET_LINK_LIBRARIES(itk_convert  ${ITK_LIBRARIES})
   
+  ADD_EXECUTABLE( itk_convert_xfm itk_convert_xfm.cpp )
+  TARGET_LINK_LIBRARIES(itk_convert_xfm  ${ITK_LIBRARIES})
+  
   ADD_EXECUTABLE( itk_morph
                   itk_morph.cpp )
   TARGET_LINK_LIBRARIES( itk_morph   ${ITK_LIBRARIES})
@@ -140,6 +143,7 @@ IF(ITK_FOUND)
     itk_similarity 
     itk_resample  
     itk_convert 
+    itk_convert_xfm
     itk_morph 
     itk_g_morph
     itk_laplace
