@@ -133,8 +133,10 @@ int main(int argc,char **argv)
     for(int i=0;i<5;i++)
     {
       if(rdr1.ndim(i)!=rdr2.ndim(i))
+      {
         std::cerr<<"Different dimensions length! "<<std::endl;
-      
+        return 1;
+      }
       if(rdr1.ndim(i)>0) size*=rdr1.ndim(i);
     }
     
