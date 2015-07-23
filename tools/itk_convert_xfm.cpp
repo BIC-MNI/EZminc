@@ -193,7 +193,7 @@ ReadWriteTranform(const std::string & input,
     if(xfm.IsNotNull())
     {
       
-      if( decompose && xfm->GetNameOfClass()=="CompositeTransform")
+      if( decompose && xfm->GetNameOfClass()==std::string("CompositeTransform"))
       {
         std::string::size_type extpos=output.rfind(".");
         std::string ext,base=output;
