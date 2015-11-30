@@ -289,11 +289,11 @@ namespace minc
     
   protected:
   SphericalHarmonicsTransform():  
-#if ( ITK_VERSION_MAJOR > 3 ) 
-     itk::Transform< double,3,3 >(),
+#if ( ITK_VERSION_MAJOR > 3 )
+    itk::Transform< double,3,3 >(3),
 #else  
-    itk::Transform< double,3,3 >(3,3),
-#endif      
+    itk::Transform< double,3,3 >(),
+#endif
     _basis_cache(Basis_cache_vector::New()),_cache_on(false)
     { 
       _extent=100.0;
