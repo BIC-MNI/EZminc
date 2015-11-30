@@ -1,18 +1,3 @@
-/* ----------------------------- MNI Header -----------------------------------
-@NAME       : 
-@DESCRIPTION: interface to LSQ nonlinear optimization solver from GSL
-@COPYRIGHT  :
-              Copyright 2009 Vladimir Fonov, 
-              McConnell Brain Imaging Centre, 
-              Montreal Neurological Institute, McGill University.
-              Permission to use, copy, modify, and distribute this
-              software and its documentation for any purpose and without
-              fee is hereby granted, provided that the above copyright
-              notice appear in all copies.  The author and McGill University
-              make no representations about the suitability of this
-              software for any purpose.  It is provided "as is" without
-              express or implied warranty.
----------------------------------------------------------------------------- */
 #include "gsl_nlfit.h"
 
 namespace minc
@@ -27,8 +12,9 @@ namespace minc
     _fun_f.p = p;
     _fun_f.params = fun;
       
-    _current.attach(_solver->x);
-    _cur_j.attach(_solver->J);
+    //_current.attach(_solver->x);
+    //_cur_j.attach(_solver->J);
+    _cur_j.resize(_fun_f.n,_fun_f.p);
     _cov.resize(_fun_f.p,_fun_f.p);
       
     _grad.resize(p);
@@ -59,8 +45,10 @@ namespace minc
   
   const gsl_double_matrix& gsl_nlfit::calc_covariance(void)
   {
-      //_cur_j.attach(_solver->J);
-    gsl_multifit_covar(_solver->J, FLT_EPSILON, _cov);  
+    //gsl_multifit_covar(_solver->J, FLT_EPSILON, _cov);  
+    gsl_multifit_fdfsolver_jac(_solver, _cur_j);
+    gsl_multifit_covar(_cur_j, FLT_EPSILON, _cov);
+    
     return _cov;
   }
  

@@ -1,9 +1,8 @@
 /* ----------------------------- MNI Header -----------------------------------
 @NAME       : 
-@DESCRIPTION: interface to LSQ nonlinear optimization solver from GSL
+@DESCRIPTION: 
 @COPYRIGHT  :
-              Copyright 2009 Vladimir Fonov, 
-              McConnell Brain Imaging Centre, 
+              Copyright 2009 Vladimir Fonov, McConnell Brain Imaging Centre, 
               Montreal Neurological Institute, McGill University.
               Permission to use, copy, modify, and distribute this
               software and its documentation for any purpose and without
@@ -103,24 +102,24 @@ namespace minc
     
     bool iterate(void)
     {
+      int _info=0;
       _status = gsl_multifit_fdfsolver_iterate (_solver);
       if(_status) return false;
-      gsl_multifit_gradient(_solver->J,_solver->f,_grad);
+      //gsl_multifit_gradient(_solver->J,_solver->f,_grad); // VF: figure this out later ?
       
-      _status = gsl_multifit_test_delta(_solver->dx, _solver->x, _dx_delta, _x_delta);
+      //_status = gsl_multifit_test_delta(_solver->dx, _solver->x, _dx_delta, _x_delta);
       //_status= gsl_multifit_test_gradient(_grad,1e-6);
+      _status = gsl_multifit_fdfsolver_test( _solver, _dx_delta, _dx_delta, _x_delta, &_info);
       return _status==GSL_CONTINUE;
     }
 
     const gsl_double_vector& solution(void) const
     {
-      //_current.attach(_solver->x);
       return _current;
     }
 
     const gsl_double_matrix& J(void) const
     {
-      //_cur_j.attach(_solver->J);
       return _cur_j;
     }
 
