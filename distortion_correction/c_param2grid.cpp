@@ -38,8 +38,8 @@ void show_usage (void)
     << "--clobber overwrite files"    << endl
     << "--spacing <n> spacing of grid file in mm, default 4"<< endl
     << "--max <dist> maximum distance, default 5mm"<<endl
-    << "--extent <mm> - data span ( -extent/2 : extent/2 in all dimensions), default 300mm"<<endl;
-
+    << "--extent <mm> - data span ( -extent/2 : extent/2 in all dimensions), default 300mm"<<endl
+    << "--scaling <d> - set spherical harmonics radial scaling, default 200mm"<<endl;
 }
 
 
@@ -48,7 +48,8 @@ int main (int argc, char **argv)
   int verbose=0, clobber=0,skip_grid=0;
   double max=5.0;
   double extent=300;
-
+  double scaling=0.0;
+  
   static struct option long_options[] = {
 		{"verbose", no_argument,       &verbose, 1},
 		{"quiet",   no_argument,       &verbose, 0},
@@ -57,6 +58,7 @@ int main (int argc, char **argv)
 		{"max",     required_argument, 0, 'm'},
 		{"version", no_argument,       0, 'v'},
     {"extent", required_argument,  0, 'e'},
+    {"scaling", required_argument,  0, 'S'},
 		{0, 0, 0, 0}
 		};
   
@@ -84,6 +86,8 @@ int main (int argc, char **argv)
         max=atof(optarg); break;
       case 'e':
         extent=atof(optarg); break;
+      case 'S':
+        scaling=atof(optarg); break;
 			case '?':
 				/* getopt_long already printed an error message. */
 			default:
@@ -108,8 +112,8 @@ int main (int argc, char **argv)
 		TransformType::Pointer finalTransform = TransformType::New();
     cout<<"Loaded parameters:"<<finalParameters<<endl;
 		finalTransform->ImportParameters( finalParameters , true);
-    
     cout<<"Imported!"<<endl;
+    if(scaling!=0.0) finalTransform->SetScaling(scaling);
 		minc::def3d::Pointer grid(minc::def3d::New());
     minc::allocate_image3d<minc::def3d>(grid, fixed_vec<3, unsigned int>(extent/spacing), fixed_vec<3, double>(spacing), fixed_vec<3, double>(-extent/2));
 		
@@ -128,8 +132,13 @@ int main (int argc, char **argv)
 			moved[0]=p2[0]-p[0];
 			moved[1]=p2[1]-p[1];
 			moved[2]=p2[2]-p[2];
-      if(fabs(moved[0])>max || fabs(moved[1])>max ||fabs(moved[2])>max)
-        moved[0]=moved[1]=moved[2]=0.0;
+      
+      if(moved[0]>max) moved[0]=max;
+      if(moved[1]>max) moved[1]=max;
+      if(moved[2]>max) moved[2]=max;
+      if(moved[0]<-max) moved[0]=-max;
+      if(moved[1]<-max) moved[1]=-max;
+      if(moved[2]<-max) moved[2]=-max;
 			
       it.Value()=moved;
     }

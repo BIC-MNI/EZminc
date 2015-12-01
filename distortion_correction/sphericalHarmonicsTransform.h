@@ -57,10 +57,10 @@ namespace minc
       {}
     
     double operator()(int n, tag_point p) const;
-    static unsigned int parameters_no(int order);
-    static double scale(int n,double);
-    void generate_basis(basis_vector &basis, int order, tag_point p);
-    void generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff);
+    static unsigned int parameters_no(int order) ;
+    static double scale(int n,double)  ;
+    void generate_basis(basis_vector &basis, int order, tag_point p) const ;
+    void generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff) const;
     void set_scaling(double s)
     {
       _scaling=s;
@@ -75,10 +75,15 @@ namespace minc
       {}
     
     double operator()(int n, tag_point p) const;
-    static unsigned int parameters_no(int order);
-    static double scale(int n,double);
-    void generate_basis(basis_vector &basis, int order, tag_point p);
-    void generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff);
+    static unsigned int parameters_no(int order) ;
+    static double scale(int n,double) ;
+    void generate_basis(basis_vector &basis, int order, tag_point p) const;
+    void generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff) const;
+    
+    void set_scaling(double s)
+    {
+      _scaling=s;
+    }
     
   };
   
@@ -290,9 +295,9 @@ namespace minc
   protected:
   SphericalHarmonicsTransform():  
 #if ( ITK_VERSION_MAJOR > 3 )
-    itk::Transform< double,3,3 >(3),
+     itk::Transform< double,3,3 >(3),
 #else  
-    itk::Transform< double,3,3 >(),
+     itk::Transform< double,3,3 >(),
 #endif
     _basis_cache(Basis_cache_vector::New()),_cache_on(false)
     { 
@@ -354,8 +359,8 @@ namespace minc
     _basis_cache->TransformPhysicalPointToIndex(point, idx);
     if(!_cache_on)
     {
-      SphericalFunctions sph;
-      sph.generate_basis(_tmp,_param_no,point);
+      //SphericalFunctions sph;
+      basis.generate_basis(_tmp,_param_no,point);
       for(size_t i=0;i<_param_no;i++)
       {
         double bs=_tmp[i];
@@ -384,8 +389,8 @@ namespace minc
     OutputPointType pnt;
     pnt.Fill(0.0);
 //    float tmp[200];
-    SphericalFunctions sph;
-    sph.generate_basis(_tmp,_param_no,point);
+    //SphericalFunctions sph;
+    basis.generate_basis(_tmp,_param_no,point);
     for(size_t i=0;i<_param_no;i++)
     {
       double bs=_tmp[i];      
@@ -531,15 +536,19 @@ namespace minc
     {
       _cache_on=on;
     }
-    
+
+    void SetScaling(double s)
+    {
+      basis.set_scaling(s);
+    }
     
   protected:
 #if ( ITK_VERSION_MAJOR > 3 ) 
-  CylindricalHarmonicsTransform(): itk::Transform< double,3,3 >(),
+    CylindricalHarmonicsTransform(): itk::Transform< double,3,3 >(3),
 #else 
-  CylindricalHarmonicsTransform(): itk::Transform< double,3,3 >(3,3),
-#endif      
-    _basis_cache(Basis_cache_vector::New()),_cache_on(false)
+    CylindricalHarmonicsTransform(): itk::Transform< double,3,3 >(3,3),
+#endif
+      _basis_cache(Basis_cache_vector::New()),_cache_on(false)
     { 
       _extent=100.0;
       _par_base=0;
@@ -601,8 +610,8 @@ namespace minc
     
     if(!_cache_on)
     {
-      CylindricalFunctions sph;
-      sph.generate_basis(_tmp,_param_no,point);
+      //CylindricalFunctions sph;
+      basis.generate_basis(_tmp,_param_no,point);
       double r=0;
       for(size_t i=0;i<_param_no;i++)
       {
@@ -647,8 +656,8 @@ namespace minc
     OutputPointType pnt;
     pnt.Fill(0.0);
 //    float tmp[200];
-    CylindricalFunctions sph;
-    sph.generate_basis(_tmp,_param_no,point);
+    //CylindricalFunctions sph;
+    basis.generate_basis(_tmp,_param_no,point);
     double r=0;
     double rp=sqrt(point[0]*point[0]+point[1]*point[1]);
     for(size_t i=0;i<_param_no;i++)

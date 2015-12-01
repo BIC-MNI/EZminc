@@ -13,6 +13,7 @@
               express or implied warranty.
 ---------------------------------------------------------------------------- */
 #include "sphericalHarmonicsTransform.h"
+
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_sf_legendre.h>
 #include <gsl/gsl_sf_result.h>
@@ -28,48 +29,48 @@ namespace minc
 		return x*x;
 	}
 
-	inline double Bz_generate(int n,int m,int part,double x,double y,double z)
-	{
-		double rxy = sqrt(SQR2(x) + SQR2(y));
-		double r =   sqrt(SQR2(x) + SQR2(y) + SQR2(z));
-		const double epsilon=1e-5;
-		double costheta=r>epsilon ? z/r : 1.0 ; //z?
-		
-		double cosphi1,sinphi1,cosphi,sinphi,cosphi_,sinphi_;
-		double rr=1.0;
-		int i;
-		if(!m) {
-			cosphi1=cosphi=1.0;
-			sinphi1=sinphi=0.0;
-		} else {
-			if(rxy>epsilon) {
-				cosphi1=cosphi=x/rxy; 
-				sinphi1=sinphi=y/rxy;
-			} else {
-				cosphi1=cosphi=1.0;
-				sinphi1=sinphi=0.0;
-			}
-		}
-		for(i = 2; i <= m; i++) {
-			cosphi_ = (cosphi1 * cosphi) - (sinphi1 * sinphi);
-			sinphi_ = (cosphi1 * sinphi) + (sinphi1 * cosphi);
-			cosphi=cosphi_;
-			sinphi=sinphi_;
-		}
-		for(i=1;i<=n;i++) {
-			rr*=r;
-		}
-		gsl_sf_result tmp;
-    //std::cerr << "gsl_sf_legendre_sphPlm_e("<<n << "," << m << "," << costheta << ")" << std::endl;
-		if(gsl_sf_legendre_sphPlm_e(n, m, costheta, &tmp) != GSL_SUCCESS)
-    {
-      ITK_REPORT_ERROR("Error in gsl_sf_legendre_sphPlm_e");
-    }
-		if(part)
-			return rr*tmp.val*sinphi;
-		else
-			return rr*tmp.val*cosphi;
-	}
+// 	inline double Bz_generate(int n,int m,int part,double x,double y,double z)
+// 	{
+// 		double rxy = sqrt(SQR2(x) + SQR2(y));
+// 		double r =   sqrt(SQR2(x) + SQR2(y) + SQR2(z));
+// 		const double epsilon=1e-5;
+// 		double costheta=r>epsilon ? z/r : 1.0 ; //z?
+// 		
+// 		double cosphi1,sinphi1,cosphi,sinphi,cosphi_,sinphi_;
+// 		double rr=1.0;
+// 		int i;
+// 		if(!m) {
+// 			cosphi1=cosphi=1.0;
+// 			sinphi1=sinphi=0.0;
+// 		} else {
+// 			if(rxy>epsilon) {
+// 				cosphi1=cosphi=x/rxy; 
+// 				sinphi1=sinphi=y/rxy;
+// 			} else {
+// 				cosphi1=cosphi=1.0;
+// 				sinphi1=sinphi=0.0;
+// 			}
+// 		}
+// 		for(i = 2; i <= m; i++) {
+// 			cosphi_ = (cosphi1 * cosphi) - (sinphi1 * sinphi);
+// 			sinphi_ = (cosphi1 * sinphi) + (sinphi1 * cosphi);
+// 			cosphi=cosphi_;
+// 			sinphi=sinphi_;
+// 		}
+// 		for(i=1;i<=n;i++) {
+// 			rr*=r;
+// 		}
+// 		gsl_sf_result tmp;
+//     //std::cerr << "gsl_sf_legendre_sphPlm_e("<<n << "," << m << "," << costheta << ")" << std::endl;
+// 		if(gsl_sf_legendre_sphPlm_e(n, m, costheta, &tmp) != GSL_SUCCESS)
+//     {
+//       ITK_REPORT_ERROR("Error in gsl_sf_legendre_sphPlm_e");
+//     }
+// 		if(part)
+// 			return rr*tmp.val*sinphi;
+// 		else
+// 			return rr*tmp.val*cosphi;
+// 	}
   
 	
 	double SphericalFunctions::operator() (int n, tag_point p) const
@@ -77,7 +78,7 @@ namespace minc
     ITK_REPORT_ERROR("Intentionally not implemented!");
 	}
   
-	void SphericalFunctions::generate_basis(basis_vector &basis, int order, tag_point p)
+	void SphericalFunctions::generate_basis(basis_vector &basis, int order, tag_point p) const
   //this could be heavely optimized!
   {
     basis.resize(order);
@@ -135,7 +136,7 @@ namespace minc
     }
   }
   
-  void SphericalFunctions::generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff)
+  void SphericalFunctions::generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff) const
   {
     basis.resize(order);
     int n=2,j=0,i=0;
@@ -169,7 +170,7 @@ namespace minc
   }
 
   
-  double SphericalFunctions::scale(int n, double v)
+  double SphericalFunctions::scale(int n, double v) 
 	{
     if(n<3) return v;
     return 
@@ -182,7 +183,7 @@ namespace minc
 	}
 
   
-	void CylindricalFunctions::generate_basis(basis_vector &basis, int order, tag_point p)
+	void CylindricalFunctions::generate_basis(basis_vector &basis, int order, tag_point p) const
   //this could be heavely optimized!
   {
     basis.resize(order);
@@ -215,7 +216,7 @@ namespace minc
     }
   }
   
-  void CylindricalFunctions::generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff)
+  void CylindricalFunctions::generate_regularization_vector(basis_vector &basis, int order,double legendre_coeff) const
   {
     basis.resize(order);
     int n=2,j=0,i=0;
@@ -237,14 +238,14 @@ namespace minc
   }
   
   
-  double CylindricalFunctions::scale(int n, double v)
+  double CylindricalFunctions::scale(int n, double v) 
 	{
     if(n<2) return v;
     return 
       pow(v,floor(-0.75+sqrt(1.5*1.5+8*n)/2));
 	}
   
-	unsigned int CylindricalFunctions::parameters_no(int order)
+	unsigned int CylindricalFunctions::parameters_no(int order) 
 	{ 
     return order*(order+1)/2+order;
 	}
@@ -316,8 +317,8 @@ namespace minc
       image3d::IndexType idx=it.GetIndex();
       tag_point p;
       sample->TransformIndexToPhysicalPoint(idx, p);
-      SphericalFunctions sph;
-      sph.generate_basis(_tmp, _param_no, p);
+      //SphericalFunctions sph;
+      basis.generate_basis(_tmp, _param_no, p);
       itb.Set(_tmp);
 		}
 	}
@@ -334,8 +335,8 @@ namespace minc
       if( !itb.Value().empty() ) continue; // assume that we have already
       tag_point p;
       sample->TransformIndexToPhysicalPoint(idx,p);
-      SphericalFunctions sph;
-      sph.generate_basis(_tmp,_param_no,p);
+      //SphericalFunctions sph;
+      basis.generate_basis(_tmp,_param_no,p);
       itb.Set(_tmp);
 
 		}
@@ -457,8 +458,8 @@ namespace minc
       if( !itb.Value().empty() ) continue; // assume that we have already      
       tag_point p;
       sample->TransformIndexToPhysicalPoint(idx,p);
-      CylindricalFunctions sph;
-      sph.generate_basis(_tmp,_param_no,p);
+      //CylindricalFunctions sph;
+      basis.generate_basis(_tmp,_param_no,p);
       itb.Set(_tmp);
 #ifdef _DEBUG
 #endif //_DEBUG
