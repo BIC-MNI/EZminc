@@ -24,10 +24,10 @@ using namespace std;
 namespace minc
 {
   
-	inline double SQR2(double x)
-	{
-		return x*x;
-	}
+  inline double SQR2(double x)
+  {
+    return x*x;
+  }
 
 // 	inline double Bz_generate(int n,int m,int part,double x,double y,double z)
 // 	{
@@ -72,24 +72,24 @@ namespace minc
 // 			return rr*tmp.val*cosphi;
 // 	}
   
-	
-	double SphericalFunctions::operator() (int n, tag_point p) const
-	{
-    ITK_REPORT_ERROR("Intentionally not implemented!");
-	}
   
-	void SphericalFunctions::generate_basis(basis_vector &basis, int order, tag_point p) const
+  double SphericalFunctions::operator() (int n, tag_point p) const
+  {
+    ITK_REPORT_ERROR("Intentionally not implemented!");
+  }
+  
+  void SphericalFunctions::generate_basis(basis_vector &basis, int order, tag_point p) const
   //this could be heavely optimized!
   {
     basis.resize(order);
     
-		double rxy = sqrt(SQR2(p[0]) + SQR2(p[1]));
-		double r =   sqrt(SQR2(p[0]) + SQR2(p[1]) + SQR2(p[2]));
-		const double epsilon= 1e-6;
-		double costheta= r > epsilon ? p[2]/r : 1.0 ; //z?
-		
-		double cosphi1,sinphi1,cosphi,sinphi,cosphi_,sinphi_;
-		double rr=1.0;
+    double rxy = sqrt(SQR2(p[0]) + SQR2(p[1]));
+    double r =   sqrt(SQR2(p[0]) + SQR2(p[1]) + SQR2(p[2]));
+    const double epsilon= 1e-6;
+    double costheta= r > epsilon ? p[2]/r : 1.0 ; //z?
+    
+    double cosphi1,sinphi1,cosphi,sinphi,cosphi_,sinphi_;
+    double rr=1.0;
     if(rxy>epsilon) {
       cosphi1=p[0]/rxy; 
       sinphi1=p[1]/rxy;
@@ -115,10 +115,10 @@ namespace minc
       c++;
       if(j)
       {
-       if(c>=order)
-         ITK_REPORT_ERROR("Out of bounds!");
-       basis[c]=rr*tmp.val*sinphi;
-       c++;
+      if(c>=order)
+        ITK_REPORT_ERROR("Out of bounds!");
+      basis[c]=rr*tmp.val*sinphi;
+      c++;
       }
       j++;
       if(j==(n+1)) 
@@ -153,12 +153,12 @@ namespace minc
       c++;
       if(j)
       {
-       if(c>=order)
-         ITK_REPORT_ERROR("Out of bounds!");
-       
-       basis[c]= legendre_coeff* n*n*n*n *(n+1)*(n+1)*(n+1)*(n+1);
-       std::cout<<basis[c]<<"\t";
-       c++;
+      if(c>=order)
+        ITK_REPORT_ERROR("Out of bounds!");
+      
+      basis[c]= legendre_coeff* n*n*n*n *(n+1)*(n+1)*(n+1)*(n+1);
+      std::cout<<basis[c]<<"\t";
+      c++;
       }
       j++;
       if(j==(n+1)) 
@@ -171,30 +171,30 @@ namespace minc
 
   
   double SphericalFunctions::scale(int n, double v) 
-	{
+  {
     if(n<3) return v;
     return 
       pow(v,floor(-1.0+sqrt(1.0+n)));
-	}
+  }
   
-	unsigned int SphericalFunctions::parameters_no(int order)
-	{ 
+  unsigned int SphericalFunctions::parameters_no(int order)
+  { 
     return order*order+2*order;
-	}
+  }
 
   
-	void CylindricalFunctions::generate_basis(basis_vector &basis, int order, tag_point p) const
+  void CylindricalFunctions::generate_basis(basis_vector &basis, int order, tag_point p) const
   //this could be heavely optimized!
   {
     basis.resize(order);
     
-		double rxy = sqrt(SQR2(p[0]) + SQR2(p[1]));
-		double r =   sqrt(SQR2(p[0]) + SQR2(p[1]) + SQR2(p[2]));
-		const double epsilon= 1e-6;
-		double costheta= r > epsilon ? p[2]/r : 1.0 ; //z?
-		
-		double cosphi1,sinphi1,cosphi,sinphi,cosphi_,sinphi_;
-		double rr=1.0;
+    double rxy = sqrt(SQR2(p[0]) + SQR2(p[1]));
+    double r =   sqrt(SQR2(p[0]) + SQR2(p[1]) + SQR2(p[2]));
+    const double epsilon= 1e-6;
+    double costheta= r > epsilon ? p[2]/r : 1.0 ; //z?
+    
+    double cosphi1,sinphi1,cosphi,sinphi,cosphi_,sinphi_;
+    double rr=1.0;
     r/=_scaling;
     int n=2,j=0,i=0;
     
@@ -239,16 +239,16 @@ namespace minc
   
   
   double CylindricalFunctions::scale(int n, double v) 
-	{
+  {
     if(n<2) return v;
     return 
       pow(v,floor(-0.75+sqrt(1.5*1.5+8*n)/2));
-	}
+  }
   
-	unsigned int CylindricalFunctions::parameters_no(int order) 
-	{ 
+  unsigned int CylindricalFunctions::parameters_no(int order) 
+  { 
     return order*(order+1)/2+order;
-	}
+  }
   
   void SphericalHarmonicsTransform::ImportParameters(const ParametersType & param, bool all)
   {
@@ -258,29 +258,29 @@ namespace minc
     {
       if(all)
       {
-       _param_no=pno;
-       _par_count=_param_no;
-       _parameters.SetSize(_param_no*3);
-       _parameters2.SetSize(_par_count*3);
+      _param_no=pno;
+      _par_count=_param_no;
+      _parameters.SetSize(_param_no*3);
+      _parameters2.SetSize(_par_count*3);
       } else {
         pno=_param_no;
       }
     }
     _parameters.Fill(0.0);
-		for(int i=0;i<pno;i++)
-		{
-			_parameters[i            ]=param[i];
-			_parameters[i+_param_no  ]=param[i+pno];
-			_parameters[i+_param_no*2]=param[i+pno*2];;
-		}
+    for(int i=0;i<pno;i++)
+    {
+      _parameters[i            ]=param[i];
+      _parameters[i+_param_no  ]=param[i+pno];
+      _parameters[i+_param_no*2]=param[i+pno*2];;
+    }
   }
   
   void SphericalHarmonicsTransform::SetIdentity( void )
   {
     _parameters.Fill(0.0);
-		_parameters[1          ]=1.0; //X
-		_parameters[_param_no+2]=1.0; //Y
-		_parameters[_param_no*2]=1.0; //Z
+    _parameters[1          ]=1.0; //X
+    _parameters[_param_no+2]=1.0; //Y
+    _parameters[_param_no*2]=1.0; //Z
   }
 
   void SphericalHarmonicsTransform::SetOrder(int order)
@@ -304,33 +304,33 @@ namespace minc
     
   }
 
-	void SphericalHarmonicsTransform::calculate_basis(mask3d::Pointer &sample)
-	{
+  void SphericalHarmonicsTransform::calculate_basis(mask3d::Pointer &sample)
+  {
     allocate_same<Basis_cache_vector,mask3d>(_basis_cache,sample );
     
-		basis_iterator  itb(_basis_cache , sample->GetRequestedRegion() );
-		mask3d_iterator it ( sample      , sample->GetRequestedRegion() );
+    basis_iterator  itb(_basis_cache , sample->GetRequestedRegion() );
+    mask3d_iterator it ( sample      , sample->GetRequestedRegion() );
     _cache_on=true;
     
-		for(it.GoToBegin();!it.IsAtEnd();++it,++itb)
-		{
+    for(it.GoToBegin();!it.IsAtEnd();++it,++itb)
+    {
       image3d::IndexType idx=it.GetIndex();
       tag_point p;
       sample->TransformIndexToPhysicalPoint(idx, p);
       //SphericalFunctions sph;
       basis.generate_basis(_tmp, _param_no, p);
       itb.Set(_tmp);
-		}
-	}
+    }
+  }
 
-	void SphericalHarmonicsTransform::calculate_basis(image3d::Pointer& sample)
-	{
+  void SphericalHarmonicsTransform::calculate_basis(image3d::Pointer& sample)
+  {
     allocate_same<Basis_cache_vector,image3d>(_basis_cache,sample);
     _cache_on=true;
-		basis_iterator   itb(_basis_cache,sample->GetRequestedRegion());
-		image3d_iterator it(sample,sample->GetRequestedRegion());
-		for(it.GoToBegin();!it.IsAtEnd();++it,++itb)
-		{
+    basis_iterator   itb(_basis_cache,sample->GetRequestedRegion());
+    image3d_iterator it(sample,sample->GetRequestedRegion());
+    for(it.GoToBegin();!it.IsAtEnd();++it,++itb)
+    {
       image3d::IndexType idx=it.GetIndex();
       if( !itb.Value().empty() ) continue; // assume that we have already
       tag_point p;
@@ -339,32 +339,32 @@ namespace minc
       basis.generate_basis(_tmp,_param_no,p);
       itb.Set(_tmp);
 
-		}
-	}
+    }
+  }
 
-	void SphericalHarmonicsTransform::GetDeltas(ParametersType &delta)
-	{
-		delta.SetSize(GetNumberOfParameters());
-		for(int i=0;i<_par_count;i++)
-		{
-			delta[i             ]=0.01; 
-			delta[i+_par_count  ]=0.01;
-			delta[i+_par_count*2]=0.01; 
-		}
-	}
+  void SphericalHarmonicsTransform::GetDeltas(ParametersType &delta)
+  {
+    delta.SetSize(GetNumberOfParameters());
+    for(int i=0;i<_par_count;i++)
+    {
+      delta[i             ]=0.01; 
+      delta[i+_par_count  ]=0.01;
+      delta[i+_par_count*2]=0.01; 
+    }
+  }
   
-	void SphericalHarmonicsTransform::GetScales(itk::Array< double > &scales)
-	{
-		scales.SetSize(GetNumberOfParameters());
-		for(int i=0;i<_par_count;i++)
-		{
-			scales[i             ]= _extent/SphericalFunctions::scale(i+_par_base, _extent);
-			scales[i+_par_count  ]= _extent/SphericalFunctions::scale(i+_par_base, _extent);
-			scales[i+_par_count*2]= _extent/SphericalFunctions::scale(i+_par_base, _extent);
-		}
-	}
+  void SphericalHarmonicsTransform::GetScales(itk::Array< double > &scales)
+  {
+    scales.SetSize(GetNumberOfParameters());
+    for(int i=0;i<_par_count;i++)
+    {
+      scales[i             ]= _extent/SphericalFunctions::scale(i+_par_base, _extent);
+      scales[i+_par_count  ]= _extent/SphericalFunctions::scale(i+_par_base, _extent);
+      scales[i+_par_count*2]= _extent/SphericalFunctions::scale(i+_par_base, _extent);
+    }
+  }
   
-	void SphericalHarmonicsTransform::SetParBaseCount(int b, int c)
+  void SphericalHarmonicsTransform::SetParBaseCount(int b, int c)
   {
     _par_base=b;
     if(c>0) _par_count=c;
@@ -381,26 +381,26 @@ namespace minc
     {
       if(all)
       {
-       _param_no=pno;
-       _par_count=_param_no;
-       _parameters.SetSize(_param_no*2);
+      _param_no=pno;
+      _par_count=_param_no;
+      _parameters.SetSize(_param_no*2);
       } else {
         pno=_param_no;
       }
     }
     _parameters.Fill(0.0);
-		for(int i=0;i<pno;i++)
-		{
-			_parameters[i            ]=param[i];
-			_parameters[i+_param_no  ]=param[i+pno];
-		}
+    for(int i=0;i<pno;i++)
+    {
+      _parameters[i            ]=param[i];
+      _parameters[i+_param_no  ]=param[i+pno];
+    }
   }
   
   void CylindricalHarmonicsTransform::SetIdentity( void )
   {
     _parameters.Fill(0.0);
-		_parameters[0          ]=1.0; //R
-		_parameters[_param_no+1]=1.0; //Z
+    _parameters[0          ]=1.0; //R
+    _parameters[_param_no+1]=1.0; //Z
   }
 
   void CylindricalHarmonicsTransform::SetOrder(int order)
@@ -423,17 +423,17 @@ namespace minc
     
   }
 
-	void CylindricalHarmonicsTransform::calculate_basis(mask3d::Pointer& sample)
-	{
+  void CylindricalHarmonicsTransform::calculate_basis(mask3d::Pointer& sample)
+  {
     allocate_same<Basis_cache_vector,mask3d>( _basis_cache, sample );
     
-		basis_iterator  itb(_basis_cache , sample->GetRequestedRegion() );
-		mask3d_iterator it ( sample      , sample->GetRequestedRegion() );
+    basis_iterator  itb(_basis_cache , sample->GetRequestedRegion() );
+    mask3d_iterator it ( sample      , sample->GetRequestedRegion() );
     _cache_on=true;
     
-		for(it.GoToBegin();!it.IsAtEnd();++it,++itb)
-		{
-			//if( !it.Value() ) 
+    for(it.GoToBegin();!it.IsAtEnd();++it,++itb)
+    {
+      //if( !it.Value() ) 
       //  continue;
       //if( !itb.Value().empty() ) continue; // assume that we have already calculated coefficients here
       image3d::IndexType idx=it.GetIndex();
@@ -442,18 +442,18 @@ namespace minc
       SphericalFunctions sph;
       sph.generate_basis(_tmp, _param_no, p);
       itb.Set(_tmp);
-		}
-	}
+    }
+  }
 
-	void CylindricalHarmonicsTransform::calculate_basis(image3d::Pointer& sample)
-	{
+  void CylindricalHarmonicsTransform::calculate_basis(image3d::Pointer& sample)
+  {
     allocate_same<Basis_cache_vector,image3d>(_basis_cache,sample);
     
     _cache_on=true;
-		basis_iterator   itb(_basis_cache,sample->GetRequestedRegion());
-		image3d_iterator it(sample,sample->GetRequestedRegion());
-		for(it.GoToBegin();!it.IsAtEnd();++it,++itb)
-		{
+    basis_iterator   itb(_basis_cache,sample->GetRequestedRegion());
+    image3d_iterator it(sample,sample->GetRequestedRegion());
+    for(it.GoToBegin();!it.IsAtEnd();++it,++itb)
+    {
       image3d::IndexType idx=it.GetIndex();
       if( !itb.Value().empty() ) continue; // assume that we have already      
       tag_point p;
@@ -461,32 +461,30 @@ namespace minc
       //CylindricalFunctions sph;
       basis.generate_basis(_tmp,_param_no,p);
       itb.Set(_tmp);
-#ifdef _DEBUG
-#endif //_DEBUG
-		}
-	}
+    }
+  }
 
-	void CylindricalHarmonicsTransform::GetDeltas(ParametersType &delta)
-	{
-		delta.SetSize(GetNumberOfParameters());
-		for(int i=0;i<_par_count;i++)
-		{
-			delta[i             ]=0.01; 
-			delta[i+_par_count  ]=0.01;
-		}
-	}
+  void CylindricalHarmonicsTransform::GetDeltas(ParametersType &delta)
+  {
+    delta.SetSize(GetNumberOfParameters());
+    for(int i=0;i<_par_count;i++)
+    {
+      delta[i             ]=0.01; 
+      delta[i+_par_count  ]=0.01;
+    }
+  }
   
-	void CylindricalHarmonicsTransform::GetScales(itk::Array< double > &scales)
-	{
-		scales.SetSize(GetNumberOfParameters());
-		for(int i=0;i<_par_count;i++)
-		{
-			scales[i           ]= _extent/CylindricalFunctions::scale(i+_par_base, _extent);
-			scales[i+_par_count]= _extent/CylindricalFunctions::scale(i+_par_base, _extent);
-		}
-	}
+  void CylindricalHarmonicsTransform::GetScales(itk::Array< double > &scales)
+  {
+    scales.SetSize(GetNumberOfParameters());
+    for(int i=0;i<_par_count;i++)
+    {
+      scales[i           ]= _extent/CylindricalFunctions::scale(i+_par_base, _extent);
+      scales[i+_par_count]= _extent/CylindricalFunctions::scale(i+_par_base, _extent);
+    }
+  }
   
-	void CylindricalHarmonicsTransform::SetParBaseCount(int b, int c)
+  void CylindricalHarmonicsTransform::SetParBaseCount(int b, int c)
   {
     _par_base=b;
     if(c>0) _par_count=c;

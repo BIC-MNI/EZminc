@@ -123,11 +123,11 @@ namespace minc
 
 
   /** \class SphericalHarmonicsTransform
-   * \brief Implementation of an Spherical Harmonics Transform.
-   *
-   * \ingroup Transforms
-   *
-   */
+  * \brief Implementation of an Spherical Harmonics Transform.
+  *
+  * \ingroup Transforms
+  *
+  */
   class SphericalHarmonicsTransform : public itk::Transform < double, 3, 3>
   {
   public:
@@ -214,7 +214,7 @@ namespace minc
     }
   
     /** Set the transformation to an Identity
-     */
+    */
     virtual void SetIdentity( void );
     void SetOrder(int order);
     
@@ -230,7 +230,7 @@ namespace minc
     }
     
     /** Set the Transformation Parameters
-     * and update the internal transformation. */
+    * and update the internal transformation. */
     virtual void  SetParameters(const ParametersType & param);
     virtual const ParametersType & GetParameters(void);
     
@@ -295,9 +295,9 @@ namespace minc
   protected:
   SphericalHarmonicsTransform():  
 #if ( ITK_VERSION_MAJOR > 3 )
-     itk::Transform< double,3,3 >(3),
+    itk::Transform< double,3,3 >(3),
 #else  
-     itk::Transform< double,3,3 >(),
+    itk::Transform< double,3,3 >(),
 #endif
     _basis_cache(Basis_cache_vector::New()),_cache_on(false)
     { 
@@ -331,9 +331,9 @@ namespace minc
     for(int i=0;i<_par_count;i++)
     {
       int j=i+_par_base;
-       _parameters[j            ]=param[i];
-       _parameters[j+_param_no  ]=param[i+_par_count];
-       _parameters[j+_param_no*2]=param[i+_par_count*2];
+      _parameters[j            ]=param[i];
+      _parameters[j+_param_no  ]=param[i+_par_count];
+      _parameters[j+_param_no*2]=param[i+_par_count*2];
     }
     
   }
@@ -343,9 +343,9 @@ namespace minc
     for(int i=0;i<_par_count;i++)
     {
       int j=i+_par_base;
-       _parameters2[i             ]=_parameters[j];
-       _parameters2[i+_par_count  ]=_parameters[j+_param_no];
-       _parameters2[i+_par_count*2]=_parameters[j+_param_no*2];
+      _parameters2[i             ]=_parameters[j];
+      _parameters2[i+_par_count  ]=_parameters[j+_param_no];
+      _parameters2[i+_par_count*2]=_parameters[j+_param_no*2];
     }
     return _parameters2;
   }
@@ -482,7 +482,7 @@ namespace minc
     }
   
     /** Set the transformation to an Identity
-     */
+    */
     virtual void SetIdentity( void );
     void SetOrder(int order);
     
@@ -496,7 +496,7 @@ namespace minc
     }
     
     /** Set the Transformation Parameters
-     * and update the internal transformation. */
+    * and update the internal transformation. */
     virtual void  SetParameters(const ParametersType & param);
     virtual const ParametersType & GetParameters(void);
     
@@ -582,8 +582,8 @@ namespace minc
     for(int i=0;i<_par_count;i++)
     {
       int j=i+_par_base;
-       _parameters[j            ]=param[i];
-       _parameters[j+_param_no  ]=param[i+_par_count];
+      _parameters[j            ]=param[i];
+      _parameters[j+_param_no  ]=param[i+_par_count];
     }
     
   }
@@ -593,8 +593,8 @@ namespace minc
     for(int i=0;i<_par_count;i++)
     {
       int j=i+_par_base;
-       _parameters2[i             ]=_parameters[j];
-       _parameters2[i+_par_count  ]=_parameters[j+_param_no];
+      _parameters2[i             ]=_parameters[j];
+      _parameters2[i+_par_count  ]=_parameters[j+_param_no];
     }
     return _parameters2;
   }
@@ -681,6 +681,3 @@ namespace minc
 
 
 #endif //__spherical_harmonics_transform_h__
-
-
-
