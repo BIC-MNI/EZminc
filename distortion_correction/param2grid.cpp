@@ -52,16 +52,16 @@ int main (int argc, char **argv)
   double scaling=0.0;
   
   static struct option long_options[] = {
-		{"verbose", no_argument,       &verbose, 1},
-		{"quiet",   no_argument,       &verbose, 0},
-		{"clobber", no_argument,       &clobber, 1},
-		{"spacing", required_argument, 0, 's'},
-		{"max",     required_argument, 0, 'm'},
-		{"version", no_argument,       0, 'v'},
+    {"verbose", no_argument,       &verbose, 1},
+    {"quiet",   no_argument,       &verbose, 0},
+    {"clobber", no_argument,       &clobber, 1},
+    {"spacing", required_argument, 0, 's'},
+    {"max",     required_argument, 0, 'm'},
+    {"version", no_argument,       0, 'v'},
     {"extent", required_argument,  0, 'e'},
     {"scaling", required_argument,  0, 'S'},
-		{0, 0, 0, 0}
-		};
+    {0, 0, 0, 0}
+    };
   
   double spacing=4.0;
   for (;;) {
@@ -74,71 +74,71 @@ int main (int argc, char **argv)
       if (c == -1) break;
 
       switch (c)
-			{
-			case 0:
-				break;
-			case 's':
-				spacing=atof(optarg);
-				break;
-			case 'v':
-				cout << "Version: 1.0" << endl;
-				return 0;
+      {
+      case 0:
+        break;
+      case 's':
+        spacing=atof(optarg);
+        break;
+      case 'v':
+        cout << "Version: 1.0" << endl;
+        return 0;
       case 'm':
         max=atof(optarg); break;
       case 'e':
         extent=atof(optarg); break;
       case 'S':
         scaling=atof(optarg); break;
-			case '?':
-				/* getopt_long already printed an error message. */
-			default:
-				show_usage ();
-				return 1;
-			}
+      case '?':
+        /* getopt_long already printed an error message. */
+      default:
+        show_usage ();
+        return 1;
+      }
     }
 
-	if ((argc - optind) < 2) {
-		show_usage ();
-		return 1;
-	}
+  if ((argc - optind) < 2) {
+    show_usage ();
+    return 1;
+  }
   std::string input=argv[optind];
   std::string output=argv[optind+1];
-	try
+  try
   {
     gsl_rng_env_setup();
     
-		typedef minc::SphericalHarmonicsTransform TransformType;
-		TransformType::ParametersType finalParameters;
-		load_parameters(input.c_str(),finalParameters);
-		TransformType::Pointer finalTransform = TransformType::New();
+    typedef minc::SphericalHarmonicsTransform TransformType;
+    TransformType::ParametersType finalParameters;
+    load_parameters(input.c_str(),finalParameters);
+    TransformType::Pointer finalTransform = TransformType::New();
     cout<<"Loaded parameters:"<<finalParameters<<endl;
-		finalTransform->ImportParameters( finalParameters , true);
+    finalTransform->ImportParameters( finalParameters , true);
     cout<<"Imported!"<<endl;
     
     if(scaling!=0.0) finalTransform->SetScaling(scaling);
-		minc::def3d::Pointer grid(minc::def3d::New());
+    minc::def3d::Pointer grid(minc::def3d::New());
     allocate_image3d<minc::def3d>(grid, fixed_vec<3, unsigned int>(extent/spacing), fixed_vec<3, double>(spacing), fixed_vec<3, double>(-extent/2));
-		
-		if(verbose) 
-		{
-			cout<<"Generating a grid file, ";
-			cout<<"extent: "<<extent<<" spacing: "<<spacing<<" ..."<<std::flush;
-		}
-		
+    
+    if(verbose) 
+    {
+      cout<<"Generating a grid file, ";
+      cout<<"extent: "<<extent<<" spacing: "<<spacing<<" ..."<<std::flush;
+    }
+    
     def3d_iterator it(grid,grid->GetLargestPossibleRegion());
-		for(it.GoToBegin();!it.IsAtEnd();++it) {
+    for(it.GoToBegin();!it.IsAtEnd();++it) {
       tag_point p,p2;
       grid->TransformIndexToPhysicalPoint(it.GetIndex(),p);
-			p2=finalTransform->TransformPointUnCached(p);
+      p2=finalTransform->TransformPointUnCached(p);
       def_vector moved;
-			moved[0]=p2[0]-p[0];
-			moved[1]=p2[1]-p[1];
-			moved[2]=p2[2]-p[2];
+      moved[0]=p2[0]-p[0];
+      moved[1]=p2[1]-p[1];
+      moved[2]=p2[2]-p[2];
       /*if(fabs(moved[0])>max || fabs(moved[1])>max ||fabs(moved[2])>max)
         moved[0]=moved[1]=moved[2]=0.0;*/
       // This is neeeded mostly not to loose precision when storing transform in 
       // minc file with short voxel type
-			if(moved[0]>max) moved[0]=max;
+      if(moved[0]>max) moved[0]=max;
       if(moved[1]>max) moved[1]=max;
       if(moved[2]>max) moved[2]=max;
       if(moved[0]<-max) moved[0]=-max;
@@ -146,13 +146,13 @@ int main (int argc, char **argv)
       if(moved[2]<-max) moved[2]=-max;
       it.Value()=moved;
     }
-		if(verbose)
-			cout<<"Done!"<<endl;
+    if(verbose)
+      cout<<"Done!"<<endl;
     save_minc<def3d>(output.c_str(), grid);
-		
-	} 
-	#ifdef HAVE_MINC4ITK
-	catch (const minc::generic_error & err) {
+    
+  } 
+  #ifdef HAVE_MINC4ITK
+  catch (const minc::generic_error & err) {
     cerr << "Got an error at:" << err.file () << ":" << err.line () << endl;
     return 1; 
   }
@@ -163,6 +163,6 @@ int main (int argc, char **argv)
     std::cerr << err << std::endl; 
     return 2;
   } 
-	return 0;
-	
+  return 0;
+  
 }
