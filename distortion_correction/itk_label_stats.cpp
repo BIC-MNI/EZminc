@@ -67,7 +67,7 @@ int main (int argc, char **argv)
     {"skip-empty", no_argument, &skip_empty,1},
     {"clobber", no_argument, &clobber,1},
     {"mask",    required_argument, 0, 'm'},
-    {"volume",    required_argument, 0, 'v'},
+    {"volume",  required_argument, 0, 'v'},
     {"invert-mask",no_argument, &invert_mask,1},
     {"bg",no_argument, &include_bg,1},
     {"labels",  required_argument, 0, 'l'},
@@ -147,6 +147,7 @@ int main (int argc, char **argv)
       reader->Update();
       
       mask=reader->GetOutput();
+      //TODO: check dimensions here
     } else {
       allocate_same<Byte3DImage,Int3DImage>(mask,img);
       mask->FillBuffer(1-invert_mask);
@@ -160,6 +161,8 @@ int main (int argc, char **argv)
       reader->Update();
       
       vol=reader->GetOutput();
+      
+      //TODO: check dimensions here
     } else {
       allocate_same<Float3DImage,Int3DImage>(vol,img);
       vol->FillBuffer(0.0);
@@ -258,7 +261,7 @@ int main (int argc, char **argv)
                   <<z_map[label]/vol;
 
           if(!vol_f.empty())
-            *out<<val_map[label]/vol<<",";
+            *out<<","<<val_map[label]/vol;
           *out<<std::endl;
         } else {
           if(!skip_empty)
@@ -270,7 +273,7 @@ int main (int argc, char **argv)
                     <<0;
 
             if(!vol_f.empty())
-              *out<<0<<",";
+              *out<<","<<0;
             *out<<std::endl;
           }
         }
