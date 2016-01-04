@@ -24,7 +24,7 @@
 #include <map>
 #include <itkImageRegionConstIteratorWithIndex.h>
 #include <unistd.h>
-
+#include <algorithm>
 #include "strtok.h"
 
 
@@ -46,7 +46,8 @@ void show_usage (const char *name)
     << "--bg include background (label 0)"<< endl
     << "--volume <input.mnc> calculate per volume means for this volume"<<endl
     << "--labels <l.csv> use label id's and names from the csv file" << endl
-    << "--skip-empty skip labels with zero volume"<<endl;
+    << "--skip-empty skip labels with zero volume"<<endl
+    << "--median - use median instead of mean for intensity statistics"<<endl;
 }
 
 int main (int argc, char **argv)
@@ -59,18 +60,20 @@ int main (int argc, char **argv)
   int include_bg=0;
   int clobber=0;
   int skip_empty=0;
+  int calc_median=0;
   std::string out_f,mask_f;
   std::string vol_f,label_f;
   
   static struct option long_options[] = { 
-    {"verbose", no_argument, &verbose,1},
-    {"skip-empty", no_argument, &skip_empty,1},
-    {"clobber", no_argument, &clobber,1},
-    {"mask",    required_argument, 0, 'm'},
-    {"volume",  required_argument, 0, 'v'},
-    {"invert-mask",no_argument, &invert_mask,1},
-    {"bg",no_argument, &include_bg,1},
-    {"labels",  required_argument, 0, 'l'},
+    {"verbose",    no_argument,  &verbose,1},
+    {"skip-empty", no_argument,  &skip_empty,1},
+    {"clobber",    no_argument,  &clobber,1},
+    {"mask",       required_argument, 0, 'm'},
+    {"volume",     required_argument, 0, 'v'},
+    {"invert-mask",no_argument,  &invert_mask,1},
+    {"bg",         no_argument,  &include_bg,1},
+    {"labels",     required_argument, 0, 'l'},
+    {"median",     no_argument,  &calc_median,1},
     {0, 0, 0, 0}};
 
   for (;;)
@@ -135,7 +138,7 @@ int main (int argc, char **argv)
     reader->SetFileName(input.c_str());
     reader->Update();
     
-    Int3DImage::Pointer img=reader->GetOutput();
+    Int3DImage::Pointer   img=reader->GetOutput();
     Byte3DImage::Pointer  mask(Byte3DImage::New());
     Float3DImage::Pointer vol(Float3DImage::New());
     
@@ -205,6 +208,7 @@ int main (int argc, char **argv)
     
     std::map<int,double> label_map;
     std::map<int,double> val_map;
+    std::map<int,std::vector<float> > val_store;
     std::map<int,double> x_map,y_map,z_map;
     
     double voxel_volume=::fabs(img->GetSpacing()[0]*img->GetSpacing()[1]*img->GetSpacing()[2]);
@@ -220,7 +224,12 @@ int main (int argc, char **argv)
       img->TransformIndexToPhysicalPoint(iti.GetIndex(),pnt);
 
       label_map[v]+=voxel_volume;
-      val_map[v]+=voxel_volume*itv.Value();
+      if(!vol_f.empty())
+      {
+        val_map[v]+=voxel_volume*itv.Value();
+        if(calc_median)
+          val_store[v].push_back(itv.Value());
+      }
 
       x_map[v]+=pnt[0]*voxel_volume;
       y_map[v]+=pnt[1]*voxel_volume;
@@ -238,11 +247,10 @@ int main (int argc, char **argv)
     }
     
     *out<<"id,volume,mx,my,mz";
-    
     if(!vol_f.empty())
       *out<<",val";
-    
     *out<<std::endl;
+    
     if(!label_f.empty())
     {
       for(size_t i=0;i<req_labels.size();++i)
@@ -261,7 +269,18 @@ int main (int argc, char **argv)
                   <<z_map[label]/vol;
 
           if(!vol_f.empty())
-            *out<<","<<val_map[label]/vol;
+          {
+            double vv=val_map[label]/vol;
+            if(calc_median)
+            {
+              std::sort(val_store[label].begin(),val_store[label].end());
+              if(val_store[label].size()%2)
+                vv=val_store[label][val_store[label].size()/2];
+              else
+                vv=(val_store[label][val_store[label].size()/2]+val_store[label][val_store[label].size()/2+1])/2.0;
+            }
+            *out<<","<<vv;
+          }
           *out<<std::endl;
         } else {
           if(!skip_empty)
@@ -290,7 +309,18 @@ int main (int argc, char **argv)
                 <<z_map[label]/vol;
 
         if(!vol_f.empty())
-          *out<<val_map[label]/vol<<",";
+        {
+          double vv=val_map[label]/vol;
+          if(calc_median)
+          {
+            std::sort(val_store[label].begin(),val_store[label].end());
+            if(val_store[label].size()%2)
+              vv=val_store[label][val_store[label].size()/2];
+            else
+              vv=(val_store[label][val_store[label].size()/2]+val_store[label][val_store[label].size()/2+1])/2.0;
+          }
+          *out<<","<<vv;
+        }
 
         *out<<std::endl;
       }
