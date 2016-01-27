@@ -37,7 +37,9 @@ my $cyanred_mask;
 my $lut;
 my $gray_mask;
 my $discrete;
+my $hotmetal_mask;
 my $big;
+my $bbox;
 my $labels_lut;
 my $labels;
 my $labels_mask;
@@ -48,29 +50,31 @@ my $mask_lut;
 my $discrete_mask;
 
 GetOptions(
-	   'verbose' => \$verbose,
-	   'fake'    => \$fake,
-	   'clobber' => \$clobber,
-	   'title=s'          => \$title,
-	   'mask=s' 	        => \$mask,
-	   'spectral'         => \$spectral,
-	   'spectral-mask'    => \$spectral_mask,
-     'gray-mask'        => \$gray_mask,
-	   'image-range=f{2}' => \@image_range,
-	   'mask-range=f{2}' => \@mask_range,
-     'cyanred'         => \$cyanred,
-     'cyanred-mask'    => \$cyanred_mask,
-     'lut=s'           => \$lut,
-     'mask-lut=s'      => \$mask_lut,
-     'discrete'        => \$discrete,
-     'discrete-mask'   => \$discrete_mask,
-     'big'             => \$big,
-     'labels'          => \$labels,
-     'labels-mask'     => \$labels_mask,
-     'red'             => \$red,
-     'green-mask'      => \$green_mask,
-     'clamp'           => \$clamp,
-	   );
+      'verbose' => \$verbose,
+      'fake'    => \$fake,
+      'clobber' => \$clobber,
+      'title=s'          => \$title,
+      'mask=s' 	        => \$mask,
+      'spectral'         => \$spectral,
+      'spectral-mask'    => \$spectral_mask,
+      'hotmetal-mask'    => \$hotmetal_mask,
+      'gray-mask'        => \$gray_mask,
+      'image-range=f{2}' => \@image_range,
+      'mask-range=f{2}' => \@mask_range,
+      'cyanred'         => \$cyanred,
+      'cyanred-mask'    => \$cyanred_mask,
+      'lut=s'           => \$lut,
+      'mask-lut=s'      => \$mask_lut,
+      'discrete'        => \$discrete,
+      'discrete-mask'   => \$discrete_mask,
+      'big'             => \$big,
+      'bbox'             => \$bbox,
+      'labels'          => \$labels,
+      'labels-mask'     => \$labels_mask,
+      'red'             => \$red,
+      'green-mask'      => \$green_mask,
+      'clamp'           => \$clamp,
+      );
 
 die "Usage: $me  <input.mnc> <output jpeg file> 
 [ 
@@ -79,6 +83,7 @@ die "Usage: $me  <input.mnc> <output jpeg file>
   --verbose 
   --mask <file> 
   --spectral 
+  --hotmetal-mask
   --spectral-mask
   --image-range a b 
   --spectral-mask 
@@ -95,6 +100,7 @@ die "Usage: $me  <input.mnc> <output jpeg file>
   --red
   --green-mask
   --clamp
+  --bbox (crop around mask)
 ]\n"  if $#ARGV < 1;
 
 #########################
@@ -123,6 +129,16 @@ foreach $infile(@ARGV)
   }
   if($clobber || check_file($outfile) )
   {
+    if($bbox && $mask)
+    {
+      do_cmd('dilate_volume',$mask,"$tmpdir/mask_dil", 1, 6, 10);
+      $bbox = `mincbbox -mincreshape $tmpdir/mask_dil `;
+      $bbox =~ s/\n//g;
+      `mincreshape $bbox $mask $tmpdir/mask_bbox.mnc`;
+      $mask = "$tmpdir/mask_bbox.mnc";
+      `mincreshape $bbox $infile $tmpdir/infile_bbox.mnc `;
+      $infile = "$tmpdir/infile_bbox.mnc"
+    }
     my @args=('minclookup','-clobb',#'-range',10,100,
       $infile, "$tmpdir/grey.mnc",'-clobber');
 
@@ -171,6 +187,8 @@ foreach $infile(@ARGV)
         push @args,'-lut_string','0.0 0.0 0.0 0.0;1.0 0.0 1.0 0.0';
       } elsif($labels_mask) {
         push @args,'-discrete','-lut_string',$labels_lut;
+      } elsif($hotmetal_mask) {
+        push @args,'-lut_string',"0.00 0.0 0.0 0.0;0.25 0.5 0.0 0.0;0.50 1.0 0.5 0.0;0.75 1.0 1.0 0.5;1.00 1.0 1.0 1.0"
       } elsif($mask_lut) {
         push @args,'-lookup_table',$mask_lut;
       } else {
