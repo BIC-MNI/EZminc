@@ -43,6 +43,7 @@ IF(NOT MINC_TOOLKIT_BUILD)
   ENDIF(ITK_FOUND)
 ELSE(NOT MINC_TOOLKIT_BUILD)
   SET(BICPL_FOUND ON) # Assume that minc-toolkit will provide BICPL
+  SET(GSL_FOUND ON) # Assume minc-toolkit has GSL pre-compiled
 ENDIF(NOT MINC_TOOLKIT_BUILD)
 
 # have to be in front of ITK includes to avoid using wrong dwt.h header
