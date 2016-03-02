@@ -292,7 +292,7 @@ for ($i=0; $i<=$#conf; $i++){
      }
    }
    # set up registration
-   @args = ('minctracc', '-clobber', $opt{lsqtype}, $opt{cost_function},
+   @args = ('minctracc', '-clobber', $opt{lsqtype},
             '-step', @{$conf[$i]{steps}}, '-simplex', $conf[$i]{simplex},
             '-tol', $conf[$i]{tolerance});
 
