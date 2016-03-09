@@ -1,4 +1,4 @@
-#include <iostream>
+// #include <iostream>
 #include <getopt.h>
 #include <unistd.h>
 #include <minc_io_simple_volume.h>
@@ -17,7 +17,7 @@ typedef minc::simple_commulative_histogram<float> simple_histogram;
 
 void show_usage(const char *name)
 {
-  std::cerr 
+  std::cerr
       << "This program implements intensity normalization algorithm published in "<<std::endl
       << "Nyul, L.G.; Udupa, J.K.; Xuan Zhang, "
       << "\"New variants of a method of MRI scale standardization,\""<<std::endl
@@ -32,7 +32,9 @@ void show_usage(const char *name)
       << "\t--fix_zero_padding fix mri volumes with lots of zeros in background"<<std::endl
       << "\t--verbose be verbose" << std::endl
       << "\t--ks calculate Kolmogorov-Smirnov difference, no output is produced"<< std::endl
-      << "\t--chist output or target are comulative histograms" << std::endl;
+      << "\t--chist output or target are comulative histograms" << std::endl
+      << "\t--dump <lut> dump lut to a file"<<std::endl
+      << "\t--cut-off <pct> cut-off" << std::endl;
 }
 
 void populate_chist(simple_histogram& hist,std::vector<double> &chist,std::vector<double> &pct,double cut_off,int steps,bool verbose=false)
@@ -92,6 +94,26 @@ void load_chist(const char* input,std::vector<double> &chist)
 }
 
 
+double map_intensities_lut(double input, 
+                           const std::vector<double>& src_levels_s,
+                           const std::vector<double>& trg_levels_s)
+{
+  int bin;
+  double output=input;
+  // find appropriate bin
+  for(bin=0;bin<src_levels_s.size();bin++)
+    if(input <= src_levels_s[bin]) break;
+  if(bin==0) // first bin ?
+    output=trg_levels_s[0];
+  else if(bin>=(src_levels_s.size()-1))  
+    output=trg_levels_s[trg_levels_s.size()-1];
+  else 
+    // perform linear mapping inside of the bin
+    output=(input-src_levels_s[bin-1])/(src_levels_s[bin]-src_levels_s[bin-1])*(trg_levels_s[bin]-trg_levels_s[bin-1])+trg_levels_s[bin-1];
+  
+  return output;
+}
+
 int main(int argc,char **argv)
 {
   int verbose=0;
@@ -106,9 +128,10 @@ int main(int argc,char **argv)
   int chist=0;
   int linear=0;
   
-  double cut_off=0.01;
+  double cut_off=1;
   
   std::string source_mask_f,target_mask_f;
+  std::string dump_lut;
   
   char *_history = time_stamp(argc, argv); 
   std::string history=_history;
@@ -127,7 +150,9 @@ int main(int argc,char **argv)
     {"target-mask",   required_argument, 0, 't'},
     //{"bins",          required_argument, 0, 'b'},
     {"steps",         required_argument, 0, 'S'},
-    {"ks", no_argument, &calc_ks,      1},
+    {"ks",      no_argument, &calc_ks,      1},
+    {"dump",    required_argument, 0, 'd'},
+    {"cut-off", required_argument, 0, 'c'},
     {0, 0, 0, 0}
   };
   
@@ -137,7 +162,7 @@ int main(int argc,char **argv)
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "m:", long_options, &option_index);
+    c = getopt_long (argc, argv, "s:t:d:S:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -158,6 +183,12 @@ int main(int argc,char **argv)
         break;
       case 'S':
         steps=atoi(optarg);
+        break;
+      case 'd':
+        dump_lut=optarg;
+        break;
+      case 'c':
+        cut_off=atof(optarg);
         break;
       case '?':
         /* getopt_long already printed an error message. */
@@ -203,7 +234,13 @@ int main(int argc,char **argv)
   {
     std::cerr << output_f.c_str () << " Exists!" << std::endl;
     return 1;
-  }  
+  }
+  
+  if (!dump_lut.empty() && !clobber && !access (dump_lut.c_str(), F_OK))
+  {
+    std::cerr << dump_lut.c_str () << " Exists!" << std::endl;
+    return 1;
+  }
  
   try
   {
@@ -261,7 +298,6 @@ int main(int argc,char **argv)
       if(chist) //load commulative histogram from a file
       {
         load_chist(input_trg_f.c_str(),trg_levels_s);
-
       } else {
         minc_1_reader rdr2;
         rdr2.open(input_trg_f.c_str());
@@ -297,9 +333,7 @@ int main(int argc,char **argv)
           //std::cout<<significance<<std::endl;
           return 0;
         }
-        
         populate_chist(trg_hist_s,trg_levels_s,trg_pct_s,cut_off,steps,verbose);  
-        
       }
       
       if(trg_levels_s.size()!=src_levels_s.size())
@@ -318,29 +352,24 @@ int main(int argc,char **argv)
         }
         std::cout<<"Recalculating intensities..."<<std::flush;
       }
-//         
       
       //TODO: analyze commulative histograms for collapsing levels?
       for(int i=0;i<src.c_buf_size();i++)
       {
         //use LUT to map the intensities
-        int bin;
-        double input=src.c_buf()[i];
-        
-        double output=input;
-        for(bin=0;bin<src_levels_s.size();bin++)
-          if(input <= src_levels_s[bin]) break;
-        
-        if(bin==0) // first bin ?
-          output=trg_levels_s[0];
-        else if(bin>=(src_levels_s.size()-1))  
-          output=trg_levels_s[trg_levels_s.size()-1];
-        else 
-          output=(input-src_levels_s[bin-1])/(src_levels_s[bin]-src_levels_s[bin-1])*(trg_levels_s[bin]-trg_levels_s[bin-1])+trg_levels_s[bin-1];
-
-        src.c_buf()[i]=output;
+        src.c_buf()[i]=map_intensities_lut(src.c_buf()[i],src_levels_s,trg_levels_s);
       }
-
+      
+      if(!dump_lut.empty())
+      {
+        std::ofstream out_lut(dump_lut.c_str());
+        out_lut.precision(20);
+        for(int i=0;i<src_levels_s.size();i++)
+        {
+          out_lut<<src_levels_s[i]<<" "<<trg_levels_s[i]<<std::endl;
+        }
+      }
+      
       if(verbose) 
         std::cout<<"Done!"<<std::endl;
 
