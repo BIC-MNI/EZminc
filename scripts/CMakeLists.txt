@@ -10,6 +10,7 @@ INSTALL(PROGRAMS
         nlfit_f
         bestlinreg.pl 
         bestlinreg_s 
+        bestlinreg_g
         bestlinreg_s2 
         icc_mask.pl
         uniformize_minc.pl
