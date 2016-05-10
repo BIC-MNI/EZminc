@@ -31,7 +31,14 @@ void show_usage (const char * prog)
            <<"\"Generalized Overlap Measures for Evaluation and Validation in Medical Image Analysis \""
            <<" IEEE TRANSACTIONS ON MEDICAL IMAGING, VOL. 25, NO. 11, NOVEMBER 2006"<<std::endl
            <<"http://dx.doi.org/10.1109/TMI.2006.880587"<<std::endl<<std::endl
-           <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> [--background] [--gkappa] [--gtc] [--akappa] [--csv] [--exclude l1[,l2[,l3]]] "<<std::endl;
+           <<"Usage: "<<prog<<" <input1.mnc> <input2.mnc> "<<std::endl
+           <<"\t[--background] take background voxels (0) into account" <<std::endl
+           <<"\t[--gkappa] calculate generalized kappa "<<std::endl
+           <<"\t[--gtc]    calculate generalized tinamoto overlap "<<std::endl
+           <<"\t[--akappa] calculate average kappa"<<std::endl
+           <<"\t[--csv]    output overla metrics in the format gkappa,gtc,akappa"<<std::endl
+           <<"\t[--exclude l1[,l2[,l3]]]  exclude labels from considerations "<<std::endl
+           <<"\t[--include l1[,l2[,l3]]]  consider only listed labels"<<std::endl;
 }
 
 typedef unsigned short voxel_type;
@@ -46,26 +53,28 @@ int main(int argc,char **argv)
   int background=0;
   
   static struct option long_options[] = {
-    {"verbose", no_argument,             &verbose, 1},
-    {"quiet",   no_argument,             &verbose, 0},
-    {"gkappa",   no_argument,            &gkappa, 1},
-    {"akappa",   no_argument,            &akappa, 1},
-    {"gtc",      no_argument,            &gtc, 1},
-    {"csv",      no_argument,            &csv, 1},
-    {"bg",       no_argument,            &background, 1},
+    {"verbose",   no_argument,            &verbose, 1},
+    {"quiet",     no_argument,            &verbose, 0},
+    {"gkappa",    no_argument,            &gkappa, 1},
+    {"akappa",    no_argument,            &akappa, 1},
+    {"gtc",       no_argument,            &gtc, 1},
+    {"csv",       no_argument,            &csv, 1},
+    {"bg",        no_argument,            &background, 1},
     {"background",no_argument,            &background, 1},
-    {"exclude",  required_argument,      0,      'e'},
+    {"exclude",   required_argument,      0,      'e'},
+    {"include",   required_argument,      0,      'i'},
    
     {0, 0, 0, 0}
   };
   
   std::set<voxel_type> exclude;
+  std::set<voxel_type> include;
   
   for (;;) {
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    int c = getopt_long (argc, argv, "vqe:", long_options, &option_index);
+    int c = getopt_long (argc, argv, "vqe:i:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1) break;
@@ -85,6 +94,15 @@ int main(int argc,char **argv)
           
           for(char *tok=strtok(optarg,delim);tok;tok=strtok(NULL,delim))
             exclude.insert(static_cast<voxel_type>(atoi(tok)));
+        }
+        break;
+        
+      case 'i':
+        {
+          const char* delim=", ";
+          
+          for(char *tok=strtok(optarg,delim);tok;tok=strtok(NULL,delim))
+            include.insert(static_cast<voxel_type>(atoi(tok)));
         }
         break;
         
@@ -108,7 +126,6 @@ int main(int argc,char **argv)
     gtc=1;
     akappa=1;
   }
-  
   try
   {
     minc_1_reader rdr1;
@@ -149,32 +166,38 @@ int main(int argc,char **argv)
     
     // Let's find all the unique labels in both volumes!
     std::set<voxel_type> label_set;
-    for(size_t i=0; i<size ; i++ )
+    if(include.empty())
     {
-      voxel_type vx=buffer1[i];
-      if(!background && vx==0)
-        continue;
+      for(size_t i=0; i<size ; i++ )
+      {
+        voxel_type vx=buffer1[i];
+        if(!background && vx==0)
+          continue;
 
-      if( exclude.find(vx) != exclude.end() )
-        continue; //skip this label
+        if( exclude.find(vx) != exclude.end() )
+          continue; //skip this label
 
-      label_set.insert(vx);
+        label_set.insert(vx);
+      }
+    } else {
+      // using only requested labels
+      label_set=include;
     }
     
     if( verbose && !csv)
     {
       std::cout<<"Number of unique labels:"<<label_set.size()<<std::endl;
-      if(background)
+      if(background && include.empty())
         std::cout<<"Including background!"<<std::endl;
     }
 
-    double intersect=0.0;
-    double overlap=0.0;
-    double volume=0.0;
-    double _akappa=0.0;
+    double intersect=  0.0;
+    double overlap=    0.0;
+    double volume=     0.0;
+    double _akappa=    0.0;
     double _akappa_cnt=0.0;
     
-    //tools for calculating average kappa ( MICCAI2012 MultiAtlas segmentation style)
+    //tools for calculating average kappa (MICCAI2012 MultiAtlas segmentation style)
     double count_intersect,kappa;
     double count_ref,count_res;
 
