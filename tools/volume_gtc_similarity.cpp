@@ -136,7 +136,7 @@ int main(int argc,char **argv)
     
     if(rdr1.dim_no()!=rdr2.dim_no() )
     {
-      std::cerr<<"Different number of dimensions!"<<std::endl;
+      std::cerr<<"ERROR:Different number of dimensions!"<<std::endl;
       return 1;
     }
     
@@ -145,7 +145,10 @@ int main(int argc,char **argv)
     for(int i=0;i<5;i++)
     {
       if(rdr1.ndim(i)!=rdr2.ndim(i))
-        std::cerr<<"Different dimensions length! "<<std::endl;
+      {
+        std::cerr<<"ERROR:Different dimensions length! "<<std::endl;
+        return 1;
+      }
       
       if(rdr1.ndim(i)>0) size*=rdr1.ndim(i);
     }
@@ -153,7 +156,10 @@ int main(int argc,char **argv)
     for(int i=0;i<5;i++)
     {
       if(rdr1.nspacing(i)!=rdr2.nspacing(i) )
-        std::cerr<<"Different step size! "<<std::endl;
+      {
+        std::cerr<<"ERROR:Different step size! "<<std::endl;
+        return 1;
+      }
     }
     
     rdr1.setup_read_ushort();
