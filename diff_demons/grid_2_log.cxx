@@ -16,12 +16,10 @@
 #include <itkMultiplyByConstantImageFilter.h>
 #endif
 
-#include "itkDisplacementFieldCompositionFilter.h"
 #include "itkImageRegionIterator.h"
 #include "itkImageRegionConstIterator.h"
 
 #include <iostream>
-
 #include "mincUtils.h"
 #include <getopt.h>
 #include <unistd.h>
@@ -39,8 +37,6 @@ class CommandIterationUpdate: public itk::Command
     typedef itk::Vector< TPixel, VImageDimension >          VectorPixelType;
     typedef itk::Image<  VectorPixelType, VImageDimension > VelocityFieldType;
     typedef itk::Image<  VectorPixelType, VImageDimension > DeformationFieldType;
-    typedef itk::DisplacementFieldCompositionFilter< DeformationFieldType, DeformationFieldType >
-    CompositionFilterType;
 
     typedef itk::DisplacementToVelocityFieldLogFilter< DeformationFieldType, VelocityFieldType >
     VelocitorFilterType;
@@ -259,13 +255,11 @@ int main ( int argc, char *argv[] )
 #if ITK_VERSION_MAJOR >= 4
   typedef itk::ExponentialDisplacementFieldImageFilter< ImageType, ImageType > ExponentiatorFilterType;
   typedef itk::MultiplyImageFilter<ImageType, ImageType, ImageType> MultiplicatorFilterType;
-#else    
+#else
   typedef itk::ExponentialDeformationFieldImageFilter< ImageType, ImageType > ExponentiatorFilterType;
   typedef itk::MultiplyByConstantImageFilter< ImageType, double, ImageType > MultiplicatorFilterType;
 #endif
   
-  
-  typedef itk::DisplacementFieldCompositionFilter< ImageType, ImageType >     CompositionFilterType;
 
   if(verbose) 
     std::cout << "Reading...";
