@@ -50,6 +50,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+
+#ifdef MT_USE_OPENMP
+    #include <omp.h>
+#else
+    #define omp_get_num_threads() 1
+    #define omp_get_thread_num() 0
+    #define omp_get_max_threads() 1
+#endif
+
+
 #include <minc_1_simple.h> // simple minc reading & writing
 #include <time_stamp.h>    // for creating minc style history entry
 #include <minc_1_simple_rw.h>
@@ -76,7 +86,7 @@ int neighborhoodsize[3]; // size of the patches
 int searching[3];        // size of the search area
 int testmean   = 1;
 int testvar    = 1;
-int nb_thread = 4;
+int nb_thread  = 1;
 double m_min   = 0.95; //threshold for mean test
 
 double v_min   = 0.5; //threshold for var test
@@ -110,7 +120,7 @@ static ArgvInfo argTable[] =
 	{(char*)"-b_space", ARGV_INT, (char *) 1, (char *) &b_space,   (char*)"Distance between blocks           [default 2]"},
 	{(char*)"-m_min", ARGV_FLOAT, (char *) 1, (char *) &m_min,     (char*)"Lowest bound of mean ratio        [default 0.95]"},
 	{(char*)"-v_min", ARGV_FLOAT, (char *) 1, (char *) &v_min,     (char*)"Lowest bound of variance ratio    [default 0.5]"},
-	{(char*)"-mt", ARGV_INT, (char *) 1, (char *) &nb_thread,      (char*)"Number of thread                  [default 4]"},
+//	{(char*)"-mt", ARGV_INT, (char *) 1, (char *) &nb_thread,      (char*)"Number of thread                  [default 4]"},
   {(char*)"-hallucinate",  ARGV_STRING,  (char*)1,  (char*) &hallucinate_file,     (char*)"Hallucinate this file (experimental)."},
     
 	{NULL, ARGV_HELP, NULL, NULL,(char*)"\n---------------------------------------------------------------------------"},
@@ -372,7 +382,7 @@ int main(int argc, char *argv[])
 	VIO_Real vol_res[3] = {0.0, 0.0, 0.0};  /* resolutions */
   
 	char *history = time_stamp(argc, argv); //maybe we should free it afterwards
-
+  nb_thread=omp_get_max_threads();
   std::cout<<"\
 ###########################################################################\n\
 #                                                                         #\n\

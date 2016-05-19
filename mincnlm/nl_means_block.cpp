@@ -1,3 +1,11 @@
+#ifdef MT_USE_OPENMP
+    #include <omp.h>
+#else
+    #define omp_get_num_threads() 1
+    #define omp_get_thread_num() 0
+    #define omp_get_max_threads() 1
+#endif
+
 #include "nl_means_utils.h"
 #include "nl_means.h"
 #include "nl_means_block.h"

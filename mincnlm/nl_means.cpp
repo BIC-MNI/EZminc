@@ -1,3 +1,11 @@
+#ifdef MT_USE_OPENMP
+    #include <omp.h>
+#else
+    #define omp_get_num_threads() 1
+    #define omp_get_thread_num() 0
+    #define omp_get_max_threads() 1
+#endif
+
 #include "nl_means.h"
 
 extern int      verbose;
@@ -100,10 +108,11 @@ extern int      debug;
   int PID=0;
   PID=arg.thread_num;
   int ret;
-  int x_min,x_max,y_min,y_max, z_min, z_max;
+  
   int NbElement2 = (2*arg.neighborhoodsize[0]+1)*(2*arg.neighborhoodsize[1]+1)*(2*arg.neighborhoodsize[2]+1);
   
   typedef float Voisinages[NbElement2];
+  //VF: suscpicious...
   Voisinages V1,V2;
   
   float w_max = 0;
@@ -127,6 +136,9 @@ extern int      debug;
       
       for (int i=0; i < arg.vol_size[0] ; i++)
       {
+        
+        int x_min,x_max,y_min,y_max, z_min, z_max;
+        
         float global_sum = 0;
         float average    = 0;
       

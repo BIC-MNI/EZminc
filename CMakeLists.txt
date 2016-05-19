@@ -49,6 +49,10 @@ ENDIF(NOT MINC_TOOLKIT_BUILD)
 # have to be in front of ITK includes to avoid using wrong dwt.h header
 INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR}/image_proc ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 
+if (MT_USE_OPENMP)
+    FIND_PACKAGE(OpenMP)
+endif()
+
 
 IF(ITK_FOUND)
   INCLUDE(${ITK_USE_FILE})
