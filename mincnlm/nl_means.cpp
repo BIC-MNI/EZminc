@@ -378,3 +378,5 @@ extern int      debug;
   }
 
 }
+
+// kate: space-indent on; indent-width 2; indent-mode C++;replace-tabs on;word-wrap-column 80;show-tabs on;tab-width 2

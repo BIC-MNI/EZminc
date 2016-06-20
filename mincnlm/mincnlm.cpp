@@ -322,7 +322,7 @@ void Exec(minc::simple_volume<float> & in, float *ima_out, int* vol_size, VIO_Re
     
     if(weight_method ==1)
     {
-      std::cout <<" - VIO_ERROR: automatic variance estimation is not available for Spekle Noise:  option '-w 1'"<<std::endl
+      std::cout <<" - ERROR: automatic variance estimation is not available for Spekle Noise:  option '-w 1'"<<std::endl
                 <<"          Use option -sigma"<<std::endl;
       return;
     }
@@ -569,3 +569,4 @@ IDDN.FR.001.070033.000.S.P.2007.000.21000\n\n";
  
 }
 
+// kate: space-indent on; indent-width 2; indent-mode C++;replace-tabs on;word-wrap-column 80;show-tabs on;tab-width 2
