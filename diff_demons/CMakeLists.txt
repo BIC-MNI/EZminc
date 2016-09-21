@@ -25,5 +25,6 @@ INSTALL(TARGETS DemonsRegistration
                 grid_2_log  
                 log_resample 
                 grid_statistics 
+                grid_proc
       RUNTIME DESTINATION bin )
 
