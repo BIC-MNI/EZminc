@@ -86,7 +86,7 @@ protected:
   bool inv_z;
   bool center;
   bool show_meta;
-  int  minc_type;
+  std::string  minc_type;
   bool minc_to_nrrd;
   bool nrrd_to_minc;
 public:
@@ -97,8 +97,8 @@ public:
               bool _inv_x=false,bool _inv_y=false,bool _inv_z=false, 
               bool _center=false, 
               bool _show_meta=false,
-              const std::string _history="",
-              int _minc_type=-1,
+              const std::string& _history="",
+              const std::string& _minc_type="",
               bool _minc_to_nrrd=false,
               bool _nrrd_to_minc=false
             )
@@ -525,10 +525,8 @@ public:
       img->SetOrigin(org);
     }
     
-#if ( ITK_VERSION_MAJOR < 4 ) 
     if(!history.empty())
       minc::append_history(img,history);
-#endif
       
     typename itk::CastImageFilter< TInputImage, TOutputImage >::Pointer cast=itk::CastImageFilter< TInputImage, TOutputImage >::New();
     
@@ -541,13 +539,16 @@ public:
     writer->SetFileName(fname);
     cast->Update();
     
-    cast->GetOutput()->SetMetaDataDictionary(thisDic);
+    minc::copy_metadata(cast->GetOutput(),img);
     
-#if ( ITK_VERSION_MAJOR < 4 ) 
-    if(minc_type!=-1) 
-      minc::set_minc_storage_type(cast->GetOutput(),(nc_type)minc_type,minc_type!=NC_BYTE); //store byte as unsigned only
-#endif
-      
+    if(!minc_type.empty()) 
+      minc::set_minc_storage_type(cast->GetOutput(),minc_type);
+    
+    if(verbose)
+    {
+      std::cout<<"minc_type="<<minc_type<<std::endl;
+    }
+    
     writer->SetInput( cast->GetOutput() );
     writer->Update();
   }
@@ -664,10 +665,8 @@ public:
       img->SetOrigin(org);
     }
     
-    #if ( ITK_VERSION_MAJOR < 4 ) 
     if(!history.empty())
         minc::append_history(img,history);
-    #endif 
     
     typename itk::CastImageFilter< TInputImage, TOutputImage >::Pointer cast=itk::CastImageFilter< TInputImage, TOutputImage >::New();
     
@@ -680,13 +679,17 @@ public:
     writer->SetFileName(fname);
     cast->Update();
     
-    cast->GetOutput()->SetMetaDataDictionary(thisDic);
+    minc::copy_metadata(cast->GetOutput(),img);
     
-#if ( ITK_VERSION_MAJOR < 4 ) 
-    if(minc_type!=-1) 
-      minc::set_minc_storage_type(cast->GetOutput(),(nc_type)minc_type,minc_type!=NC_BYTE); //store byte as unsigned only
-#endif
+    if(!minc_type.empty()) 
+      minc::set_minc_storage_type(cast->GetOutput(),minc_type);
+    
+    if(verbose)
+    {
+      std::cout<<"minc_type="<<minc_type<<std::endl;
+    }
 
+    
     writer->SetInput( cast->GetOutput() );
     writer->Update();
   }
@@ -723,11 +726,12 @@ int main(int argc,char **argv)
 #endif
   int use_b_matrix=0;
   int dwi_flip_z=0;
-  int minc_type=-1;
   int nrrd_to_minc=0;
   int minc_to_nrrd=0;
   
   int store_char=0,store_uchar=0,store_short=0,store_ushort=0,store_float=0,store_int=0,store_uint=0,store_double=0;
+  int minc_float=0,minc_double=0,minc_byte=0,minc_short=0,minc_int=0;
+  std::string minc_type;
   
   static struct option long_options[] = { 
     {"verbose", no_argument, &verbose, 1},
@@ -744,23 +748,21 @@ int main(int argc,char **argv)
     {"nrrd-to-minc",no_argument, &nrrd_to_minc, 1},
     {"minc-to-nrrd",no_argument, &minc_to_nrrd, 1},
     
-    {"float", no_argument, &store_float, 1},
+    {"float", no_argument,  &store_float,  1},
     {"double", no_argument, &store_double, 1},
-    {"byte", no_argument, &store_uchar, 1},
-    {"char", no_argument, &store_char, 1},
-    {"short", no_argument, &store_short, 1},
+    {"byte", no_argument,   &store_uchar,  1},
+    {"char", no_argument,   &store_char,   1},
+    {"short", no_argument,  &store_short,  1},
     {"ushort", no_argument, &store_ushort, 1},
-    {"int", no_argument, &store_int, 1},
-    {"uint", no_argument, &store_uint, 1},
+    {"int", no_argument,    &store_int,    1},
+    {"uint", no_argument,   &store_uint,   1},
     
-#if ( ITK_VERSION_MAJOR < 4 )  //for now 
-
-    {"mfloat",  no_argument, &minc_type, NC_FLOAT},
-    {"mdouble", no_argument, &minc_type, NC_DOUBLE},
-    {"mbyte",   no_argument, &minc_type, NC_BYTE},
-    {"mshort",  no_argument, &minc_type, NC_SHORT},
-    {"mint",    no_argument, &minc_type, NC_INT},
-#endif 
+    {"mfloat",  no_argument, &minc_float, 1},
+    {"mdouble", no_argument, &minc_double, 1},
+    {"mbyte",   no_argument, &minc_byte, 1},
+    {"mshort",  no_argument, &minc_short, 1},
+    {"mint",    no_argument, &minc_int,   1},
+    
     {0, 0, 0, 0}
   };
     
@@ -946,6 +948,17 @@ int main(int argc,char **argv)
 
     if(converter)
     {
+      if(minc_float)
+          minc_type=typeid(float).name();
+      else if(minc_double)
+          minc_type=typeid(double).name();
+      else if(minc_byte)
+          minc_type=typeid(unsigned char).name();
+      else if(minc_short)
+          minc_type=typeid(unsigned short).name();
+      else if(minc_int)
+          minc_type=typeid(int).name();
+      
       converter->setup(verbose,assume_dti,use_b_matrix,dwi_flip_z,inv_x,inv_y,inv_z,center,show_meta,history,minc_type,minc_to_nrrd,nrrd_to_minc);
       converter->load_and_save_image(io,output.c_str(),oct);
     }
