@@ -119,7 +119,8 @@ void show_usage (const char * prog)
     << "--lut map.txt  apply relabeling map"<<std::endl
     << "--lut-string \"a b;c d;....\" apply lut string in command line"<<std::endl
     << "--aa <fwhm> apply anti-aliasing filter to labels before resampling  (only usable for order > 0 )"<<std::endl
-    << "--baa apply binary anti-aliasing filter to labels before resampling (only usable for order > 0 )"<<std::endl; 
+    << "--baa apply binary anti-aliasing filter to labels before resampling (only usable for order > 0 )"<<std::endl
+    << "--fill <v> - fill value for voxels falling outside of input volume, default 0"<<std::endl;
 }
 
 
@@ -140,13 +141,14 @@ struct resample_options
   
   double aa_fwhm;
   int baa_smooth;
+  double fill;
   
   resample_options():
     invert(0),
     uniformize(0),unistep(0),
     transform_bbox(0),
     store_float(0),store_short(0),store_byte(0),
-    aa_fwhm(0), baa_smooth(0) ,normalize(0)
+    aa_fwhm(0), baa_smooth(0) ,normalize(0),fill(0)
   {}
 };
 
@@ -411,7 +413,7 @@ void resample_image(
 
   //creating the interpolator
   filter->SetInterpolator( interpolator );
-  filter->SetDefaultPixelValue( 0 );
+  filter->SetDefaultPixelValue( opt.fill );
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
 
@@ -592,7 +594,7 @@ void resample_label_image (
 
   //creating the interpolator
   filter->SetInterpolator( interpolator );
-  filter->SetDefaultPixelValue( 0 );
+  filter->SetDefaultPixelValue( -1 );
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
 
@@ -661,7 +663,7 @@ void resample_label_image (
   MaxImage->SetBufferedRegion(region);
   MaxImage->SetRequestedRegion(region);
   MaxImage->Allocate();
-  MaxImage->FillBuffer(0.0);
+  MaxImage->FillBuffer(-10.0);
   
   typename ImageOut::Pointer LabelImage= ImageOut::New();
   LabelImage->SetOrigin(filter->GetOutputOrigin());
@@ -720,7 +722,11 @@ void resample_label_image (
     {
       typename TmpImage::PixelType val = it_filter.Get();
       typename TmpImage::PixelType val_max = it_max.Get();
-      if(label_it == sval.begin() || vnl_math_isfinite(val) && val>val_max)
+      
+      if( !vnl_math_isfinite(val) || val<0.0) {
+        it_max.Set(-1.0);
+        it_out.Set(opt.fill);
+      } else if( label_it == sval.begin() || vnl_math_isfinite(val) && val>val_max)
       {
         it_max.Set(val);
         it_out.Set(*label_it);
@@ -945,11 +951,11 @@ int main (int argc, char **argv)
   bool order_was_set=false;
   
   static struct option long_options[] = {
-		{"verbose",      no_argument,       &verbose, 1},
-		{"quiet",        no_argument,       &verbose, 0},
-		{"clobber",      no_argument,       &clobber, 1},
-		{"like",         required_argument, 0, 'l'},
-		{"transform",    required_argument, 0, 't'},
+    {"verbose",      no_argument,       &verbose, 1},
+    {"quiet",        no_argument,       &verbose, 0},
+    {"clobber",      no_argument,       &clobber, 1},
+    {"like",         required_argument, 0, 'l'},
+    {"transform",    required_argument, 0, 't'},
     {"order",        required_argument, 0, 'o'},
     {"uniformize",   required_argument, 0, 'u'},
     {"unistep",      required_argument, 0, 'U'},
@@ -965,6 +971,7 @@ int main (int argc, char **argv)
     {"aa",           required_argument,      0,'a'},
     {"baa",          no_argument,       &opt.baa_smooth, 1},
     {"transform-bbox",no_argument,      &opt.transform_bbox, 1},
+    {"fill",         required_argument, 0, 'f'},
     {0, 0, 0, 0}
     };
   
@@ -972,18 +979,18 @@ int main (int argc, char **argv)
       /* getopt_long stores the option index here. */
       int option_index = 0;
 
-      int c = getopt_long (argc, argv, "vqcl:t:o:u:L:l:s:a:U:", long_options, &option_index);
+      int c = getopt_long (argc, argv, "vqcl:t:o:u:L:l:s:a:U:f:", long_options, &option_index);
 
       /* Detect the end of the options. */
       if (c == -1) break;
 
       switch (c)
-			{
-			case 0:
-				break;
-			case 'v':
-				cout << "Version: 0.8" << endl;
-				return 0;
+      {
+      case 0:
+          break;
+      case 'v':
+        cout << "Version: 0.8" << endl;
+        return 0;
       case 'a':
         opt.aa_fwhm=atof(optarg);break;
       case 'l':
@@ -998,25 +1005,27 @@ int main (int argc, char **argv)
         opt.uniformize=atof(optarg);break;
       case 'U':
         opt.unistep=atof(optarg);break;
+      case 'f':
+        opt.fill=atof(optarg);break;
       case 'L':
         map_f=optarg;break;
       case 's':
         map_str=optarg;break;
-			case '?':
-				/* getopt_long already printed an error message. */
-			default:
-				show_usage (argv[0]);
-				return 1;
-			}
+      case '?':
+                /* getopt_long already printed an error message. */
+      default:
+                show_usage (argv[0]);
+                return 1;
+        }
     }
 
   if(opt.normalize && !order_was_set) //perform nearest neighbour interpolation in this case
     order=0;
   
-	if ((argc - optind) < 2) {
-		show_usage(argv[0]);
-		return 1;
-	}
+    if ((argc - optind) < 2) {
+            show_usage(argv[0]);
+            return 1;
+    }
   input_f=argv[optind];
   output_f=argv[optind+1];
   
@@ -1076,7 +1085,7 @@ int main (int argc, char **argv)
     free(_str);
   }
 
-	try
+  try
   {
 #if ( ITK_VERSION_MAJOR < 4 )  
     itk::RegisterMincIO();
@@ -1156,3 +1165,5 @@ int main (int argc, char **argv)
   }
 	return 0;
 };
+
+/* kate: indent-mode cstyle; indent-width 2; replace-tabs on; hl c++*/
