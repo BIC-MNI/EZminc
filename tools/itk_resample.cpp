@@ -594,7 +594,7 @@ void resample_label_image (
 
   //creating the interpolator
   filter->SetInterpolator( interpolator );
-  filter->SetDefaultPixelValue( -1 );
+  filter->SetDefaultPixelValue( -9 );
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
 
@@ -723,8 +723,8 @@ void resample_label_image (
       typename TmpImage::PixelType val = it_filter.Get();
       typename TmpImage::PixelType val_max = it_max.Get();
       
-      if( !vnl_math_isfinite(val) || val<0.0) {
-        it_max.Set(-1.0);
+      if( !vnl_math_isfinite(val) || val<-8.5) {
+        it_max.Set(-8.5);
         it_out.Set(opt.fill);
       } else if( label_it == sval.begin() || vnl_math_isfinite(val) && val>val_max)
       {
