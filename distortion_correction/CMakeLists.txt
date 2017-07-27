@@ -29,6 +29,14 @@ ADD_EXECUTABLE( fit_harmonics_grids
 TARGET_LINK_LIBRARIES(fit_harmonics_grids 
   ITKIOMINC ${ITK_LIBRARIES} 
   spherical_harmonics )
+
+ADD_EXECUTABLE( fit_harmonics_grids_diff
+                fit_harmonics_grids_diff.cpp )
+                
+TARGET_LINK_LIBRARIES(fit_harmonics_grids_diff
+  ITKIOMINC ${ITK_LIBRARIES} 
+  spherical_harmonics )
+  
   
 ADD_EXECUTABLE( fit_harmonics_grids_regularize
                 fit_harmonics_grids_regularize.cpp )
@@ -84,6 +92,7 @@ TARGET_LINK_LIBRARIES( itk_label_stats
 
 INSTALL(TARGETS
     fit_harmonics_grids
+    fit_harmonics_grids_diff
     c_fit_harmonics_grids
     fit_harmonics_grids_regularize
     param2grid
