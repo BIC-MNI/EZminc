@@ -18,7 +18,10 @@ void show_usage(const char *name)
       << "Usage: "<<name<<" <input> " << std::endl
       << "\t--verbose be verbose" << std::endl
       << "\t--noise  output noise level (default)" << std::endl
-      << "\t--snr output SNR " << std::endl;
+      << "\t--snr output SNR " << std::endl
+      << "\t--bins <n> histograms bins used to detect object , default 2000" << std::endl
+      << "\t--mask <mask.mnc> object mask - overrides object detection based on k-means" << std::endl
+      << "\t--gauss - use gaussian noise assumption, default - disabled" << std::endl;
 
 }
 
@@ -34,6 +37,9 @@ int main(int argc,char **argv)
   int hist_bins=2000;
   int output_snr=0; 
   int output_noise=0;
+  int gaussian_noise=0;
+  
+  std::string input_mask_f;
   
   static struct option long_options[] =
   {
@@ -42,6 +48,9 @@ int main(int argc,char **argv)
     {"quiet",   no_argument, &verbose,      0},
     {"snr",     no_argument, &output_snr,   1},
     {"noise",   no_argument, &output_noise, 1},
+    {"gauss",   no_argument, &gaussian_noise, 1},
+    {"bins",   required_argument, 0, 'b'},
+    {"mask",   required_argument, 0, 'm'},
     {0, 0, 0, 0}
   };
   
@@ -51,7 +60,7 @@ int main(int argc,char **argv)
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "m:", long_options, &option_index);
+    c = getopt_long (argc, argv, "m:b:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -63,6 +72,9 @@ int main(int argc,char **argv)
         break;
       case 'b':
         hist_bins=atoi(optarg);
+        break;
+      case 'm':
+        input_mask_f=optarg;
         break;
       case '?':
         /* getopt_long already printed an error message. */
@@ -84,17 +96,44 @@ int main(int argc,char **argv)
   try
   {
     simple_volume<float> input;
+    minc_byte_volume  input_mask;
+    
     minc_1_reader rdr;
     rdr.open(input_f.c_str());
     load_simple_volume<float>(rdr,input);
     
+    if(!input_mask_f.empty())
+    {
+      minc_1_reader rdr2;
+      rdr2.open(input_mask_f.c_str());
+      
+      for(int i=0;i<3;i++)
+      {
+        if(rdr.ndim(i)!=rdr2.ndim(i))
+        {
+          std::cerr<<"Mask has Different dimensions length! "<<std::endl;
+          return 1;
+        }
+      }
+      
+      for(int i=0;i<5;i++)
+      {
+        if(rdr.nspacing(i)!=rdr2.nspacing(i) )
+        {
+          std::cerr<<"Mask has Different step size! "<<std::endl;
+          return 1;
+        }
+      }
+      load_simple_volume<unsigned char>(rdr2,input_mask);
+      
+      
+    }
     
     double mean_signal=0.0;
     
-    double nsig_corr=noise_estimate(input,mean_signal,false,verbose);
+    double nsig_corr=noise_estimate(input,mean_signal,gaussian_noise,verbose,hist_bins,input_mask);
           
     if(output_noise) {
-      
       if(verbose) std::cout<<"Noise=";
       std::cout<<nsig_corr<<std::endl;
     }
@@ -104,9 +143,12 @@ int main(int argc,char **argv)
       if(verbose) std::cout<<"SNR=";
       std::cout<<mean_signal/nsig_corr<<std::endl;
     }
+    
   } catch (const minc::generic_error & err) {
     std::cerr << "Got an error at:" << err.file () << ":" << err.line () << std::endl;
     std::cerr << err.msg()<<std::endl;
     return 1;
   }
 }
+
+// kate: indent-mode cstyle; indent-width 2; replace-tabs on; tab-width 2

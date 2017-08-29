@@ -56,11 +56,9 @@ static double noise_correct(double sig,double nsig)
   return sqrt((nsig*nsig / epsi(snr1)));
 }
 
-double minc::noise_estimate(const minc::simple_volume<float>& input,double &mean_signal,bool gaussian,bool verbose)
+double minc::noise_estimate(const minc::simple_volume<float>& input,double &mean_signal,bool gaussian,bool verbose,int hist_bins,const minc::minc_byte_volume& mask)
 {
   int debug=0;
-  int maxiter=10;
-  int hist_bins=2000;
 
 	std::vector<simple_volume<float> > dwt;
 	
@@ -73,16 +71,27 @@ double minc::noise_estimate(const minc::simple_volume<float>& input,double &mean
 	build_histogram(LLL_hist,dwt[0]);
 	
 	minc_byte_volume LLL_mask(dwt[0].size());
-	std::vector<double> LLL_mu;
-	simple_k_means(LLL_hist,LLL_mu,2,10);
-	
-	float LLL_threshold=(float)(LLL_mu[0]+LLL_mu[1])/2;
-	
-	if(verbose) std::cout<<"LLL threshold="<<LLL_threshold<<std::endl;
-	
-	for(size_t i=0;i<LLL_mask.c_buf_size();i++)
-		LLL_mask.c_buf()[i]=(dwt[0].c_buf()[i]>LLL_threshold?1:0);
-	
+  
+  if(mask.empty()) {
+    std::vector<double> LLL_mu;
+    simple_k_means(LLL_hist,LLL_mu,2,10);
+    
+    float LLL_threshold=(float)(LLL_mu[0]+LLL_mu[1])/2;
+    
+    if(verbose) std::cout<<"LLL threshold="<<LLL_threshold<<std::endl;
+    
+    for(size_t i=0;i<LLL_mask.c_buf_size();i++)
+      LLL_mask.c_buf()[i]=(dwt[0].c_buf()[i]>LLL_threshold?1:0);
+  } else {
+    /*downsample mask */
+    LLL_mask=0;
+    for(size_t z=0;z<input.dim(2)/2;z++)
+      for(size_t y=0;y<input.dim(1)/2;y++)
+        for(size_t x=0;x<input.dim(0)/2;x++)
+    {
+      LLL_mask.set(x,y,z,mask.get(x*2,y*2,z*2));
+    }
+  }
 	
 	double bkgr_mean=0.0;
 	double bkgr_std=0.0;
@@ -112,7 +121,7 @@ double minc::noise_estimate(const minc::simple_volume<float>& input,double &mean
 		}
 	}
 			
-	// remove edges
+	// remove edges (areas with high magnitude of the gradients)
 	simple_volume<float> LLL_gmag(dwt[0].size());
 	calc_gradient_mag(dwt[0],LLL_gmag,1,1,1);//TODO: compensate for nonuniform step size?
 	
@@ -123,9 +132,9 @@ double minc::noise_estimate(const minc::simple_volume<float>& input,double &mean
 	
 	if(verbose) std::cout<<"Median gradient magnitude="<<gmag_median<<std::endl;
 	
-	
+  //exclude areas with high gradients from mask
 	for(int i=0;i<LLL_mask.c_buf_size();i++)
-		LLL_mask.c_buf()[i]=dwt[0].c_buf()[i]>LLL_threshold && LLL_gmag.c_buf()[i]<gmag_median;
+		LLL_mask.c_buf()[i]=LLL_mask.c_buf()[i] && LLL_gmag.c_buf()[i]<gmag_median;
 	
 	simple_volume<float> HHH_abs(dwt[0].size());
 	
@@ -139,32 +148,6 @@ double minc::noise_estimate(const minc::simple_volume<float>& input,double &mean
 	double nsig=abs_HHH_hist.find_percentile(0.5)/0.6745; //MAD estimator
 	
 	if(verbose) std::cout<<"Noise="<<nsig<<std::endl;
-	
-	/*
-	if(verbose) std::cout<<"Blurring..."<<std::endl;
-	simple_volume<float> blur(input.size());
-	blur_volume(input,blur,false,false,false,3,3,3); //for now replace flat filter with gaussian
-	
-	//detect object
-	histogram<double> blur_hist(hist_bins);
-	build_histogram(blur_hist,blur);
-	
-	std::vector<double> blur_mu;
-	simple_k_means(blur_hist,blur_mu,2,10);
-	
-	double blur_threshold=(blur_mu[0]+blur_mu[1])/2;
-	if(verbose) std::cout<<"Signal threshold="<<    blur_threshold<<std::endl;      
-	
-	double mean_signal=0.0;
-	int    cnt_signal=0;
-	for(int i=0;i<input.c_buf_size();i++)
-	{
-		if(input.c_buf()[i]>blur_threshold)
-		{
-			mean_signal+=input.c_buf()[i];
-			cnt_signal++;
-		}
-	}*/
 	
 	mean_signal=0.0;
 	size_t    cnt_signal=0;
@@ -191,8 +174,7 @@ double minc::noise_estimate(const minc::simple_volume<float>& input,double &mean
     nsig_corr=noise_correct(mean_signal,nsig);
   }
   
-  //if(verbose)
-  //  std::cout<<"Noise="<<nsig<<std::endl;
-		
-	return nsig_corr;
+  return nsig_corr;
 }
+
+// kate: indent-mode cstyle; indent-width 2; replace-tabs on; tab-width 2

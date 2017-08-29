@@ -23,8 +23,10 @@
 
 namespace minc
 {
-  double noise_estimate(const minc::simple_volume<float>& input,double &mean_signal,bool gaussian=false,bool verbose=false);
+  double noise_estimate(const minc::simple_volume<float>& input,double &mean_signal,bool gaussian=false,bool verbose=false,int hist_bins=2000,const minc::minc_byte_volume& mask=minc_byte_volume());
 
 };
 
 #endif //__NOISE_ESTIMATE_H__
+
+// kate: indent-mode cstyle; indent-width 2; replace-tabs on; tab-width 2
