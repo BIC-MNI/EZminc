@@ -28,6 +28,8 @@
 #include <itkHessian3DToVesselnessMeasureImageFilter.h>
 #include <itkMultiScaleHessianBasedMeasureImageFilter.h>
 #include <itkHessianToObjectnessMeasureImageFilter.h>
+#include <itkRescaleIntensityImageFilter.h>
+
 
 using namespace  std;
 using namespace  minc;
@@ -35,7 +37,7 @@ using namespace  minc;
 void show_usage (const char *name)
 {
   std::cerr 
-	  << "Usage: " << name << " <input> <output> " << endl
+    << "Usage: " << name << " <input> <output> " << endl
     << "--clobber clobber output files" << endl
     << "--version" << endl
     << "--sigma <d>  default 1 " << endl
@@ -44,7 +46,11 @@ void show_usage (const char *name)
     << "--gamma <d> " << endl
     << "--bright" << endl
     << "--frangi - use Frangi's filter (2nd order derivative)" << endl
-    << "--short  - store image in short file format"<<endl;
+    << "--short  - store image in short file format" << endl
+    << "--scales <n> - use multiscale algo" << endl
+    << "--sigma2 <f> - second sigma for multiscale" << endl
+    << "--rescale - use rescaling filter to map output to fixed range (0-100)" << endl
+    << "--best <out> - output best scale into file"<<endl;
 }
 
 
@@ -60,16 +66,25 @@ int main (int argc, char **argv)
   
   int clobber=0;
   int c;
-  double sigma=0.0;
-  double alpha1=0.0;
-  double alpha2=0.0;
-  double gamma=0.0;
-  double beta=0.0;
+  double sigma=0.2;
+  double sigma2=2.0;
+  
+  double alpha1=0.5;
+  double alpha2=2.0;
+  
+  double gamma=5.0;
+  double beta=0.5;
+  
   int bright_object=0;
+  
   int frangi=0;
+  int scales=0;
+  
   int store_byte=0;
   int store_short=0;
   int store_float=0;
+  int rescale=0;
+  std::string out_scale;
   
   static struct option long_options[] = { 
     {"clobber", no_argument, &clobber, 1},
@@ -77,13 +92,17 @@ int main (int argc, char **argv)
     {"short",   no_argument, &store_short, 1},
     {"float",   no_argument, &store_float, 1},
     {"byte",    no_argument, &store_byte, 1},
+    {"rescale", no_argument, &rescale, 1},
     {"version", no_argument, 0, 'v'},
-    {"sigma", required_argument, 0, 's'},
+    {"sigma",  required_argument, 0, 's'},
+    {"sigma2", required_argument, 0, 'S'},
     {"alpha1", required_argument, 0, 'a'},
-    {"alpha", required_argument, 0, 'a'},
+    {"alpha",  required_argument, 0, 'a'},
     {"alpha2", required_argument, 0, 'b'},
-    {"beta", required_argument, 0, 'b'},
-    {"gamma", required_argument, 0, 'g'},
+    {"beta",   required_argument, 0, 'b'},
+    {"gamma",  required_argument, 0, 'g'},
+    {"scales", required_argument, 0, 'm'},
+    {"best",   required_argument, 0, 'B'},
     {"bright", no_argument, &bright_object, 1},
     {0, 0, 0, 0}};
 
@@ -92,7 +111,7 @@ int main (int argc, char **argv)
 		/* getopt_long stores the option index here. */
 		int option_index = 0;
 
-		c = getopt_long (argc, argv, "cvs:a:b:g:", long_options, &option_index);
+		c = getopt_long (argc, argv, "cvs:a:b:g:s:S:m:B:", long_options, &option_index);
 
 		/* Detect the end of the options. */
 		if (c == -1)
@@ -114,9 +133,18 @@ int main (int argc, char **argv)
     case 'g':
       gamma=atof(optarg);
       break;
+    case 'S':
+      sigma2=atof(optarg);
+      break;
+    case 'm':
+      scales=atoi(optarg);
+      break;
     case 'v':
       cout << "Version: 1.0" << endl;
       return 0;
+    case 'B':
+      out_scale=optarg;
+      break;
     case '?':
     default:
       show_usage (argv[0]);
@@ -153,22 +181,66 @@ int main (int argc, char **argv)
               
     typedef itk::HessianToObjectnessMeasureImageFilter< HessianFilterType::OutputImageType,image3d >
           FrangiFilterType;
-    
-    
-    HessianFilterType::Pointer hessianFilter = HessianFilterType::New();
-    
-    FrangiFilterType::Pointer frangiFilter = FrangiFilterType::New();
-    VesselnessMeasureFilterType::Pointer vesselnessFilter = VesselnessMeasureFilterType::New();
-    
-    if(sigma>0.0)
-      hessianFilter->SetSigma( sigma );
-    
-    hessianFilter->SetInput( reader->GetOutput() );
+          
+    typedef itk::MultiScaleHessianBasedMeasureImageFilter< image3d,HessianFilterType::OutputImageType, image3d > 
+          MultiScaleFilterType;
     
     itk::Image<float, 3>::Pointer out;
     
-    if(frangi)
+    if(scales>1)
     {
+        HessianFilterType::Pointer hessianFilter = HessianFilterType::New();
+        VesselnessMeasureFilterType::Pointer vesselnessFilter = VesselnessMeasureFilterType::New();
+      
+        MultiScaleFilterType::Pointer filter = MultiScaleFilterType::New();
+
+        
+        if( alpha1>0.0 )
+        {
+            vesselnessFilter->SetAlpha1( alpha1 );
+        }
+
+        if( alpha2>0.0 )
+        {
+            vesselnessFilter->SetAlpha2( alpha2 );
+        }
+        
+        filter->SetHessianToMeasureFilter(vesselnessFilter);
+        filter->SetInput( reader->GetOutput() );
+        
+        filter->SetSigmaMinimum(sigma);
+        filter->SetSigmaMaximum(sigma2);
+        filter->SetNumberOfSigmaSteps(scales);
+        
+        if(!out_scale.empty())
+        {
+            filter->SetGenerateScalesOutput(true);
+        }
+        
+        filter->Update();
+        
+        out=filter->GetOutput();
+        
+        if(!out_scale.empty())
+        {
+            itk::ImageFileWriter< itk::Image<float, 3> >::Pointer writer = itk::ImageFileWriter<itk::Image<float, 3> >::New();
+    
+            writer->SetFileName(out_scale.c_str());
+            writer->SetInput( filter->GetScalesOutput() );
+            writer->Update();
+        }
+
+    }
+    else if(frangi)
+    {
+      HessianFilterType::Pointer hessianFilter = HessianFilterType::New();
+      FrangiFilterType::Pointer frangiFilter = FrangiFilterType::New();
+
+      if(sigma>0.0)
+        hessianFilter->SetSigma( sigma );
+        
+      hessianFilter->SetInput( reader->GetOutput() );
+      
       frangiFilter->SetObjectDimension(2);
       frangiFilter->SetBrightObject(bright_object);
       
@@ -193,6 +265,10 @@ int main (int argc, char **argv)
       out=frangiFilter->GetOutput();
       
     } else {
+      HessianFilterType::Pointer hessianFilter = HessianFilterType::New();
+      VesselnessMeasureFilterType::Pointer vesselnessFilter = VesselnessMeasureFilterType::New();
+      hessianFilter->SetInput( reader->GetOutput() );
+      
       if( alpha1>0.0 )
       {
         vesselnessFilter->SetAlpha1( alpha1 );
@@ -227,6 +303,16 @@ int main (int argc, char **argv)
     minc::set_minc_storage_type(out,typeid(unsigned char).name());
   }
 #endif
+    if(rescale) {
+        typedef itk::RescaleIntensityImageFilter<image3d> RescaleFilterType;
+        RescaleFilterType::Pointer rescale = RescaleFilterType::New();
+        rescale->SetOutputMinimum(0);
+        rescale->SetOutputMaximum(100.0);
+        
+        rescale->SetInput(out);
+        rescale->Update();
+        out=rescale->GetOutput();
+    }
     minc::append_history(out,history);
 
     itk::ImageFileWriter< itk::Image<float, 3> >::Pointer writer = itk::ImageFileWriter<itk::Image<float, 3> >::New();
