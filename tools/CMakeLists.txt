@@ -10,7 +10,6 @@ IF(GSL_FOUND AND HAVE_MINC1)
 
   TARGET_LINK_LIBRARIES(random_volume ${EZMINC_LIBRARIES}  ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY})
 
- 
   ADD_EXECUTABLE( fdr_threshold
                 fdr_threshold.cpp )
 
@@ -19,14 +18,43 @@ IF(GSL_FOUND AND HAVE_MINC1)
   ADD_EXECUTABLE(t2_fit
       t2_fit.cpp )
 
-  TARGET_LINK_LIBRARIES(t2_fit ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY}  ${EZMINC_LIBRARIES} )
-
+  TARGET_LINK_LIBRARIES(t2_fit ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY} ${EZMINC_LIBRARIES} )
+  
   INSTALL(TARGETS 
         random_volume
         fdr_threshold
         volume_pol
         t2_fit
         RUNTIME DESTINATION bin )
+        
+  # PCA utils
+  
+  ADD_LIBRARY(pca_utils pca_utils.cpp  pca_utils.h  utils.cpp  utils.h )
+  TARGET_LINK_LIBRARIES(pca_utils ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY} ${EZMINC_LIBRARIES} )
+  
+  ADD_EXECUTABLE(volumes_pca volumes_pca.cpp)
+  TARGET_LINK_LIBRARIES(volumes_pca pca_utils)
+  
+  ADD_EXECUTABLE(volumes_pca_preprocess volumes_pca_preprocess.cpp)
+  TARGET_LINK_LIBRARIES(volumes_pca_preprocess pca_utils)
+  
+  ADD_EXECUTABLE(volumes_lm volumes_lm.cpp)
+  TARGET_LINK_LIBRARIES(volumes_lm pca_utils)
+  
+  ADD_EXECUTABLE(volumes_lsq volumes_lsq.cpp)
+  TARGET_LINK_LIBRARIES(volumes_lsq pca_utils)
+  
+  ADD_EXECUTABLE(em_classify em_classify.cpp)
+  TARGET_LINK_LIBRARIES(em_classify pca_utils)
+  
+  INSTALL(TARGETS 
+        volumes_pca_preprocess
+        volumes_pca
+        volumes_lm
+        volumes_lsq
+        em_classify
+        RUNTIME DESTINATION bin )
+
 ENDIF(GSL_FOUND AND HAVE_MINC1)
 
 
@@ -187,7 +215,6 @@ IF(HAVE_MINC1)
   
   ADD_EXECUTABLE( volume_similarity volume_similarity.cpp)
   TARGET_LINK_LIBRARIES(volume_similarity minc_image_proc ${EZMINC_LIBRARIES})
-  
   
   ADD_EXECUTABLE( minc_taylor_reg minc_taylor_reg.c)
   TARGET_LINK_LIBRARIES(minc_taylor_reg ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES})

@@ -20,6 +20,7 @@ INSTALL(PROGRAMS
         lobes_to_volumes.pl
         minc_qc2.pl
         minc_qc.pl
+        minc_aqc.pl
         minc_qc_rgb.pl
         minc_qc_t2t1.pl
         minc_pretty_pic.pl
