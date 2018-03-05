@@ -38,7 +38,7 @@ namespace minc
   //! calculate PCA from a covariance matrix
   int calculate_pca(gsl_double_matrix& cov,gsl_double_matrix& pc,gsl_double_vector &v,double threshold);
   
-  //! calculate number of PCs to represent a given fraaction of variance (1 - 100%)
+  //! calculate number of PCs to represent a given fraction of variance (1 - 100%)
   int calc_selected(string_table& tbl,double threshold);
   
 };

@@ -67,7 +67,7 @@ void save_results(const string_table& tbl,
 
       minc_1_writer wrt2; 
       wrt2.open(file2,rdr.info(),2,NC_FLOAT);
-      save_simple_volume<float>(wrt2,tmp);
+      save_simple_volume<float>(wrt2, tmp);
       std::cout<<j<<"\t"<<std::flush;
     }
     std::cout<<std::endl;
@@ -94,7 +94,9 @@ void show_usage(const char *name)
       << "\t--mask <mask.mnc> use mask for ROI" << std::endl
       << "\t--verbose be verbose" << std::endl
       << "\t--clobber clobber the output files" << std::endl
-      << "\t--normalize normalize PCA to 1" << std::endl ;
+      << "\t--normalize normalize PCA to 1" << std::endl 
+      << "\t--nobias do not remove bias (mean)" << std::endl 
+      << "\t--threshold <f>, default 0.98 - proportion of variance explained" << std::endl;
 }
 
 int main(int argc,char **argv)
@@ -102,14 +104,20 @@ int main(int argc,char **argv)
   int clobber=0;
   int verbose=0;
   int normalize=0;
+  int nobias=0;
+  int n_select=0;
+  double threshold=0.98;
+  
   std::string mask_f;
   static struct option long_options[] =
   {
-    {"verbose", no_argument, &verbose, 1},
-    {"quiet", no_argument, &verbose, 0},
-    {"clobber", no_argument, &clobber, 1},
-    {"normalize",no_argument, &normalize, 1},
-    {"mask"     , required_argument, 0,       'm'},
+    {"verbose",   no_argument, &verbose, 1},
+    {"quiet",     no_argument, &verbose, 0},
+    {"clobber",   no_argument, &clobber, 1},
+    {"normalize", no_argument, &normalize, 1},
+    {"nobias",    no_argument, &nobias, 1},
+    {"mask"     , required_argument, 0, 'm'},
+    {"threshold", required_argument, 0, 't'},
     {0, 0, 0, 0}
   };
   
@@ -119,7 +127,7 @@ int main(int argc,char **argv)
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "s", long_options, &option_index);
+    c = getopt_long (argc, argv, "sm:t:", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -133,6 +141,9 @@ int main(int argc,char **argv)
         /* getopt_long already printed an error message. */
       case 'm':
         mask_f=optarg;
+        break;
+      case 't':
+        threshold=atof(optarg);
         break;
       default:
         show_usage(argv[0]);
@@ -158,16 +169,25 @@ int main(int argc,char **argv)
   
     //1. calculate averages
     volumes means;
-    std::cout<<"Averaging..."<<std::endl;
-    average_tables(tbl,means);
-    std::cout<<"Done"<<std::endl;
-    
-    minc_byte_volume mask;
-    if(mask_f.empty())
+    if(nobias)
     {
-      //mask.resize(means[0].size());
-      //mask=1; //all is allowed
+        means.resize(tbl[0].size());
+        for(int i=0;i<tbl[0].size();i++) //go through modalities
+        {
+            minc_1_reader rdr1;
+            rdr1.open(tbl[0][i].c_str());
+            //HACK: just for volume resizing...
+            load_simple_volume<float>(rdr1,means[i]);
+            means[i]=0.0;
+        }
     } else {
+        std::cout<<"Averaging..."<<std::endl;
+        average_tables(tbl, means);
+        std::cout<<"Done"<<std::endl;
+    }
+    minc_byte_volume mask;
+    if(!mask_f.empty())
+    {
       minc_1_reader rdr;
       rdr.open(mask_f.c_str());
       load_simple_volume(rdr,mask);
@@ -176,20 +196,21 @@ int main(int argc,char **argv)
     //2. calculate correlation matrix
     gsl_double_matrix cov,pc;
     gsl_double_vector w;
-    std::cout<<"Calculating covariance..."<<std::endl;
+    std::cout<<"Calculating covariance matrix..."<<std::endl;
     
     if(mask_f.empty())
-      calculate_covariance(tbl,means,cov,0,means.size(),false);
+      calculate_covariance(tbl,means,       cov, 0, means.size(), false);
     else
-      calculate_covariance(tbl,means,mask,cov,0,means.size(),false);
+      calculate_covariance(tbl,means, mask, cov, 0, means.size(), false);
     
     std::cout<<"Done"<<std::endl;
     //3. PCA
-    std::cout<<"Calculating PCA..."<<std::endl;
-    calculate_pca(cov,pc,w,0.98);
+    std::cout<<"Calculating PCA..., threshold="<<threshold<<std::endl;
+    n_select=calculate_pca(cov, pc, w, threshold);
     std::cout<<"Done"<<std::endl;
+    
     //4. store results?
-    std::cout<<"Writing eigen vectors"<<std::endl;
+    std::cout<<"Writing "<<n_select<<" eigen vectors"<<std::endl;
     if(normalize)
     {
       double ss=1;
@@ -202,7 +223,7 @@ int main(int argc,char **argv)
       //ss*=ss;
       w*=1.0/ss;
     }
-    save_results(tbl,means,pc,w,output,normalize);
+    save_results(tbl, means, pc, w, output, normalize);
     std::cout<<"Done"<<std::endl;
     
   } catch (const minc::generic_error & err) {

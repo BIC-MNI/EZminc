@@ -48,6 +48,7 @@ namespace minc
   
   //! calculate column-wise averages
   void average_tables(string_table& tbl,volumes &v);
+  
   //! calculate column-wise averages
   void average_tables(string_table& tbl,grids &v);
   

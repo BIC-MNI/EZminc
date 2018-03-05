@@ -298,7 +298,7 @@ namespace minc
     return r;
   }
 
-  void average_tables(string_table& tbl,volumes &v)
+  void average_tables(string_table& tbl, volumes &v)
   {
     v.resize(tbl[0].size());
     minc_float_volume tmp;
