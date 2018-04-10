@@ -4,7 +4,7 @@
 #@NAME       :  assemble_bricks.pl
 #@DESCRIPTION:  create lego phantom image based on location of bricks
 #@COPYRIGHT  :
-#              Vladimir S. Fonov  April 2012
+#              Vladimir S. Fonov  April 2012, April 2018
 #              Montreal Neurological Institute, McGill University.
 #              Permission to use, copy, modify, and distribute this
 #              software and its documentation for any purpose and without
@@ -38,16 +38,15 @@ GetOptions (
           "brick=s"   => \$brick,
           "like=s"    => \$like,
           "mask=s"    => \$mask,
-          "cont"      => \$cont,
           "tmp=s"     => \$tmpdir
           );
           
-die "Usage: $me <bricks.tag> <output_model.mnc> --verbose --clobber --brick <brick> --mask <brick_mask> --like <sample> --cont \n"  if $#ARGV<0;
+die "Usage: $me <bricks.tag> <output_model_ideal.mnc> <output_model_bricks.mnc> --verbose --clobber --brick <brick> --mask <brick_mask> --like <sample> \n"  if $#ARGV<0;
 
-my ($tag,$out)=@ARGV;
+my ($tag, $out_phantom, $out_bricks)=@ARGV;
 
-die "Need a brick or mask!\n" unless $brick || $mask;
-die "Specify Output please\n" unless $out;
+die "Need a brick and mask!\n" unless $brick || $mask;
+die "Specify Output please\n" unless $out_phantom && $out_bricks;
 die "Specify an example (--like)\n" unless $like;
 
 check_file($out) unless $clobber;
@@ -68,9 +67,9 @@ for $i(0..$#tags)
 	{
 		do_cmd('xfmconcat',"$tmpdir/rotate90.xfm",$out_tmp,$out_xfm);
 	} else {
-		do_cmd('cp', $out_tmp,$out_xfm);
+		do_cmd('cp', $out_tmp, $out_xfm);
 	}
-	push (@xfm,$out_xfm);
+	push (@xfm, $out_xfm);
 }
 
 
@@ -80,42 +79,42 @@ delete $ENV{MINC_COMPRESS} if $comp;
 my $b;
 my $j=1;
 my @bricks;
-do_cmd('minccalc','-expression',0,$like,"$tmpdir/brick_tmp.mnc",'-byte');
+do_cmd('minccalc','-expression', 0, $like, "$tmpdir/brick_tmp.mnc", '-byte', '-labels');
 
-if($cont) {
-  
-  foreach $b(@xfm)
-  {
-    do_cmd('mincresample',$brick,"$tmpdir/brick_${j}.mnc",'-transform',$b,'-like', $like,'-clobber');
-    do_cmd('mincmath','-max',"$tmpdir/brick_${j}.mnc","$tmpdir/brick_tmp.mnc","$tmpdir/brick_tmp2.mnc",'-clobber');
-    do_cmd('mv',"$tmpdir/brick_tmp2.mnc","$tmpdir/brick_tmp.mnc");
-    do_cmd('rm','-f',"$tmpdir/brick_${j}.mnc");
-    $j++;
-  }
-} else {
-  unless($mask) {
-      $mask="$tmpdir/brick.mnc";
-      do_cmd('itk_morph', '--bimodal', $brick, $mask);
-  }
-  foreach $b(@xfm)
-  {
-    do_cmd('mincresample',$mask,"$tmpdir/brick_t.mnc",'-nearest','-transform',$b,'-like', $like,'-clobber');
-    do_cmd('minccalc','-expression',"A[0]*$j","$tmpdir/brick_t.mnc","$tmpdir/brick_${j}.mnc");
-    do_cmd('mincmath','-max',"$tmpdir/brick_${j}.mnc","$tmpdir/brick_tmp.mnc","$tmpdir/brick_tmp2.mnc",'-clobber');
-    do_cmd('mv',"$tmpdir/brick_tmp2.mnc","$tmpdir/brick_tmp.mnc");
-    do_cmd('rm','-f',"$tmpdir/brick_${j}.mnc");
-    $j++;
-  }
+# 1 create continious phantom  
+foreach $b(@xfm)
+{
+  do_cmd('mincresample', $brick, "$tmpdir/brick_${j}.mnc", '-transform', $b, '-like', $like,'-clobber');
+  do_cmd('mincmath','-max', "$tmpdir/brick_${j}.mnc", "$tmpdir/brick_tmp.mnc", "$tmpdir/brick_tmp2.mnc", '-clobber');
+  do_cmd('mv', "$tmpdir/brick_tmp2.mnc", "$tmpdir/brick_tmp.mnc");
+  do_cmd('rm', '-f', "$tmpdir/brick_${j}.mnc");
+  $j++;
+}
+do_cmd('mincreshape', "$tmpdir/brick_tmp.mnc", $out_phantom);
+do_cmd('rm', '-f', "$tmpdir/brick_tmp.mnc");
+do_cmd('minccalc', '-expression', 0, $like, "$tmpdir/brick_tmp.mnc", '-byte', '-labels');
+
+
+unless($mask) {
+    $mask="$tmpdir/brick.mnc";
+    do_cmd('itk_morph', '--bimodal', $brick, $mask);
+}
+
+# 2 create bricks view
+$j=1;
+foreach $b(@xfm)
+{
+  do_cmd('mincresample', $mask, "$tmpdir/brick_t.mnc", '-nearest', '-transform', $b, '-like', $like, '-clobber', '-labels');
+  do_cmd('minccalc', '-expression',"A[0]*$j", "$tmpdir/brick_t.mnc","$tmpdir/brick_${j}.mnc",'-labels');
+  do_cmd('mincmath', '-max', "$tmpdir/brick_${j}.mnc", "$tmpdir/brick_tmp.mnc", "$tmpdir/brick_tmp2.mnc", '-clobber','-labels');
+  do_cmd('mv', "$tmpdir/brick_tmp2.mnc","$tmpdir/brick_tmp.mnc");
+  do_cmd('rm', '-f', "$tmpdir/brick_${j}.mnc");
+  $j++;
 }
 
 $ENV{MINC_COMPRESS}=$comp if $comp;
 
-if($cont)
-{
-  do_cmd('mincreshape',"$tmpdir/brick_tmp.mnc",$out);
-} else {
-  do_cmd('mincreshape',"$tmpdir/brick_tmp.mnc",$out,'-image_range',0,$j,'-valid_range',0,$j);
-}
+do_cmd('mincreshape',"$tmpdir/brick_tmp.mnc",$out_bricks, '-image_range',0,$j, '-valid_range',0,$j);
 
 
 sub do_cmd {
