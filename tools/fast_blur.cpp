@@ -5,8 +5,6 @@
 #include <math.h>
 #include <limits>
 #include <string>
-#include <vector>
-#include <getopt.h>
 #include <complex>
 #include <stdlib.h>
 #include <unistd.h>
@@ -23,11 +21,14 @@ using namespace  minc;
 
 void show_usage (const char *name)
 {
-  std::cerr 
+  std::cerr
       << "Usage: "<<name<<" <input> <output> " << endl
       << "--clobber clobber output files"<<endl
       << "--verbose be verbose"<<endl
-      << "--fwhm <f>"<< endl
+      << "--fwhm <f> (Global fwhm - Cannot be used with per-dimension fwhm)"<< endl
+      << "--fwhm_x <fx>"<< endl
+      << "--fwhm_y <fy>"<< endl
+      << "--fwhm_z <fz>"<< endl
       << "--dx diffirentiate in X dir"<<endl
       << "--dy diffirentiate in Y dir"<<endl
       << "--dz diffirentiate in Z dir"<<endl
@@ -42,10 +43,11 @@ int main (int argc, char **argv)
   int clobber=0;
   int low=0,hi=0;
   int dx=0,dy=0,dz=0,gmag=0,grad=0,out_float=0;
-  double fwhm=1.0;
+  double fwhm=-INFINITY;
+  double fwhm_x=-INFINITY, fwhm_y=-INFINITY, fwhm_z=-INFINITY;
   char *history = time_stamp(argc, argv); //maybe we should free it afterwards
 
-  static struct option long_options[] = { 
+  static struct option long_options[] = {
     {"verbose", no_argument, &verbose, 1},
     {"quiet", no_argument, &verbose, 0},
     {"clobber", no_argument, &clobber, 1},
@@ -55,10 +57,13 @@ int main (int argc, char **argv)
     {"gmag", no_argument, &gmag, 1},
     {"grad", no_argument, &grad, 1},
     {"float", no_argument, &out_float, 1},
-    {"fwhm",  required_argument, 0, 'f'},
+    {"fwhm", required_argument, 0, 'f'},
+    {"fwhm_x", required_argument, 0, 'x'},
+    {"fwhm_y", required_argument, 0, 'y'},
+    {"fwhm_z", required_argument, 0, 'z'},
     {0, 0, 0, 0}
     };
-    
+
   int c;
   for (;;)
   {
@@ -78,6 +83,15 @@ int main (int argc, char **argv)
     case 'f':
       fwhm = atof(optarg);
       break;
+    case 'x':
+      fwhm_x = atof(optarg);
+    break;
+    case 'y':
+      fwhm_y = atof(optarg);
+    break;
+    case 'z':
+      fwhm_z = atof(optarg);
+    break;
     case '?':
       /* getopt_long already printed an error message. */
     default:
@@ -85,9 +99,32 @@ int main (int argc, char **argv)
       return 1;
     }
   }
-  
+
   if((argc - optind)<2)
   {
+    show_usage(argv[0]);
+    return 1;
+  }
+  if( fwhm!=-INFINITY){
+      if(fwhm_x!=-INFINITY || fwhm_y!=-INFINITY || fwhm_z!=-INFINITY){
+        cerr<<"fwhm cannot have a global and per-dimension value!"<<endl;
+        show_usage(argv[0]);
+        return 1;
+      }
+      fwhm_x = fwhm_y = fwhm_z = fwhm;
+  }
+  if(fwhm_x==-INFINITY){
+    cerr<<"No fwhm given for the x dimension!"<<endl;
+    show_usage(argv[0]);
+    return 1;
+  }
+  if(fwhm_y==-INFINITY){
+    cerr<<"No fwhm given for the y dimension!"<<endl;
+    show_usage(argv[0]);
+    return 1;
+  }
+  if(fwhm_z==-INFINITY){
+    cerr<<"No fwhm given for the z dimension!"<<endl;
     show_usage(argv[0]);
     return 1;
   }
@@ -98,58 +135,58 @@ int main (int argc, char **argv)
     cerr << output.c_str () << " Exists!" << endl;
     return 1;
   }
-  
+
   try {
     minc::minc_1_reader in_volume;
-    
+
     if(verbose) std::cout<<"Reading:"<<argv[optind]<<std::endl;
     in_volume.open(argv[optind]);
-    
+
     nc_type out_file_type=out_float?NC_FLOAT:in_volume.datatype();
     int out_file_signed=out_float?1:in_volume.is_signed();
-    
+
     simple_volume<float> in;
     load_simple_volume<float>(in_volume,in);
-    
-    
+
+
     if(verbose)
-        std::cout<<"FWHM:"<<fwhm/in_volume.nspacing(1)
-          <<"x"<<fwhm/in_volume.nspacing(2)<<"x"<<fwhm/in_volume.nspacing(3)<<std::endl;
-    
+        std::cout<<"FWHM:"<<fwhm_x/in_volume.nspacing(1)
+          <<"x"<<fwhm_y/in_volume.nspacing(2)<<"x"<<fwhm_z/in_volume.nspacing(3)<<std::endl;
+
     if(grad)
     {
       minc::minc_grid_volume out(in.size());
-      calc_gradient(in,out,fwhm/in_volume.nspacing(1),
-                    fwhm/in_volume.nspacing(2),fwhm/in_volume.nspacing(3));
-      
+      calc_gradient(in,out,fwhm_x/in_volume.nspacing(1),
+                    fwhm_y/in_volume.nspacing(2),fwhm_z/in_volume.nspacing(3));
+
       minc::minc_1_writer out_volume;
       minc::minc_info out_info=in_volume.info();
-      
+
       out_info.push_back(minc::dim_info(3,0,0,minc::dim_info::DIM_VEC));
-      
+
       out_volume.open(argv[optind+1],out_info,3,out_file_type,out_file_signed);
-      
+
       out_volume.copy_headers(in_volume);
       out_volume.append_history(history);
       save_simple_volume<fixed_vec<3,float> >(out_volume,out);
-        
+
     } else if(gmag) {
-        simple_volume<float> mout(in); 
-        
-        calc_gradient_mag(in,mout,fwhm/in_volume.nspacing(1),
-                      fwhm/in_volume.nspacing(2),fwhm/in_volume.nspacing(3));
-                      
+        simple_volume<float> mout(in);
+
+        calc_gradient_mag(in,mout,fwhm_x/in_volume.nspacing(1),
+                      fwhm_y/in_volume.nspacing(2),fwhm_z/in_volume.nspacing(3));
+
         minc::minc_1_writer out_volume;
         out_volume.open(argv[optind+1],in_volume.info(),2,out_file_type,out_file_signed);
         out_volume.copy_headers(in_volume);
         out_volume.append_history(history);
         save_simple_volume<float>(out_volume,mout);
     } else {
-      simple_volume<float> out(in); 
+      simple_volume<float> out(in);
       blur_volume(in,out,dx,dy,dz,
-                  fwhm/in_volume.nspacing(1),
-                  fwhm/in_volume.nspacing(2),
-                  fwhm/in_volume.nspacing(3));
+                  fwhm_x/in_volume.nspacing(1),
+                  fwhm_y/in_volume.nspacing(2),
+                  fwhm_z/in_volume.nspacing(3));
       minc::minc_1_writer out_volume;
       out_volume.open(argv[optind+1],in_volume.info(),2,out_file_type,out_file_signed);
       out_volume.copy_headers(in_volume);
