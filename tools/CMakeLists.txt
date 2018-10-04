@@ -34,6 +34,9 @@ IF(GSL_FOUND AND HAVE_MINC1)
   
   ADD_EXECUTABLE(volumes_pca volumes_pca.cpp)
   TARGET_LINK_LIBRARIES(volumes_pca pca_utils)
+
+  ADD_EXECUTABLE(grids_pca grids_pca.cpp)
+  TARGET_LINK_LIBRARIES(grids_pca pca_utils)
   
   ADD_EXECUTABLE(volumes_pca_preprocess volumes_pca_preprocess.cpp)
   TARGET_LINK_LIBRARIES(volumes_pca_preprocess pca_utils)
@@ -53,6 +56,7 @@ IF(GSL_FOUND AND HAVE_MINC1)
         volumes_lm
         volumes_lsq
         em_classify
+        grids_pca
         RUNTIME DESTINATION bin )
 
 ENDIF(GSL_FOUND AND HAVE_MINC1)
