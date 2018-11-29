@@ -2,7 +2,7 @@
 
 ############################# MNI Header #####################################
 #@NAME       :  deface_minipipe.pl
-#@DESCRIPTION:  defacing pipline
+#@DESCRIPTION:  defacing pipeline
 #@COPYRIGHT  :
 #              Vladimir S. Fonov  February, 2009
 #              Montreal Neurological Institute, McGill University.
@@ -73,92 +73,110 @@ Usage: $me <T1w> [T2w] [PDw] <output_base>
  --model     <model name>
  [--verbose
   --clobber
-  --dual-echo - assume dual echo T2/PD
+  --dual-echo - assume dual echo T2/PD (T2 being provided to the script right before PD)
   --nonlinear  perform quick nonlinear registration to compensate for different head shape (i.e for small kids)
   --watermark watermark output files
-  --no-int-norm - don't normalize output file to 0-4095 range, usefull only for watermarking
+  --no-int-norm - don't normalize output file to 0-4095 range, useful only for watermarking
   --t1w-xfm <t1w.xfm>
   --t2w-xfm <t2w.xfm>
   --pdw-xfm <pdw.xfm>
   --keep-real-range - keep the real range of the data the same
-  --beastlib <dir> - location of BEaST library, mondatory
+  --beastlib <dir> - location of BEaST library, mandatory
   --3t for 3T scans
   ]
 HELP
 if $#ARGV<1 || !$beastlib;
 
-my $output_base=pop @ARGV;
+my $output_base = pop @ARGV;             # base name to use for the grid file
+my $output_dir  = dirname($output_base); # this would be the final output directory
+my $t1w         = shift @ARGV;           # this stores the full path to the t1w file
+my @other_scans = @ARGV;      # array that stores full path to other files to deface
 
-my ($t1w,$t2w,$pdw)=@ARGV;
+my $out_grid = "${output_base}_deface_grid_0.mnc"; # full path to the final grid file
 
-my $out_grid="${output_base}_deface_grid_0.mnc";
-
-my $out_t1w="${output_base}_t1w.mnc";
-my $out_t2w="${output_base}_t2w.mnc";
-my $out_pdw="${output_base}_pdw.mnc";
-
-#check_file($out_grid) unless $clobber;
+# determine final path to defaced t1w
+my $out_t1w         = "$output_dir/" . basename($t1w, '.mnc') . "_defaced.mnc";
+# determine final paths to the other defaced files
+my @out_other_scans = map { "$output_dir/" . basename($_, '.mnc') . "_defaced.mnc" } @other_scans;
 
 check_file($out_t1w) unless $clobber;
-check_file($out_t2w) if !$clobber||$t2w ;
-check_file($out_pdw) if !$clobber||$pdw ;
+for ( my $idx = 0; $idx < scalar @other_scans; $idx++ ) {
+  check_file($out_other_scans[$idx]) if !$clobber || $other_scans[$idx];
+}
 
 my $tmpdir = &tempdir( "$me-XXXXXXXX", TMPDIR => 1, CLEANUP => !$keep_tmp );
 
-my $compress=$ENV{MINC_COMPRESS};
+my $compress = $ENV{MINC_COMPRESS};
 delete $ENV{MINC_COMPRESS} if $ENV{MINC_COMPRESS};
 
-my $model_t1w="$model_dir/$model_name.mnc";
-my $model_t2w=$model_t1w;
-my $model_pdw=$model_t1w;
-my $model_face="$model_dir/${model_name}_face_mask.mnc";
+my $model_t1w  = "$model_dir/$model_name.mnc";
+my $model_t2w  = $model_t1w;
+my $model_pdw  = $model_t1w;
+my $model_face = "$model_dir/${model_name}_face_mask.mnc";
 
-$model_t2w=~s/t1/t2/;
-$model_pdw=~s/t1/pd/;
+$model_t2w =~ s/t1/t2/;
+$model_pdw =~ s/t1/pd/;
 
-my $model_mask="$model_dir/${model_name}_mask.mnc";
+# determine which model to use for the other modalities stored in @other_scans
+# based on their filename
+my @models;
+foreach my $scan (@other_scans) {
+  push(@models, $model_t1w) if basename($scan) =~ /t1|mp2?rage/i;
+  push(@models, $model_t2w) if basename($scan) =~ /t2|flair/i;
+  push(@models, $model_pdw) if basename($scan) =~ /pd/;
+}
+
+my $model_mask = "$model_dir/${model_name}_mask.mnc";
 #fix irregular sampling
-$t1w=fix_sampling($t1w);
-$t2w=fix_sampling($t2w) if $t2w;
-$pdw=fix_sampling($pdw) if $pdw;
+$t1w = fix_sampling($t1w);
+foreach my $scan (@other_scans) {
+  fix_sampling($scan);
+}
 
 # perform NU correct & clamp
-correct($t1w,$model_t1w,"$tmpdir/clp_t1w.mnc") unless $t1w_xfm && $brain_mask;
-correct($t2w,$model_t2w,"$tmpdir/clp_t2w.mnc") if $t2w && !($t1w_xfm&&$brain_mask);
-correct($pdw,$model_pdw,"$tmpdir/clp_pdw.mnc") if $pdw && !($t1w_xfm&&$brain_mask);
+correct($t1w, $model_t1w, "$tmpdir/clp_t1w.mnc") unless $t1w_xfm && $brain_mask;
+for ( my $idx = 0; $idx < scalar @other_scans; $idx++ ) {
+  my $scan   = $other_scans[$idx];      # full path to the original scan
+  my $suffix = basename($scan, '.mnc'); # suffix used for NU corrected & clamped file
+  my $model  = $models[$idx];           # ICBM template to use
+  correct($scan, $model, "$tmpdir/clp_$suffix.mnc") unless $t1w_xfm && $brain_mask;
+}
 
 #stx registration
+my @other_xfms;
 unless($t1w_xfm && $brain_mask)
 {
   unless($t1w_xfm)
   {
     do_cmd('bestlinreg.pl','-lsq9',"$tmpdir/clp_t1w.mnc",$model_t1w,"$tmpdir/t1w_stx.xfm") ;
     $t1w_xfm="$tmpdir/t1w_stx.xfm";
-  } 
-  #T2 to T1 registration
-
-  if($t2w && ! $t2w_xfm)
-  {
-      do_cmd('mritoself','-mi','-lsq6','-close','-nothreshold',
-          "$tmpdir/clp_t2w.mnc","$tmpdir/clp_t1w.mnc",
-          "$tmpdir/t2t1.xfm");
-          
-      do_cmd('xfmconcat',"$tmpdir/t2t1.xfm",$t1w_xfm,"$tmpdir/t2w_stx.xfm");
-      $t2w_xfm="$tmpdir/t2w_stx.xfm";
   }
 
-  if($pdw && !$pdw_xfm)
-  {
-    if($dual_echo)
-    {
-      do_cmd('cp',"$tmpdir/t2w_stx.xfm","$tmpdir/pdw_stx.xfm");
-    } else {
+  #T2 to T1 registration
+  for ( my $idx = 0; $idx < scalar @other_scans; $idx++ ) {
+    my $scan   = $other_scans[$idx];      # full path to the original scan
+    my $suffix = basename($scan, '.mnc'); # suffix used for XFM file names
+    my $model  = $models[$idx];           # ICBM template to use
+    if ($model =~ /t2/i && !$t2w_xfm) {
       do_cmd('mritoself','-mi','-lsq6','-close','-nothreshold',
-          "$tmpdir/clp_pdw.mnc","$tmpdir/clp_t1w.mnc",
-          "$tmpdir/pdt1.xfm");
-      do_cmd('xfmconcat',"$tmpdir/pdt1.xfm",$t1w_xfm,"$tmpdir/pdw_stx.xfm");    
+          "$tmpdir/clp_$suffix.mnc","$tmpdir/clp_t1w.mnc",
+          "$tmpdir/${suffix}_t1.xfm");
+
+      do_cmd('xfmconcat',"$tmpdir/${suffix}_t1.xfm",$t1w_xfm,"$tmpdir/${suffix}_stx.xfm");
+      push(@other_xfms, "$tmpdir/${suffix}_stx.xfm");
     }
-    $pdw_xfm="$tmpdir/pdw_stx.xfm";
+    if ($model =~ /pd/i && !$pdw_xfm) {
+      if ($dual_echo) {
+        my $t2_suffix = basename($other_scans[$idx-1], 'mnc');
+        do_cmd('cp',"$tmpdir/${t2_suffix}_stx.xfm","$tmpdir/${suffix}_stx.xfm");
+      } else {
+        do_cmd('mritoself','-mi','-lsq6','-close','-nothreshold',
+            "$tmpdir/clp_$suffix","$tmpdir/clp_t1w.mnc",
+            "$tmpdir/${suffix}_t1.xfm");
+        do_cmd('xfmconcat',"$tmpdir/${suffix}_t1.xfm",$t1w_xfm,"$tmpdir/${suffix}_stx.xfm");
+      }
+      push(@other_xfms, "$tmpdir/${suffix}_stx.xfm");
+    }
   }
 }
 
@@ -206,22 +224,37 @@ unless( -e $out_grid )
   do_cmd('cp',"$tmpdir/face_grid.mnc",$out_grid);
 }
 
-deface_volume($out_grid,$t1w_xfm,$t1w,"$tmpdir/deface_t1w.mnc");
-deface_volume($out_grid,$t2w_xfm,$t2w,"$tmpdir/deface_t2w.mnc") if $t2w;
-deface_volume($out_grid,$pdw_xfm,$pdw,"$tmpdir/deface_pdw.mnc") if $pdw;
+deface_volume($out_grid, $t1w_xfm, $t1w, "$tmpdir/deface_t1w.mnc");
+for ( my $idx = 0; $idx < scalar @other_scans; $idx++ ) {
+  my $scan   = $other_scans[$idx]; # full path to the original scan
+  my $xfm    = $other_xfms[$idx];  # XFM file to use to deface the volume
+  $xfm       = $t2w_xfm if (!$xfm && $t2w_xfm && basename($scan) =~ /t2/i);
+  $xfm       = $pdw_xfm if (!$xfm && $pdw_xfm && basename($scan) =~ /pd/i);
+  my $tmpout = "$tmpdir/deface_" . basename($out_other_scans[$idx]);
+  deface_volume($out_grid, $xfm, $scan, $tmpout)
+}
+
 
 $ENV{MINC_COMPRESS}=$compress if $compress;
 
 if($watermark)
 {
   watermark("$tmpdir/deface_t1w.mnc",$out_t1w);
-  watermark("$tmpdir/deface_t2w.mnc",$out_t2w) if $t2w;
-  watermark("$tmpdir/deface_pdw.mnc",$out_pdw) if $pdw;
+  for ( my $idx = 0; $idx < scalar @other_scans; $idx++ ) {
+    my $final_out = $out_other_scans[$idx];  # full path to the final defaced file
+    my $tmp_out   = "$tmpdir/deface_" . basename($final_out);
+    watermark($tmp_out, $final_out);
+  }
 } else {
   do_cmd('mincreshape',"$tmpdir/deface_t1w.mnc",$out_t1w,'-clobber');
-  do_cmd('mincreshape',"$tmpdir/deface_t2w.mnc",$out_t2w,'-clobber') if $t2w;
-  do_cmd('mincreshape',"$tmpdir/deface_pdw.mnc",$out_pdw,'-clobber') if $pdw;
+  for ( my $idx = 0; $idx < scalar @other_scans; $idx++ ) {
+    my $final_out = $out_other_scans[$idx];   # full path to the final defaced file
+    my $tmp_out   = "$tmpdir/deface_" . basename($final_out);
+    do_cmd('mincreshape', $tmp_out, $final_out, '-clobber');
+  }
 }
+
+exit 0;
 
 
 sub deface_volume {
