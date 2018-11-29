@@ -157,7 +157,9 @@ unless($t1w_xfm && $brain_mask)
     my $scan   = $other_scans[$idx];      # full path to the original scan
     my $suffix = basename($scan, '.mnc'); # suffix used for XFM file names
     my $model  = $models[$idx];           # ICBM template to use
-    if ($model =~ /t2/i && !$t2w_xfm) {
+    # if this is a t2w based image or another t1w based image, run mritoself to the
+    # with the first t1w clamped image as a reference
+    if ( ($model =~ /t2/i && !$t2w_xfm) || $model =~ /t1/i ) {
       do_cmd('mritoself','-mi','-lsq6','-close','-nothreshold',
           "$tmpdir/clp_$suffix.mnc","$tmpdir/clp_t1w.mnc",
           "$tmpdir/${suffix}_t1.xfm");
