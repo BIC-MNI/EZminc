@@ -68,7 +68,7 @@ GetOptions (
 ); 
 
 die <<HELP
-Usage: $me <T1w> [T2w] [PDw] <output_base>
+Usage: $me <T1w> [modality2] [modality3] ... [modalityX] <output_base>
  --model-dir <model directory>
  --model     <model name>
  [--verbose
