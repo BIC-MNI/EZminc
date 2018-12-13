@@ -23,13 +23,8 @@ use Getopt::Long;
 my $fake=0;
 my $verbose=0;
 my $clobber=0;
-my $amp=1.0;
-my $fwhm=10;
 my $me=basename($0);
 my $keep_tmp=0;
-my $mask;
-my $byte;
-my $edge_smooth;
 my $model_dir;
 my $model_name;
 my $nonlinear=0;
@@ -39,9 +34,7 @@ my $fwhm=6;
 
 my $no_int_norm=0;
 my $watermark=0;
-my $t1w_xfm;
-my $t2w_xfm;
-my $pdw_xfm;
+my @xfms;
 my $brain_mask;
 my $keep_real_range;
 my $beastlib;
@@ -55,9 +48,7 @@ GetOptions (
   "nonlinear"       => \$nonlinear,
   'no-int-norm'     => \$no_int_norm,
   'watermark'       => \$watermark,
-  't1w-xfm=s'       => \$t1w_xfm,
-  't2w-xfm=s'       => \$t2w_xfm,
-  'pdw-xfm=s'       => \$pdw_xfm,
+  'xfm=s'           => \@xfms,
   'brain-mask=s'    => \$brain_mask,
   'keep-tmp'        => \$keep_tmp,
   'keep-real-range' => \$keep_real_range,
@@ -66,7 +57,7 @@ GetOptions (
 ); 
 
 die <<HELP
-Usage: $me <T1w> [modality2] [modality3] ... [modalityX] <output_base>
+Usage: $me <T1W_file> [modality2_file] [modality3echo1_file,modality3echo2_file] ... [modalityX_file] <output_base>
  --model-dir <model directory>
  --model     <model name>
  [--verbose
@@ -74,9 +65,7 @@ Usage: $me <T1w> [modality2] [modality3] ... [modalityX] <output_base>
   --nonlinear  perform quick nonlinear registration to compensate for different head shape (i.e for small kids)
   --watermark watermark output files
   --no-int-norm - don't normalize output file to 0-4095 range, useful only for watermarking
-  --t1w-xfm <t1w.xfm>
-  --t2w-xfm <t2w.xfm>
-  --pdw-xfm <pdw.xfm>
+  --xfm <filebasename,file.xfm> - specify both the base name of the modality and the xfm file to convert this modality to stereotaxic space; can be called multiple times
   --keep-real-range - keep the real range of the data the same
   --beastlib <dir> - location of BEaST library, mandatory
   --3t for 3T scans
@@ -96,6 +85,9 @@ my @multi_echo_scans = grep(/,/, @ARGV); # grep the multi-contrast, mp2rage and
 my @other_scans = grep(! /,/, @ARGV);    # grep the non-multi-contrast, non mp2rage
                                          #  or non-reiteration acquisitions
                                          # (arguments without ,)
+
+# create the directory where the final outputs will be saved
+mkdir($output_dir) unless (-e $output_dir);
 
 
 
@@ -119,6 +111,28 @@ foreach my $modality (@other_scans) {
   my @file_out = map { "$output_dir/" . basename($_, '.mnc') . "_defaced.mnc" } @file_in;
   $multi_echo_scans{$modality}{OriginalFiles} = \@file_in;
   $multi_echo_scans{$modality}{DefacedFiles}  = \@file_out;
+}
+
+
+
+## Grep the XFM files from the command line if option -xfm set
+my $t1w_xfm;
+foreach my $option (@xfms) {
+  my @array = split(',', $option);
+  my $scan  = $array[0];
+  my $xfm   = $array[1];
+  if ($scan=~ m/$t1w/) {
+    # set the T1W XFM if the scan matches the T1W image provided as a reference
+    $t1w_xfm = $xfm;
+  } elsif ( grep($scan, keys %multi_echo_scans) ) {
+    # append the XFM for other modalities in the hash
+    my @key = grep($scan, keys %multi_echo_scans);
+    $multi_echo_scans{$key[0]}{xfm} = $xfm;
+  } else {
+    print "\nError, the file basename specified with the argument -xfm does not"
+          . " appear in the list of modalities you provided with the script.\n";
+    exit;
+  }
 }
 
 
@@ -172,8 +186,6 @@ foreach my $modality (keys %multi_echo_scans) {
   }
 }
 
-my $model_mask = "$model_dir/${model_name}_mask.mnc";
-
 
 
 ## Fix irregular sampling
@@ -207,7 +219,7 @@ foreach my $modality (keys %multi_echo_scans) {
 my $t1w_stx_xfm = "$tmpdir/t1w_stx.xfm";
 unless($t1w_xfm && $brain_mask) {
   # create the t1w XFM if it was not provided to the script
-  unless($t1w_xfm) {
+  unless ($t1w_xfm) {
     do_cmd('bestlinreg.pl', '-lsq9', $clp_t1_file, $model_t1w, $t1w_stx_xfm);
     $t1w_xfm = "$tmpdir/t1w_stx.xfm";
   }
@@ -219,9 +231,12 @@ unless($t1w_xfm && $brain_mask) {
     my $xfm_to_t1 = "$tmpdir/${suffix}_t1.xfm";   # name of the XFM modality to t1
     my $clp_file  = "$tmpdir/clp_$suffix.mnc";    # name of the clp file
 
-    do_cmd('mritoself', '-mi', '-lsq6', '-close', '-nothreshold', $clp_file, $clp_t1_file, $xfm_stx);
-    do_cmd('xfmconcat', $xfm_to_t1, $t1w_xfm, $xfm_stx);
-    $multi_echo_scans{$modality}{xfm} = $xfm_stx;
+    unless ($multi_echo_scans{$modality}{xfm}) {
+      # do registration if no xfm files were provided
+      do_cmd('mritoself', '-mi', '-lsq6', '-close', '-nothreshold', $clp_file, $clp_t1_file, $xfm_to_t1);
+      do_cmd('xfmconcat', $xfm_to_t1, $t1w_xfm, $xfm_stx);
+      $multi_echo_scans{$modality}{xfm} = $xfm_stx;
+    }
   }
 }
 
@@ -230,9 +245,9 @@ unless($t1w_xfm && $brain_mask) {
 ## Brain mask creation (if it does not already exist)
 
 unless($brain_mask) {
-  do_cmd('itk_resample', $clp_t1_file, $t1w_stx_xfm, '--transform', $t1w_xfm, '--like', $model_t1w);
+  do_cmd('itk_resample', $clp_t1_file, "$tmpdir/stx_t1w.mnc", '--transform', $t1w_xfm, '--like', $model_t1w);
   #do_cmd('mincbet',"$tmpdir/stx_t1w.mnc","$tmpdir/stx_brain",'-m','-n');
-  do_cmd('mincbeast', $beastlib, $t1w_stx_xfm, "$tmpdir/stx_brain_mask.mnc",'-fill','-same_resolution','-median','-configuration',"$beastlib/default.2mm.conf");
+  do_cmd('mincbeast', $beastlib, "$tmpdir/stx_t1w.mnc", "$tmpdir/stx_brain_mask.mnc",'-fill','-same_resolution','-median','-configuration',"$beastlib/default.2mm.conf");
   $brain_mask = "$tmpdir/stx_brain_mask.mnc";
 }
 
