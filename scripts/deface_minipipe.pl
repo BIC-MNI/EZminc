@@ -98,19 +98,19 @@ my $out_grid = "${output_base}_deface_grid_0.mnc"; # full path to final grid fil
 # determine final path to defaced t1w
 my $out_t1w         = "$output_dir/" . basename($t1w, '.mnc') . "_defaced.mnc";
 # determine final paths for multi-echo acquisitions
-my %multi_echo_scans;
+my %images_hash;
 foreach my $modality (@multi_echo_scans) {
   my @files_in  = split(',', $modality);
   my @files_out = map { "$output_dir/" . basename($_, '.mnc') . "_defaced.mnc" } @files_in;
-  $multi_echo_scans{$files_in[0]}{OriginalFiles} = \@files_in;
-  $multi_echo_scans{$files_in[0]}{DefacedFiles}  = \@files_out;
+  $images_hash{$files_in[0]}{OriginalFiles} = \@files_in;
+  $images_hash{$files_in[0]}{DefacedFiles}  = \@files_out;
 }
 # determine final paths to the other defaced files
 foreach my $modality (@other_scans) {
   my @file_in = ($modality);
   my @file_out = map { "$output_dir/" . basename($_, '.mnc') . "_defaced.mnc" } @file_in;
-  $multi_echo_scans{$modality}{OriginalFiles} = \@file_in;
-  $multi_echo_scans{$modality}{DefacedFiles}  = \@file_out;
+  $images_hash{$modality}{OriginalFiles} = \@file_in;
+  $images_hash{$modality}{DefacedFiles}  = \@file_out;
 }
 
 
@@ -121,13 +121,13 @@ foreach my $option (@xfms) {
   my @array = split(',', $option);
   my $scan  = $array[0];
   my $xfm   = $array[1];
-  if ($scan=~ m/$t1w/) {
+  if ($t1w =~ m/$scan/) {
     # set the T1W XFM if the scan matches the T1W image provided as a reference
     $t1w_xfm = $xfm;
-  } elsif ( grep($scan, keys %multi_echo_scans) ) {
+  } elsif ( grep($scan, keys %images_hash) ) {
     # append the XFM for other modalities in the hash
-    my @key = grep($scan, keys %multi_echo_scans);
-    $multi_echo_scans{$key[0]}{xfm} = $xfm;
+    my @key = grep(/$scan/, keys %images_hash);
+    $images_hash{$key[0]}{xfm} = $xfm;
   } else {
     print "\nError, the file basename specified with the argument -xfm does not"
           . " appear in the list of modalities you provided with the script.\n";
@@ -143,9 +143,9 @@ foreach my $option (@xfms) {
 # check if defaced t1w file exists
 check_file($out_t1w) unless $clobber;
 # check if defaced multi-contrast acquisitions exist
-foreach my $modality (keys %multi_echo_scans) {
-  my @in_files  = $multi_echo_scans{$modality}{OriginalFiles};
-  my @out_files = $multi_echo_scans{$modality}{DefacedFiles};
+foreach my $modality (keys %images_hash) {
+  my @in_files  = $images_hash{$modality}{OriginalFiles};
+  my @out_files = $images_hash{$modality}{DefacedFiles};
   for ( my $idx = 0; $idx < scalar @out_files; $idx++ ) {
     check_file($out_files[$idx]) if !$clobber || $in_files[$idx];
   }
@@ -174,14 +174,14 @@ $model_t2w =~ s/t1/t2/;
 $model_pdw =~ s/t1/pd/;
 
 # determine which model to use for the multi-contrast modalities
-foreach my $modality (keys %multi_echo_scans) {
-  foreach my $scan (@{ $multi_echo_scans{$modality}{OriginalFiles} }) {
+foreach my $modality (keys %images_hash) {
+  foreach my $scan (@{ $images_hash{$modality}{OriginalFiles} }) {
     if (basename($scan) =~ /t1|mp2?rage/i) {
-      $multi_echo_scans{$modality}{Model} = $model_t1w;
+      $images_hash{$modality}{Model} = $model_t1w;
     } elsif (basename($scan) =~ /t2|flair/i) {
-      $multi_echo_scans{$modality}{Model} = $model_t2w;
+      $images_hash{$modality}{Model} = $model_t2w;
     } elsif (basename($scan) =~ /pd/i) {
-      $multi_echo_scans{$modality}{Model} = $model_pdw;
+      $images_hash{$modality}{Model} = $model_pdw;
     }
   }
 }
@@ -191,8 +191,8 @@ foreach my $modality (keys %multi_echo_scans) {
 ## Fix irregular sampling
 
 $t1w = fix_sampling($t1w);
-foreach my $modality (keys %multi_echo_scans) {
-  foreach my $scan (@{ $multi_echo_scans{$modality}{OriginalFiles} }) {
+foreach my $modality (keys %images_hash) {
+  foreach my $scan (@{ $images_hash{$modality}{OriginalFiles} }) {
     fix_sampling($scan);
   }
 }
@@ -204,10 +204,10 @@ foreach my $modality (keys %multi_echo_scans) {
 
 my $clp_t1_file = "$tmpdir/clp_t1w.mnc";
 correct($t1w, $model_t1w, $clp_t1_file) unless $t1w_xfm && $brain_mask;
-foreach my $modality (keys %multi_echo_scans) {
-  foreach my $scan (@{ $multi_echo_scans{$modality}{OriginalFiles} }) {
+foreach my $modality (keys %images_hash) {
+  foreach my $scan (@{ $images_hash{$modality}{OriginalFiles} }) {
     my $suffix = basename($scan, '.mnc');
-    my $model  = $multi_echo_scans{$modality}{Model};
+    my $model  = $images_hash{$modality}{Model};
     correct($scan, $model, "$tmpdir/clp_$suffix.mnc") unless $t1w_xfm && $brain_mask;
   }
 }
@@ -225,17 +225,17 @@ unless($t1w_xfm && $brain_mask) {
   }
 
   # Other modality to T1 co-registration
-  foreach my $modality (keys %multi_echo_scans) {
+  foreach my $modality (keys %images_hash) {
     my $suffix    = basename($modality, '.mnc');  # suffix to use for file names
     my $xfm_stx   = "$tmpdir/${suffix}_stx.xfm";  # name of the XFM modality to stx
     my $xfm_to_t1 = "$tmpdir/${suffix}_t1.xfm";   # name of the XFM modality to t1
     my $clp_file  = "$tmpdir/clp_$suffix.mnc";    # name of the clp file
 
-    unless ($multi_echo_scans{$modality}{xfm}) {
+    unless ($images_hash{$modality}{xfm}) {
       # do registration if no xfm files were provided
       do_cmd('mritoself', '-mi', '-lsq6', '-close', '-nothreshold', $clp_file, $clp_t1_file, $xfm_to_t1);
       do_cmd('xfmconcat', $xfm_to_t1, $t1w_xfm, $xfm_stx);
-      $multi_echo_scans{$modality}{xfm} = $xfm_stx;
+      $images_hash{$modality}{xfm} = $xfm_stx;
     }
   }
 }
@@ -292,10 +292,10 @@ unless( -e $out_grid ) {
 deface_volume($out_grid, $t1w_xfm, $t1w, "$tmpdir/deface_t1w.mnc");
 
 # Deface the other modalities
-foreach my $modality (keys %multi_echo_scans) {
-  my $xfm_file  = $multi_echo_scans{$modality}{xfm};
-  my @in_files  = $multi_echo_scans{$modality}{OriginalFiles};
-  my @out_files = $multi_echo_scans{$modality}{DefacedFiles};
+foreach my $modality (keys %images_hash) {
+  my $xfm_file  = $images_hash{$modality}{xfm};
+  my @in_files  = @{ $images_hash{$modality}{OriginalFiles} };
+  my @out_files = @{ $images_hash{$modality}{DefacedFiles} };
 
   for ( my $idx = 0; $idx < scalar @out_files; $idx++ ) {
     my $scan     = $in_files[$idx];
@@ -315,8 +315,8 @@ $ENV{MINC_COMPRESS} = $compress if $compress;
 if($watermark) {
   watermark("$tmpdir/deface_t1w.mnc", $out_t1w);
 
-  foreach my $modality (keys %multi_echo_scans) {
-    my @out_files = $multi_echo_scans{$modality}{DefacedFiles};
+  foreach my $modality (keys %images_hash) {
+    my @out_files = @{ $images_hash{$modality}{DefacedFiles} };
     for ( my $idx = 0; $idx < scalar @out_files; $idx++ ) {
       my $final_out = $out_files[$idx];  # full path to the final defaced file
       my $tmp_out   = "$tmpdir/deface_" . basename($final_out);
@@ -327,8 +327,8 @@ if($watermark) {
 } else {
   do_cmd('mincreshape', "$tmpdir/deface_t1w.mnc", $out_t1w, '-clobber');
 
-  foreach my $modality (keys %multi_echo_scans) {
-    my @out_files = $multi_echo_scans{$modality}{DefacedFiles};
+  foreach my $modality (keys %images_hash) {
+    my @out_files = @{ $images_hash{$modality}{DefacedFiles} };
 
     for ( my $idx = 0; $idx < scalar @out_files; $idx++ ) {
       my $final_out = $out_files[$idx];   # full path to the final defaced file
