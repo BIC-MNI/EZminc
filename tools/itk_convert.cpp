@@ -126,12 +126,12 @@ public:
   void convert_meta_minc_to_nrrd(itk::MetaDataDictionary& dict)
   {
     // let's try converting DTI-related meta-information
-    double_vector bvalues,direction_x,direction_y,direction_z;
+    itk::Array<double> bvalues,direction_x,direction_y,direction_z;
     
-    if( itk::ExposeMetaData<double_vector>( dict , "acquisition:bvalues",bvalues) &&
-        itk::ExposeMetaData<double_vector>( dict , "acquisition:direction_x",direction_x) &&
-        itk::ExposeMetaData<double_vector>( dict , "acquisition:direction_y",direction_y) &&
-        itk::ExposeMetaData<double_vector>( dict , "acquisition:direction_z",direction_z))
+    if( itk::ExposeMetaData< itk::Array<double> >( dict , "acquisition:bvalues",bvalues) &&
+        itk::ExposeMetaData< itk::Array<double> >( dict , "acquisition:direction_x",direction_x) &&
+        itk::ExposeMetaData< itk::Array<double> >( dict , "acquisition:direction_y",direction_y) &&
+        itk::ExposeMetaData< itk::Array<double> >( dict , "acquisition:direction_z",direction_z))
     {
       //We have got MINC-style DTI metadata
       if(bvalues.size()!=direction_x.size() || 
