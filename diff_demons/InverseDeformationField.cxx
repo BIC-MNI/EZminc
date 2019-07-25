@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
     {
     VelocitorFilterType::Pointer velocitor = VelocitorFilterType::New();
     velocitor->SetInput (displacement);
-    velocitor->SetNumberOfIterations ( atoi(argv[3]) );
+    velocitor->SetNumberOfIterations ( std::stoi(argv[3]) );
     velocitor->SmoothVelocityFieldOn();
     velocitor->SetSigma (2.0);
     velocitor->SetNumberOfExponentialIntegrationSteps (500);

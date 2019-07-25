@@ -63,8 +63,8 @@ int main(int argc,char** argv)
     return(3);
   }
   for(i = 0;i < labelsToChange;i++) {
-    inlabel = atoi(argv[2*i + 3]);
-    outlabel = atoi(argv[2*i + 4]);
+    inlabel = std::stoi(argv[2*i + 3]);
+    outlabel = std::stoi(argv[2*i + 4]);
     cout << "Changing" << inlabel << "->" << outlabel << endl;
     for(int j=0;j<imgin.data.size();j++)
     {

@@ -480,7 +480,7 @@ namespace itk
       usedGradientTimes2.GetSquaredNorm();
 
     const double speedValue = fixedValue - movingValue;
-    if ( vnl_math_abs ( speedValue ) < m_IntensityDifferenceThreshold )
+    if ( fabs ( speedValue ) < m_IntensityDifferenceThreshold )
       {
         update.Fill ( 0.0 );
       }
@@ -490,7 +490,7 @@ namespace itk
         if ( m_Normalizer > 0.0 )
           {
             // "ITK-Thirion" normalization
-            denom =  usedGradientTimes2SquaredMagnitude + ( vnl_math_sqr ( speedValue ) /m_Normalizer );
+            denom =  usedGradientTimes2SquaredMagnitude + ( pow ( speedValue,2 ) /m_Normalizer );
           }
         else
           {
@@ -520,7 +520,7 @@ namespace itk
     // if we could, this would be an often unnecessary time-consuming task.
     if ( globalData )
       {
-        globalData->m_SumOfSquaredDifference += vnl_math_sqr ( speedValue );
+        globalData->m_SumOfSquaredDifference += pow ( speedValue,2 );
         globalData->m_NumberOfPixelsProcessed += 1;
         globalData->m_SumOfSquaredChange += update.GetSquaredNorm();
       }
@@ -539,7 +539,7 @@ namespace itk
     {
       GlobalDataStruct * globalData = ( GlobalDataStruct * ) gd;
 
-      m_MetricCalculationLock.Lock();
+      m_MetricCalculationLock.lock();
       m_SumOfSquaredDifference += globalData->m_SumOfSquaredDifference;
       m_NumberOfPixelsProcessed += globalData->m_NumberOfPixelsProcessed;
       m_SumOfSquaredChange += globalData->m_SumOfSquaredChange;
@@ -547,10 +547,10 @@ namespace itk
         {
           m_Metric = m_SumOfSquaredDifference /
                      static_cast<double> ( m_NumberOfPixelsProcessed );
-          m_RMSChange = vcl_sqrt ( m_SumOfSquaredChange /
+          m_RMSChange = sqrt ( m_SumOfSquaredChange /
                                    static_cast<double> ( m_NumberOfPixelsProcessed ) );
         }
-      m_MetricCalculationLock.Unlock();
+      m_MetricCalculationLock.unlock();
 
       delete globalData;
     }

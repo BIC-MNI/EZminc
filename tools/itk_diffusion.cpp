@@ -109,7 +109,7 @@ int main (int argc, char **argv)
       conductance = atof(optarg);
       break;
     case 'i':
-      iterations = atoi(optarg);
+      iterations = std::stoi(optarg);
       break;
     case '?':
     default:

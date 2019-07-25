@@ -2,8 +2,25 @@
 #
 # Vladimir S. FONOV - vladimir.fonov@gmail.com
 
-PROJECT(ezminc)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+PROJECT(ezminc )
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10.2)
+
+if(CMAKE_CXX_STANDARD EQUAL "98" ) # ANTs 
+   message(FATAL_ERROR "CMAKE_CXX_STANDARD:STRING=98 is not supported in ITK version 5 and greater.")
+endif()
+
+#####
+##  Set the default target properties for ITK
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 11) # Supported values are ``11``, ``14``, and ``17``.
+endif()
+if(NOT CMAKE_CXX_STANDARD_REQUIRED)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+endif()
+if(NOT CMAKE_CXX_EXTENSIONS)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+endif()
+
 
 SET(BICPL_FOUND OFF)
 
@@ -30,16 +47,15 @@ IF(NOT MINC_TOOLKIT_BUILD)
   OPTION(EZMINC_BUILD_TOOLS "Build additional tools , requires GSL" OFF)
 
   IF(ITK_FOUND)
-    IF( NOT ITK_VERSION_MAJOR VERSION_EQUAL 4 )
+    IF( ITK_VERSION_MAJOR VERSION_LESS 4 )
       FIND_PACKAGE(MINC4ITK REQUIRED)
       SET(HAVE_MINC4ITK ON)
-    ELSE( NOT ITK_VERSION_MAJOR VERSION_EQUAL 4 )
+    ELSE( )
       # Assume that ITK4 has built-in MINC support
       SET(MINC4ITK_LIBRARY_DIRS )
       SET(MINC4ITK_INCLUDE_DIRS )
       SET(HAVE_MINC4ITK OFF)
-      
-    ENDIF(NOT ITK_VERSION_MAJOR VERSION_EQUAL 4 )
+    ENDIF( )
   ENDIF(ITK_FOUND)
 ELSE(NOT MINC_TOOLKIT_BUILD)
   SET(BICPL_FOUND ON) # Assume that minc-toolkit will provide BICPL
@@ -100,7 +116,11 @@ ENDIF(EZMINC_BUILD_MRFSEG AND HAVE_MINC1)
 
 IF(ITK_FOUND)
   IF(EZMINC_BUILD_DD)
-    ADD_SUBDIRECTORY(diff_demons)
+    IF( ITK_VERSION_MAJOR VERSION_GREATER 4 )
+      message(AUTHOR_WARNING "Diffeomorphic demons currently broken for ITK v5")
+    ELSE()
+      ADD_SUBDIRECTORY(diff_demons)
+    ENDIF()
   ENDIF(EZMINC_BUILD_DD)
 ENDIF(ITK_FOUND)
 

@@ -272,8 +272,8 @@ namespace minc
 	
   void volume_dwt(simple_volume<float>& vol,bool forward,void (*wtstep)(float [], int, int, int, wavefilt))
   {
-    int N[3]={vol.dim(0),vol.dim(1),vol.dim(2)};
-    int n[3]={vol.dim(0),vol.dim(1),vol.dim(2)};
+    int N[3]={(int)vol.dim(0),(int)vol.dim(1),(int)vol.dim(2)};
+    int n[3]={(int)vol.dim(0),(int)vol.dim(1),(int)vol.dim(2)};
 
     dwt3DNonStandard(vol.c_buf(),N,n,0,1,forward?1:-1,wtstep);
   }

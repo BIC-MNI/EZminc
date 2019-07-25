@@ -78,7 +78,7 @@ mincVectorBSplineInterpolate< TInputImage, TCoordRep >
   }
   
   for( dim = 0; dim < Dimension; dim++ )
-    output[dim]=_interpolator[dim]->EvaluateAtContinuousIndex(insideIndex);
+    output[dim] = _interpolator[dim]->EvaluateAtContinuousIndex(insideIndex);
 
   return ( output );
 }

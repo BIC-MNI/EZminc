@@ -56,7 +56,7 @@ MultiResolutionLogDomainDeformableRegistrationM<TFixedImage,TMovingImage,TField,
     m_MovingImageMaskPyramid = ActualMaskImagePyramidType::New();
 
     m_FieldExpander     = FieldExpanderType::New();
-    m_InitialVelocityField = NULL;
+    m_InitialVelocityField = nullptr;
 
     m_NumberOfLevels = 3;
     m_NumberOfIterations.resize( m_NumberOfLevels );
@@ -327,13 +327,13 @@ MultiResolutionLogDomainDeformableRegistrationM<TFixedImage,TMovingImage,TField,
     m_CurrentLevel = 0;
     m_StopRegistrationFlag = false;
 
-    unsigned int movingLevel = vnl_math_min( (int) m_CurrentLevel,
+    unsigned int movingLevel = std::min( (int) m_CurrentLevel,
                                (int) m_MovingImagePyramid->GetNumberOfLevels() );
 
-    unsigned int fixedLevel = vnl_math_min( (int) m_CurrentLevel,
+    unsigned int fixedLevel = std::min( (int) m_CurrentLevel,
                                             (int) m_FixedImagePyramid->GetNumberOfLevels() );
 
-    VelocityFieldPointer tempField = NULL;
+    VelocityFieldPointer tempField = nullptr;
 
     VelocityFieldPointer inputPtr =
         const_cast< VelocityFieldType * >( this->GetInput(0) );
@@ -391,7 +391,7 @@ MultiResolutionLogDomainDeformableRegistrationM<TFixedImage,TMovingImage,TField,
         m_FieldExpander->SetOutputDirection( fi->GetDirection());
 
         m_FieldExpander->UpdateLargestPossibleRegion();
-        m_FieldExpander->SetInput( NULL );
+        m_FieldExpander->SetInput( nullptr );
         tempField = m_FieldExpander->GetOutput();
         tempField->DisconnectPipeline();
     }
@@ -403,7 +403,7 @@ MultiResolutionLogDomainDeformableRegistrationM<TFixedImage,TMovingImage,TField,
 
         if ( tempField.IsNull() )
         {
-            m_RegistrationFilter->SetInitialVelocityField( NULL );
+            m_RegistrationFilter->SetInitialVelocityField( nullptr );
         }
         else
         {
@@ -423,7 +423,7 @@ MultiResolutionLogDomainDeformableRegistrationM<TFixedImage,TMovingImage,TField,
             m_FieldExpander->SetOutputDirection( fi->GetDirection());
 
             m_FieldExpander->UpdateLargestPossibleRegion();
-            m_FieldExpander->SetInput( NULL );
+            m_FieldExpander->SetInput( nullptr );
             tempField = m_FieldExpander->GetOutput();
             tempField->DisconnectPipeline();
 
@@ -461,9 +461,9 @@ MultiResolutionLogDomainDeformableRegistrationM<TFixedImage,TMovingImage,TField,
 
         // Increment level counter.
         m_CurrentLevel++;
-        movingLevel = vnl_math_min( (int) m_CurrentLevel,
+        movingLevel = std::min( (int) m_CurrentLevel,
                                     (int) m_MovingImagePyramid->GetNumberOfLevels() );
-        fixedLevel = vnl_math_min( (int) m_CurrentLevel,
+        fixedLevel = std::min( (int) m_CurrentLevel,
                                    (int) m_FixedImagePyramid->GetNumberOfLevels() );
 
         // Invoke an iteration event.
@@ -516,9 +516,9 @@ MultiResolutionLogDomainDeformableRegistrationM<TFixedImage,TMovingImage,TField,
     }
 
     // Release memory
-    m_FieldExpander->SetInput( NULL );
+    m_FieldExpander->SetInput( nullptr );
     m_FieldExpander->GetOutput()->ReleaseData();
-    m_RegistrationFilter->SetInput( NULL );
+    m_RegistrationFilter->SetInput( nullptr );
     m_RegistrationFilter->GetOutput()->ReleaseData();
 
 }

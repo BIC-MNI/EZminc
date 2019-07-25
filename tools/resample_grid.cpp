@@ -30,7 +30,7 @@
 #include <vnl/vnl_vector_fixed_ref.h>
 #include <vnl/vnl_vector.h>
 
-typedef minc::mincVectorBSplineInterpolate<minc::def3d,double> Vector_Interpolator;
+typedef minc::mincVectorBSplineInterpolate<minc::def3d, double> Vector_Interpolator;
 
 #include <volume_io.h>
 

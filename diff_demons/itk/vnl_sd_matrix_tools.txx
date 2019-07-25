@@ -124,7 +124,7 @@ GetSquareRoot(const vnl_matrix<T> & m,
     {
     //std::cout << "niter=" << niter << ", energy=" << energy << "." << std::endl;
 
-    const T gamma = vcl_pow(vcl_abs(vnl_determinant(Mk)), -1.0/(2.0*n));
+    const T gamma = vcl_pow(fabs(vnl_determinant(Mk)), -1.0/(2.0*n));
     const T gamma2 = gamma*gamma;
     invMk = GetInverse(Mk);
 

@@ -17,7 +17,6 @@
 #include "minc_io_exceptions.h"
 
 #include "itk4MincHelpers.h"
-
 #include <itkMetaDataObject.h>
 
 #include <iostream>
@@ -530,7 +529,7 @@ namespace minc
   }
   
 
-  void load_parameters(const char *file,itk::Array<double> &param)
+  void load_parameters(const char *file, itk::Array<double> &param)
   {
     std::vector<double> p;
     ifstream in(file);

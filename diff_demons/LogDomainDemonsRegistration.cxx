@@ -496,7 +496,7 @@ template < class TPixel = float, unsigned int VImageDimension = 3 >
         return;
       }
 
-      typename DeformationFieldType::ConstPointer deffield = 0;
+      typename DeformationFieldType::ConstPointer deffield = nullptr;
 
       unsigned int iter = -1;
       double metricbefore = -1.0;
@@ -696,9 +696,9 @@ template < class TPixel = float, unsigned int VImageDimension = 3 >
 
       m_HarmonicEnergyCalculator = HarmonicEnergyCalculatorType::New();
 
-      m_TrueField = 0;
-      m_TrueWarpGradientCalculator = 0;
-      m_CompWarpGradientCalculator = 0;
+      m_TrueField = nullptr;
+      m_TrueWarpGradientCalculator = nullptr;
+      m_CompWarpGradientCalculator = nullptr;
     };
 
     ~CommandIterationUpdate()
@@ -731,11 +731,11 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
 
 
   // Images we use
-  typename ImageType::Pointer fixedImage = 0;
-  typename ImageType::Pointer movingImage = 0;
-  typename ImageType::Pointer fixedMask = 0;
-  typename ImageType::Pointer movingMask = 0;
-  typename VelocityFieldType::Pointer inputVelField = 0;
+  typename ImageType::Pointer fixedImage = nullptr;
+  typename ImageType::Pointer movingImage = nullptr;
+  typename ImageType::Pointer fixedMask = nullptr;
+  typename ImageType::Pointer movingMask = nullptr;
+  typename VelocityFieldType::Pointer inputVelField = nullptr;
 
 
   // Set up the file readers
@@ -1000,9 +1000,9 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
 
 
   // Set up the demons filter output deformation field
-  typename DeformationFieldType::Pointer defField = 0;
-  typename DeformationFieldType::Pointer invDefField = 0;
-  typename VelocityFieldType::Pointer velField = 0;
+  typename DeformationFieldType::Pointer defField = nullptr;
+  typename DeformationFieldType::Pointer invDefField = nullptr;
+  typename VelocityFieldType::Pointer velField = nullptr;
 
   {//for mem allocations
 
@@ -1514,7 +1514,7 @@ void LogDomainDemonsRegistrationFunction ( arguments args )
 
     for ( iterfix.GoToBegin(), itermovwarp.GoToBegin(); !iterfix.IsAtEnd(); ++iterfix, ++itermovwarp )
     {
-      finalSSD += vnl_math_sqr ( iterfix.Get() - itermovwarp.Get() );
+      finalSSD += pow ( iterfix.Get() - itermovwarp.Get(),2 );
     }
 
     const double finalMSE = finalSSD / static_cast<double> (

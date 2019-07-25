@@ -137,7 +137,7 @@ int main (int argc, char **argv)
 			target_mask_file = optarg;
 			break;
 		case 'o':
-			order = atoi(optarg);
+			order = std::stoi(optarg);
 			break;
 		case 'h':
 			hist_file = optarg;

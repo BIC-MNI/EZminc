@@ -15,12 +15,12 @@ TARGET_LINK_LIBRARIES(
     ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY} 
     )
 
-IF( ITK_VERSION_MAJOR VERSION_EQUAL 4 )
+IF( ITK_VERSION_MAJOR VERSION_GREATER_EQUAL 4 )
   TARGET_LINK_LIBRARIES( 
     spherical_harmonics
     itk4MincHelpers
   )
-ENDIF( ITK_VERSION_MAJOR VERSION_EQUAL 4 )
+ENDIF( )
 
     
 ADD_EXECUTABLE( fit_harmonics_grids
@@ -68,7 +68,7 @@ ADD_EXECUTABLE( sph_par2grid
                 
                 
 TARGET_LINK_LIBRARIES( sph_par2grid 
-  spherical_harmonics 
+  spherical_harmonics
   ${ITK_LIBRARIES}
   )
 

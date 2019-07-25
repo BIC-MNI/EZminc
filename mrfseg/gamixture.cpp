@@ -70,23 +70,23 @@ int Parameters::parseParams(int n,char** arguments)
     if(!strcmp(arguments[2*i - 1],"-alpha"))
       alpha = atof(arguments[2*i]);
     if(!strcmp(arguments[2*i - 1],"-size"))
-      size = atoi(arguments[2*i]);
+      size = std::stoi(arguments[2*i]);
     if(!strcmp(arguments[2*i - 1],"-terminationthr"))
       terminationThr = atof(arguments[2*i]);
     if(!strcmp(arguments[2*i - 1],"-xoverrate"))
       xoverRate = atof(arguments[2*i]);
     if(!strcmp(arguments[2*i - 1],"-maxgen"))
-      maxGenerations = atoi(arguments[2*i]);
+      maxGenerations = std::stoi(arguments[2*i]);
     if(!strcmp(arguments[2*i - 1],"-sortpop"))
-      sortPop = atoi(arguments[2*i]);
+      sortPop = std::stoi(arguments[2*i]);
     if(!strcmp(arguments[2*i - 1],"-parzenn"))
-      parzenN = atoi(arguments[2*i]);
+      parzenN = std::stoi(arguments[2*i]);
     if(!strcmp(arguments[2*i - 1],"-parzensigma"))
-      parzenSigma = atoi(arguments[2*i]);
+      parzenSigma = std::stoi(arguments[2*i]);
     if(!strcmp(arguments[2*i - 1],"-equalvar"))
-      equalVar = atoi(arguments[2*i]);
+      equalVar = std::stoi(arguments[2*i]);
     if(!strcmp(arguments[2*i - 1],"-restarts"))  // Version 1.1
-      restarts = atoi(arguments[2*i]);
+      restarts = std::stoi(arguments[2*i]);
   }
   return(0);
 }

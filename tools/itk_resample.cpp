@@ -38,7 +38,7 @@
 #include <itkBSplineInterpolateImageFunction.h>
 #include <itkVectorImage.h>
 #include <itkBinaryThresholdImageFilter.h>
-#include <itkVectorResampleImageFilter.h>
+//#include <itkVectorResampleImageFilter.h>
 #include "mincVectorBSplineInterpolate.h"
 #include <itkImageConstIterator.h>
 #include <itkSmoothingRecursiveGaussianImageFilter.h>
@@ -81,12 +81,14 @@ typedef itk::Image<itk::Vector<float,3>, 3>  Vector3DImage;
 typedef itk::ImageIOBase          IOBase;
 typedef itk::SmartPointer<IOBase> IOBasePointer;
 
-typedef itk::BSplineInterpolateImageFunction< Float3DImage, double, double >  InterpolatorType;
+typedef itk::BSplineInterpolateImageFunction< Float3DImage, double >  InterpolatorType;
 typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NNInterpolatorType;
 typedef minc::mincVectorBSplineInterpolate<Vector3DImage,double>      VectorInterpolatorType;
+//typedef itk::BSplineInterpolateImageFunction<Vector3DImage,double>      VectorInterpolatorType;
+
 typedef itk::ResampleImageFilter<Float3DImage, Float3DImage> FloatFilterType;
 typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
-typedef itk::VectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
+typedef itk::ResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
 typedef itk::Transform<double,3,3>           TransformBaseType;
 typedef itk::IdentityTransform<double,3>     IdentityTransformType;
   
@@ -417,7 +419,7 @@ void resample_image(
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
 
-  typename Image::Pointer like=0;
+  typename Image::Pointer like=nullptr;
 
   if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
     minc_transform->Invert();
@@ -598,7 +600,7 @@ void resample_label_image (
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
 
-  typename Image::Pointer like=0;
+  typename Image::Pointer like=nullptr;
 
   if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
     minc_transform->Invert();
@@ -681,7 +683,7 @@ void resample_label_image (
   {
     InputPixelType val = it.Get();
 
-    if(vnl_math_isfinite(val))
+    if(isfinite(val))
       sval.insert(val);
   }
   
@@ -723,10 +725,10 @@ void resample_label_image (
       typename TmpImage::PixelType val = it_filter.Get();
       typename TmpImage::PixelType val_max = it_max.Get();
       
-      if( !vnl_math_isfinite(val) || val<-8.5) {
+      if( !isfinite(val) || val<-8.5) {
         it_max.Set(-8.5);
         it_out.Set(opt.fill);
-      } else if( label_it == sval.begin() || vnl_math_isfinite(val) && val>val_max)
+      } else if( label_it == sval.begin() || isfinite(val) && val>val_max)
       {
         it_max.Set(val);
         it_out.Set(*label_it);
@@ -790,7 +792,7 @@ void resample_vector_image(
    )
 {
   //typedef typename itk::VariableVectorResampleImageFilter<Image, ImageOut> ResampleFilterType;
-  typedef typename itk::VectorResampleImageFilter<Image, ImageOut> ResampleFilterType;
+  typedef typename itk::ResampleImageFilter<Image, ImageOut> ResampleFilterType;
   typedef typename itk::ImageFileReader<Image >   ImageReaderType;
   typedef typename itk::ImageFileWriter<ImageOut >   ImageWriterType;
   
@@ -830,7 +832,7 @@ void resample_vector_image(
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
 
-  typename Image::Pointer like=0;
+  typename Image::Pointer like=nullptr;
 
   if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
     minc_transform->Invert();

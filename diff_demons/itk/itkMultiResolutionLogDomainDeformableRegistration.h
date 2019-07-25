@@ -12,7 +12,7 @@
 #include "itkLogDomainDeformableRegistrationFilter.h"
 #include "itkLogDomainDemonsRegistrationFilter.h"
 #include "itkMultiResolutionPyramidImageFilter.h"
-#include "itkVectorResampleImageFilter.h"
+//#include "itkVectorResampleImageFilter.h"
 
 #include <vector>
 
@@ -150,8 +150,7 @@ public:
 		
 		
     /** The velocity field expander type. */
-    typedef VectorResampleImageFilter<VelocityFieldType, VelocityFieldType >
-    FieldExpanderType;
+    typedef VectorInterpolateImageFunction<VelocityFieldType, VelocityFieldType > FieldExpanderType;
     typedef typename FieldExpanderType::Pointer  FieldExpanderPointer;
 
     /** Set the fixed image. */

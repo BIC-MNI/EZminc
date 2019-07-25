@@ -508,7 +508,7 @@ LogDomainDeformableRegistrationFilterM<TFixedImage,TMovingImage,TField,TMask>
     {
         // smooth along this dimension
         oper->SetDirection( j );
-        double variance = vnl_math_sqr( StandardDeviations[j] );
+        double variance = pow( StandardDeviations[j],2 );
         oper->SetVariance( variance );
         oper->SetMaximumError( m_MaximumError );
         oper->SetMaximumKernelWidth( m_MaximumKernelWidth );

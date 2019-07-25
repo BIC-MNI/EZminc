@@ -23,81 +23,54 @@ namespace minc
   */
   template <class TInputImage, class TCoordRep = double>
   class mincVectorBSplineInterpolate :
-      public  itk::VectorInterpolateImageFunction<TInputImage,TCoordRep>
+      public  itk::InterpolateImageFunction< TInputImage, TCoordRep >
   {
   public:
-    /** Standard class typedefs. */
-    typedef mincVectorBSplineInterpolate Self;
-    typedef itk::VectorInterpolateImageFunction<TInputImage,TCoordRep>     Superclass;
-    typedef itk::SmartPointer<Self>                                        Pointer;
-    typedef itk::SmartPointer<const Self>                                  ConstPointer;
-  
-    /** Method for creation through the object factory. */
-    itkNewMacro(Self);
-  
-    /** Run-time type information (and related methods). */
-    itkTypeMacro(mincVectorBSplineInterpolate,
-                 itk::VectorInterpolateImageFunction);
-  
-    /** InputImageType typedef support. */
-    typedef typename Superclass::InputImageType                           InputImageType;
-    typedef typename Superclass::PixelType                                PixelType;
-    typedef typename Superclass::ValueType                                ValueType;
-    typedef typename Superclass::RealType                                 RealType;
-  
-    typedef typename Superclass::PointType                                PointType;
-  
-    /** Grab the vector dimension from the superclass. */
-    itkStaticConstMacro(Dimension, unsigned int,
-                        Superclass::Dimension);
-  
-    /** Dimension underlying input image. */
-    itkStaticConstMacro(ImageDimension, unsigned int,Superclass::ImageDimension);
-  
-    /** Index typedef support. */
-    typedef typename Superclass::IndexType                               IndexType;
-  
-    /** ContinuousIndex typedef support. */
-    typedef typename Superclass::ContinuousIndexType                     ContinuousIndexType;
-  
-    /** Output type is Vector<double,Dimension> */
-    typedef typename Superclass::OutputType                              OutputType;
+    ITK_DISALLOW_COPY_AND_ASSIGN(mincVectorBSplineInterpolate);
+
+    using Self = mincVectorBSplineInterpolate;
+    using Superclass = itk::InterpolateImageFunction< TInputImage, TCoordRep >;
+    using Pointer = itk::SmartPointer< Self >;
+    using ConstPointer = itk::SmartPointer< const Self >;
     
+    itkTypeMacro(mincVectorBSplineInterpolate, itk::InterpolateImageFunction);
+    
+    itkNewMacro(Self);  
+    
+    /** InputImageType typedef support. */
+    using OutputType = typename Superclass::OutputType;
+    using InputImageType = typename Superclass::InputImageType;
+    using InputPixelType = typename Superclass::InputPixelType;
+    using RealType =  TCoordRep; // hack?
+
+    static constexpr unsigned int ImageDimension = Superclass::ImageDimension;
+    static constexpr unsigned int Dimension = InputPixelType::Dimension;
+
+    using IndexType = typename Superclass::IndexType;
+    using SizeType = typename Superclass::SizeType;
+    using ContinuousIndexType = typename Superclass::ContinuousIndexType;
+    using InternalComputationType = typename ContinuousIndexType::ValueType;
+      
     /** Should check if an index is inside the image buffer, however we
     * require that it answers true to use the extrapolation possibility. */
-    virtual bool IsInsideBuffer( const IndexType & ) const
-    { 
-      return true;
-    }
-  
-    /** Should check if a point is inside the image buffer, however we
-    * require that it answers true to use the extrapolation possibility. */
-    virtual bool IsInsideBuffer( const PointType & ) const
-    {
-      return true;
-    }
-  
-    /** Should check if a continuous index is inside the image buffer, however we
-    * require that it answers true to use the extrapolation possibility. */
-    virtual bool IsInsideBuffer( const ContinuousIndexType & ) const
-    {
-      return true;
-    }
-  
+    // virtual bool IsInsideBuffer( const IndexType & ) const
+    // { 
+    //   return true;
+    // }
+    
     /** Evaluate the function at a ContinuousIndex position
     *
     * Returns the linearly interpolated image intensity at a
     * specified point position. If the point does not lie within the
     * image buffer a nearest neighbor interpolation is done. */
-    virtual OutputType EvaluateAtContinuousIndex(
-      const ContinuousIndexType & index ) const;
+    virtual OutputType EvaluateAtContinuousIndex( const ContinuousIndexType & index ) const override;
   
     /** Evaluate the function at an index position
     *
     * Simply returns the image value at the
     * specified index position. If the index does not lie within the
     * image buffer a nearest neighbor interpolation is done. */
-    virtual OutputType EvaluateAtIndex( const IndexType & index ) const;
+    virtual OutputType EvaluateAtIndex( const IndexType & index ) const override;
     
     typedef itk::NthElementImageAdaptor<TInputImage, RealType > ImageAdaptorType;
     typedef typename ImageAdaptorType::Pointer ImageAdaptorPointer;
@@ -109,20 +82,20 @@ namespace minc
     
     virtual void SetInputImage( const InputImageType * ptr );
     
-    CovariantVectorType EvaluateDerivative(unsigned int dim,const PointType &point) const
-    {
-      return _interpolator[dim]->EvaluateDerivative(point);
-    }
+    // CovariantVectorType EvaluateDerivative(unsigned int dim,const PointType &point) const
+    // {
+    //   return _interpolator[dim]->EvaluateDerivative(point);
+    // }
     
 /*    CovariantVectorType EvaluateDerivative(unsigned int dim,const PointType &point, unsigned int threadID) const
     {
       return _interpolator[dim]->EvaluateDerivative(point,threadID);
     }*/
     
-    CovariantVectorType EvaluateDerivativeAtContinuousIndex(unsigned int dim, const ContinuousIndexType &x) const
-    {
-      return _interpolator[dim]->EvaluateDerivativeAtContinuousIndex(x);
-    }
+    // CovariantVectorType EvaluateDerivativeAtContinuousIndex(unsigned int dim, const ContinuousIndexType &x) const
+    // {
+    //   return _interpolator[dim]->EvaluateDerivativeAtContinuousIndex(x);
+    // }
     
 /*    CovariantVectorType EvaluateDerivativeAtContinuousIndex(unsigned int dim, const ContinuousIndexType &x, unsigned int threadID) const
     {
@@ -141,17 +114,20 @@ namespace minc
       return m_Order; //_interpolator[0]->GetSplineOrder();
     }
     
+#if !defined(ITKV4_COMPATIBILITY)
+    SizeType GetRadius() const override
+    {
+      return _interpolator[0]->GetRadius();
+    }
+#endif
     
   protected:
     mincVectorBSplineInterpolate();
-    virtual ~mincVectorBSplineInterpolate() {}
+    virtual ~mincVectorBSplineInterpolate()  override = default;
   
-    virtual void PrintSelf(std::ostream& os, itk::Indent indent) const;
+    virtual void PrintSelf(std::ostream& os, itk::Indent indent) const override ;
   
   private:
-    mincVectorBSplineInterpolate(const Self&); //purposely not implemented
-    void operator=(const Self&); //purposely not implemented
-  
     /** Number of neighbors used in the interpolation */
     unsigned long  m_Order;
     ImageAdaptorPointer _adaptor[Dimension];
