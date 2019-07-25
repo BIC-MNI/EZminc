@@ -1398,7 +1398,7 @@ void DemonsRegistrationFunction ( arguments args )
 
     for ( iterfix.GoToBegin(), itermovwarp.GoToBegin(); !iterfix.IsAtEnd(); ++iterfix, ++itermovwarp )
     {
-      finalSSD += vnl_math_sqr ( iterfix.Get() - itermovwarp.Get() );
+      finalSSD += itk::Math::sqr ( iterfix.Get() - itermovwarp.Get() );
     }
 
     const double finalMSE = finalSSD / static_cast<double> (

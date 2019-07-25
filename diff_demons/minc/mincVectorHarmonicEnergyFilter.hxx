@@ -5,7 +5,7 @@
 
 #include <itkImageRegionIterator.h>
 #include <itkProgressReporter.h>
-#include <vnl/vnl_math.h>
+#include <itkMath.h>
 #include <vnl/vnl_matrix.h>
 #include <vnl/vnl_det.h>
 

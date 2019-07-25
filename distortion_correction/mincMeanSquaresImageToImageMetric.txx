@@ -200,7 +200,7 @@ namespace minc
 				typename MovingImageType::IndexType mappedIndex; 
 				for( unsigned int j = 0; j < MovingImageType::ImageDimension; j++ )
 				{
-					mappedIndex[j] = static_cast<long>( vnl_math_rnd( tempIndex[j] ) );
+					mappedIndex[j] = static_cast<long>( itk::Math::rnd ( tempIndex[j] ) );
 				}
 	
 				const GradientPixelType gradient = this->GetGradientImage()->GetPixel( mappedIndex );
@@ -320,7 +320,7 @@ namespace minc
 				typename MovingImageType::IndexType mappedIndex; 
 				for( unsigned int j = 0; j < MovingImageType::ImageDimension; j++ )
 				{
-					mappedIndex[j] = static_cast<long>( vnl_math_rnd( tempIndex[j] ) );
+					mappedIndex[j] = static_cast<long>( itk::Math::rnd ( tempIndex[j] ) );
 				}
 	
 				const GradientPixelType gradient = 

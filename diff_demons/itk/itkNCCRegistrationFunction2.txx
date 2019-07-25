@@ -3,7 +3,7 @@
 
 #include "itkNCCRegistrationFunction2.h"
 #include "itkExceptionObject.h"
-#include "vnl/vnl_math.h"
+#include "itkMath.h"
 
 namespace itk {
 

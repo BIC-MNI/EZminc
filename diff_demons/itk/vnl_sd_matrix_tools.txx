@@ -4,7 +4,7 @@
 #include "vnl_sd_matrix_tools.h"
 
 #include <exception>
-#include <vnl/vnl_math.h>
+#include <itkMath.h>
 #include <vnl/algo/vnl_determinant.h>
 #include <vnl/algo/vnl_matrix_inverse.h>
 
@@ -269,7 +269,7 @@ GetExponential(const vnl_matrix<T> & m,
 
   if(norm > 1)
     {
-    k = 1 + static_cast<int>( vcl_ceil( vcl_log(norm)/vnl_math::ln2 ) );
+    k = 1 + static_cast<int>( vcl_ceil( vcl_log(norm)/itk::Math::ln2 ) );
     }
   else if(norm >0.5)
     {
