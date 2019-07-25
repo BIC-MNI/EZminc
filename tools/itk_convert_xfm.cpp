@@ -41,7 +41,7 @@ ReadTransform(const std::string & filename)
   if( !itksys::SystemTools::FileExists( filename.c_str() ) )
     {
     std::cerr << "Transform file does not exist: " << filename << std::endl;
-    return ITK_NULLPTR;
+    return nullptr;
     }
 
   bool hasTransformBeenRead = false;
@@ -153,7 +153,7 @@ WriteTransform(typename itk::Transform<T, VImageDimension, VImageDimension>::Poi
   // if it's a displacement field transform
   try
     {
-//     if( dispXfrm != ITK_NULLPTR )
+//     if( dispXfrm != nullptr )
 //       {
 //       typename DisplacementFieldType::Pointer dispField = dispXfrm->GetModifiableDisplacementField();
 //       typename DisplacementFieldWriter::Pointer writer = DisplacementFieldWriter::New();
