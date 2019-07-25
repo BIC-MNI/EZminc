@@ -2,7 +2,7 @@
 #include <fstream>
 #include <getopt.h>
 #include <vector>
-#include <math.h>
+#include <cmath>
 #include <limits>
 #include <unistd.h>
 //#include "data_proc.h"

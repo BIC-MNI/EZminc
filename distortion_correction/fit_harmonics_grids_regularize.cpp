@@ -29,7 +29,7 @@
 #include "sphericalHarmonicsTransform.h"
 
 #include <gsl/gsl_rng.h>
-#include <time.h>
+#include <ctime>
 #include <sys/time.h>
 
 using namespace std;

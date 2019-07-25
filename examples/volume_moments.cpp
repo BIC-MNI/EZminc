@@ -24,7 +24,7 @@
 
 #include <iostream>
 #include <getopt.h>
-#include <math.h>
+#include <cmath>
 
 using namespace  std;
 using namespace  minc;

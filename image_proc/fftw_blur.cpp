@@ -17,7 +17,7 @@
 
 #include "fftw_blur.h"
 #include <fftw3.h>
-#include <math.h>
+#include <cmath>
 #include <iostream>
 namespace minc
 {

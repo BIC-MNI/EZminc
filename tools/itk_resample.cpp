@@ -24,11 +24,11 @@
 #include <set>
 #include <map>
 #include <valarray>
-#include <math.h>
+#include <cmath>
 #include <limits>
 #include <unistd.h>
 #include <algorithm>
-#include <stdlib.h>
+#include <cstdlib>
 
 #include <itkVector.h>
 #include <itkResampleImageFilter.h>

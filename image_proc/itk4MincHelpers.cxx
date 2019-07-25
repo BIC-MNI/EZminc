@@ -12,7 +12,7 @@
               software for any purpose.  It is provided "as is" without
               express or implied warranty.
 ---------------------------------------------------------------------------- */
-#include <math.h>
+#include <cmath>
 
 #include "minc_io_exceptions.h"
 

@@ -6,7 +6,7 @@
 #include <time_stamp.h>    // for creating minc style history entry
 // for get_opt_long
 #include <getopt.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <unistd.h>
 
 using namespace  std;

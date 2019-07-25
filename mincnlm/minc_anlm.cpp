@@ -5,9 +5,9 @@
 #include <iostream>
 #include <cstdlib>
 
-#include <math.h>
-#include <float.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cfloat>
+#include <cstdlib>
 #include <unistd.h>
 
 #include <getopt.h>
@@ -16,7 +16,7 @@
 #include <minc_1_simple_rw.h>
 #include "minc_histograms.h"
 #include <time_stamp.h>    // for creating minc style history entry
-#include <math.h>
+#include <cmath>
 #include <pthread.h>
 #include <vector>
 

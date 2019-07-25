@@ -17,7 +17,7 @@
 #include <fstream>
 #include <minc_1_simple.h>
 #include <minc_1_simple_rw.h>
-#include <math.h>
+#include <cmath>
 #include <gsl_glue.h>
 #include <gsl/gsl_eigen.h>
 

@@ -35,9 +35,9 @@
 
 #include <metaCommand.h>
 
-#include <errno.h>
+#include <cerrno>
 #include <iostream>
-#include <limits.h>
+#include <climits>
 
 #include "mincUtils.h"
 

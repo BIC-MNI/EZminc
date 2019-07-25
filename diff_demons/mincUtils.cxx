@@ -3,7 +3,7 @@
 #endif //HAVE_CONFIG_H
 
 #include "mincUtils.h"
-#include <time.h>
+#include <ctime>
 
 std::string minc_history;
 

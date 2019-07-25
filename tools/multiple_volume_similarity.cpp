@@ -24,7 +24,7 @@
 #include <getopt.h>
 #include <map>
 #include <set>
-#include <stdlib.h>
+#include <cstdlib>
 
 #if ( ITK_VERSION_MAJOR < 4 )
 #include <time_stamp.h>    // for creating minc style history entry

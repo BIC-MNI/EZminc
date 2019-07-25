@@ -14,7 +14,7 @@
 ---------------------------------------------------------------------------- */
 #include "dwt_utils.h"
 #include "volume_dwt.h"
-#include <assert.h>
+#include <cassert>
 
 namespace minc
 {

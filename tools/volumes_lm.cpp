@@ -21,7 +21,7 @@
 #include <minc_1_simple.h>
 #include <minc_1_simple_rw.h>
 #include <getopt.h>
-#include <math.h>
+#include <cmath>
 #include <unistd.h>
 
 #include <gsl_glue.h>

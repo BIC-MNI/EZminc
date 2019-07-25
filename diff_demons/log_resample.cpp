@@ -21,7 +21,7 @@
 #include <getopt.h>
 #include <vector>
 #include <valarray>
-#include <math.h>
+#include <cmath>
 #include <limits>
 #include <unistd.h>
 

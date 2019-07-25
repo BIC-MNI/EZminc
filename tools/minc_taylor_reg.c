@@ -13,7 +13,7 @@
               express or implied warranty.
 ---------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include <volume_io.h>
 #include <time_stamp.h> 
 

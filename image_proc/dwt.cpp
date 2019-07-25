@@ -8,8 +8,8 @@
  *  Modified by Vladimir Fonov on 25/09/09
  */
 
-#include <stdlib.h>
-#include <math.h>
+#include <cstdlib>
+#include <cmath>
 #include "volume_dwt.h"
 
 

@@ -21,7 +21,7 @@
 #include <getopt.h>
 #include "sphericalHarmonicsTransform.h"
 #include <gsl/gsl_rng.h>
-#include <time.h>
+#include <ctime>
 #include <sys/time.h>
 
 #ifdef HAVE_MINC4ITK

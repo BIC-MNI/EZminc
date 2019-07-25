@@ -4,12 +4,12 @@
 #include <getopt.h>
 #include <vector>
 #include <valarray>
-#include <math.h>
+#include <cmath>
 #include <limits>
 #include <unistd.h>
 //#include "data_proc.h"
 #include <sys/time.h>
-#include <time.h>
+#include <ctime>
 //#include <mt19937ar.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>

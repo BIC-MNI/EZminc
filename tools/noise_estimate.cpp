@@ -3,7 +3,7 @@
 #include <minc_io_simple_volume.h>
 #include <minc_1_simple.h>
 #include <minc_1_simple_rw.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include "noise_estimate.h"
 
 using namespace minc;

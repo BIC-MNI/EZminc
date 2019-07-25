@@ -16,7 +16,7 @@
 #include <minc_1_simple_rw.h>
 
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 #include <iostream>
 #include <getopt.h>
 #include <unistd.h>

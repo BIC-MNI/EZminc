@@ -30,7 +30,7 @@
 #define PARZEN_H
 
 #include "generic_image.h"
-#include <math.h>
+#include <cmath>
 #include <vector>
 
 struct PdfEstimate 

@@ -4,9 +4,9 @@
 #include <minc_io_simple_volume.h>
 #include <minc_1_simple_rw.h>
 #include <getopt.h>
-#include <stdlib.h>
+#include <cstdlib>
 
-#include <math.h>
+#include <cmath>
 //#include <gsl/gsl_sf_gamma.h>
 //#include <gsl/gsl_errno.h>
 #include <gsl/gsl_cdf.h>

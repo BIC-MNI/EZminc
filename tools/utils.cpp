@@ -18,9 +18,9 @@
 
 #include <minc_1_simple.h>
 #include <minc_1_simple_rw.h>
-#include <math.h>
+#include <cmath>
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <libgen.h> //for dirname
 
 namespace minc

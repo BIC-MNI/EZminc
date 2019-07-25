@@ -17,7 +17,7 @@
 #include "minc_1_simple.h"
 #include <getopt.h>
 #include <algorithm>
-#include <string.h>
+#include <cstring>
 //#include <map>
 #include <set>
 

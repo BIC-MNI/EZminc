@@ -40,9 +40,9 @@
 
 #include <metaCommand.h>
 
-#include <errno.h>
+#include <cerrno>
 #include <iostream>
-#include <limits.h>
+#include <climits>
 
 //MINC support
 #include "mincUtils.h"

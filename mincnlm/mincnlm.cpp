@@ -45,9 +45,9 @@
 #include <iostream>
 #include <cstdlib>
 
-#include <math.h>
-#include <float.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cfloat>
+#include <cstdlib>
 #include <unistd.h>
 
 #include <minc_1_simple.h> // simple minc reading & writing

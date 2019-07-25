@@ -43,15 +43,15 @@
 
 #include <vector>
 #include <algorithm>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
 
 #ifdef HAVE_VALUES_H
 #include <values.h>
 #else
-#include <limits.h>
-#include <float.h>
+#include <climits>
+#include <cfloat>
 #define MAXSHORT   SHRT_MAX
 #define MAXINT     INT_MAX 
 #define MAXDOUBLE  DBL_MAX
@@ -64,7 +64,7 @@
 
 #endif 
 
-#include <math.h>
+#include <cmath>
 
 
 struct ImageHeader {

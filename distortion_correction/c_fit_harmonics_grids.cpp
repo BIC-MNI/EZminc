@@ -28,7 +28,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include "sphericalHarmonicsTransform.h"
-#include <time.h>
+#include <ctime>
 #include <sys/time.h>
 #include <gsl/gsl_rng.h>
 

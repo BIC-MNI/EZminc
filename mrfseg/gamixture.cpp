@@ -27,7 +27,7 @@
 
 #include <algorithm>
 #include "gamixture.h"
-#include <time.h>
+#include <ctime>
 
 //todo: use std instead
 #ifdef   MAX

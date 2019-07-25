@@ -18,7 +18,7 @@
 ---------------------------------------------------------------------------- */
 #include <iostream>
 #include <getopt.h>
-#include <math.h>
+#include <cmath>
 #include <minc_io_simple_volume.h>
 #include <minc_1_simple.h>
 #include <minc_1_simple_rw.h>

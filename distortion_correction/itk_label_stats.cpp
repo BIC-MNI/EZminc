@@ -19,7 +19,7 @@
 #endif
 #include <iostream>
 #include <getopt.h>
-#include <math.h>
+#include <cmath>
 #include <limits>
 #include <map>
 #include <itkImageRegionConstIteratorWithIndex.h>

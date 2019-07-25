@@ -2,7 +2,7 @@
 #include <minc_1_simple.h>
 #include <unistd.h>
 
-#include <math.h>
+#include <cmath>
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
 

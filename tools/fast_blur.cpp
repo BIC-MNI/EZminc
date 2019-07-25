@@ -2,11 +2,11 @@
 #include <fstream>
 #include <getopt.h>
 #include <vector>
-#include <math.h>
+#include <cmath>
 #include <limits>
 #include <string>
 #include <complex>
-#include <stdlib.h>
+#include <cstdlib>
 #include <unistd.h>
 
 #include <minc_1_simple.h> // simple minc reading & writing
