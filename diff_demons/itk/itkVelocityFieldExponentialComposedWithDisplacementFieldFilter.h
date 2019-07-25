@@ -54,7 +54,7 @@ public:
   VelocityFieldInterpolatorType;
 
   itkSetObjectMacro (VelocityField, VelocityFieldType);
-  itkGetObjectMacro (VelocityField, VelocityFieldType);
+  itkGetConstObjectMacro (VelocityField, VelocityFieldType);
 
   /**
    * Set/Get the number of integration steps to compute the exponential

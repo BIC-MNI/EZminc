@@ -127,8 +127,8 @@ protected:
   itkSetObjectMacro( LeftGradientCalculator,  InputFieldGradientCalculatorType );
   
   /** Get right and left gradient calculators. */
-  itkGetObjectMacro( RightGradientCalculator, InputFieldGradientCalculatorType );
-  itkGetObjectMacro( LeftGradientCalculator,  InputFieldGradientCalculatorType );
+  itkGetConstObjectMacro( RightGradientCalculator, InputFieldGradientCalculatorType );
+  itkGetConstObjectMacro( LeftGradientCalculator,  InputFieldGradientCalculatorType );
 
 private:
   VelocityFieldLieBracketFilter(const Self&); //purposely not implemented

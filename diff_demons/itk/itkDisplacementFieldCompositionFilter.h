@@ -65,7 +65,7 @@ public:
   itkSetObjectMacro( Warper, VectorWarperType );
 
   /** Get the warper (can be used to change the interpolator). */
-  itkGetObjectMacro( Warper, VectorWarperType );
+  itkGetConstObjectMacro( Warper, VectorWarperType );
 
 
 protected:
@@ -86,7 +86,7 @@ protected:
   itkSetObjectMacro( Adder, AdderType );
 
   /** Get the adder. */
-  itkGetObjectMacro( Adder, AdderType );
+  itkGetConstObjectMacro( Adder, AdderType );
 
 private:
   DisplacementFieldCompositionFilter(const Self&); //purposely not implemented

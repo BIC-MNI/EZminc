@@ -99,19 +99,19 @@ protected:
 
     /** Set/Get the adder. */
     itkSetObjectMacro( Adder, AdderType );
-    itkGetObjectMacro( Adder, AdderType );
+    itkGetConstObjectMacro( Adder, AdderType );
 
     /** Set/Get the multipliers. */
     itkSetObjectMacro( Multiplier, MultiplierType );
-    itkGetObjectMacro( Multiplier, MultiplierType );
+    itkGetConstObjectMacro( Multiplier, MultiplierType );
     itkSetObjectMacro( Multiplier2, MultiplierType );
-    itkGetObjectMacro( Multiplier2, MultiplierType );
+    itkGetConstObjectMacro( Multiplier2, MultiplierType );
 
     /** Set/Get the Lie bracket filters. */
     itkSetObjectMacro( LieBracketFilter, LieBracketFilterType );
-    itkGetObjectMacro( LieBracketFilter, LieBracketFilterType );
+    itkGetConstObjectMacro( LieBracketFilter, LieBracketFilterType );
     itkSetObjectMacro( LieBracketFilter2, LieBracketFilterType );
-    itkGetObjectMacro( LieBracketFilter2, LieBracketFilterType );
+    itkGetConstObjectMacro( LieBracketFilter2, LieBracketFilterType );
 
 #if ( ITK_VERSION_MAJOR < 3 ) || ( ITK_VERSION_MAJOR == 3 && ITK_VERSION_MINOR < 13 )
     virtual void SetInPlace(const bool b)

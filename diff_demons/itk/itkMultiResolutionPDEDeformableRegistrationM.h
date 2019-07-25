@@ -208,19 +208,19 @@ public:
   itkSetObjectMacro( RegistrationFilter, RegistrationType );
 
   /** Get the internal registrator. */
-  itkGetObjectMacro( RegistrationFilter, RegistrationType );
+  itkGetConstObjectMacro( RegistrationFilter, RegistrationType );
   
   /** Set the fixed image pyramid. */
   itkSetObjectMacro( FixedImagePyramid, FixedImagePyramidType );
 
   /** Get the fixed image pyramid. */
-  itkGetObjectMacro( FixedImagePyramid, FixedImagePyramidType );
+  itkGetConstObjectMacro( FixedImagePyramid, FixedImagePyramidType );
 
   /** Set the moving image pyramid. */
   itkSetObjectMacro( MovingImagePyramid, MovingImagePyramidType );
 
   /** Get the moving image pyramid. */
-  itkGetObjectMacro( MovingImagePyramid, MovingImagePyramidType );
+  itkGetConstObjectMacro( MovingImagePyramid, MovingImagePyramidType );
 
   /** Set number of multi-resolution levels. */
   virtual void SetNumberOfLevels( unsigned int num );
@@ -238,7 +238,7 @@ public:
   itkSetObjectMacro( FieldExpander, FieldExpanderType );
 
   /** Get the moving image pyramid. */
-  itkGetObjectMacro( FieldExpander, FieldExpanderType );
+  itkGetConstObjectMacro( FieldExpander, FieldExpanderType );
 
   /** Get number of iterations per multi-resolution levels. */
   virtual const unsigned int * GetNumberOfIterations() const

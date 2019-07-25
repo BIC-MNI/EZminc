@@ -254,7 +254,7 @@ protected:
   typedef typename FieldExponentiatorType::Pointer FieldExponentiatorPointer;
 
   itkSetObjectMacro( Exponentiator, FieldExponentiatorType );
-  itkGetObjectMacro( Exponentiator, FieldExponentiatorType );
+  itkGetConstObjectMacro( Exponentiator, FieldExponentiatorType );
 
   /** Supplies the halting criteria for this class of filters.  The
    * algorithm will stop after a user-specified number of iterations. */
