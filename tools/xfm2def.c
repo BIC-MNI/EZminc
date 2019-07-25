@@ -14,8 +14,8 @@
 /* suitability of this software for any purpose.  It is provided "as is"     */
 /* without express or implied warranty.                                      */
 
-#include <cmath>
-#include <cfloat>
+#include <math.h>
+#include <float.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <volume_io.h>
