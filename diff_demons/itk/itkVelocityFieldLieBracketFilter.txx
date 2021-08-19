@@ -42,7 +42,7 @@ VelocityFieldLieBracketFilter<TInputImage,TOutputImage>
 template <class TInputImage, class TOutputImage>
 void
 VelocityFieldLieBracketFilter<TInputImage,TOutputImage>
-::GenerateInputRequestedRegion() throw (InvalidRequestedRegionError)
+::GenerateInputRequestedRegion() 
 {
   // call the superclass' implementation of this method
   Superclass::GenerateInputRequestedRegion();
