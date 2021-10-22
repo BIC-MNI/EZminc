@@ -171,10 +171,8 @@ int main (int argc, char **argv)
       m(2,1)=(v2-v1)/(2*delta);
       m(2,2)=(w2-w1)/(2*delta);
       
-      //_out=m * _in ;
-      _out=_in*m  ;
-      //it.Value()=	vnl_det(m)-1;
-      //vnl_vector_fixed_ref<float,3) _in(cnv.
+      _out=_in*m.as_ref();
+
       it.Value()[0]=_out[0];
       it.Value()[1]=_out[1];
       it.Value()[2]=_out[2];

@@ -27,7 +27,13 @@
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
 #include "itkImageIOFactory.h"
+
+#if ITK_VERSION_MAJOR >= 5
+#include <itkMacro.h>
+#else 
 #include <itkExceptionObject.h>
+#endif
+
 #include <minc_io_fixed_vector.h>
 //#include <minc_io_exceptions.h>
 

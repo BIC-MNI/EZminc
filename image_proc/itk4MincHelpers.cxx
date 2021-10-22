@@ -14,7 +14,7 @@
 ---------------------------------------------------------------------------- */
 #include <math.h>
 
-#include "minc_io_exceptions.h"
+//#include "minc_io_exceptions.h"
 
 #include "itk4MincHelpers.h"
 
@@ -26,8 +26,6 @@
 #include <iterator>
 
 using namespace std;
-
-
 
 namespace minc
 {

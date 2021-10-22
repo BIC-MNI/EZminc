@@ -38,7 +38,11 @@
 #include <itkBSplineInterpolateImageFunction.h>
 #include <itkVectorImage.h>
 #include <itkBinaryThresholdImageFilter.h>
+
+#if (ITK_VERSION_MAJOR<5)
 #include <itkVectorResampleImageFilter.h>
+#endif
+
 #include "mincVectorBSplineInterpolate.h"
 #include <itkImageConstIterator.h>
 #include <itkSmoothingRecursiveGaussianImageFilter.h>
@@ -83,10 +87,20 @@ typedef itk::SmartPointer<IOBase> IOBasePointer;
 
 typedef itk::BSplineInterpolateImageFunction< Float3DImage, double, double >  InterpolatorType;
 typedef itk::NearestNeighborInterpolateImageFunction< Int3DImage, double >    NNInterpolatorType;
-typedef minc::mincVectorBSplineInterpolate<Vector3DImage,double>      VectorInterpolatorType;
+//typedef minc::mincVectorBSplineInterpolate<Vector3DImage,double>            VectorInterpolatorType;
+typedef itk::LinearInterpolateImageFunction<Vector3DImage, double>            VectorInterpolatorType; // TODO: fix this for ITKv5
+//typedef itk::BSplineInterpolateImageFunction< Vector3DImage, double, double >  VectorInterpolatorType;
+
+
 typedef itk::ResampleImageFilter<Float3DImage, Float3DImage> FloatFilterType;
 typedef itk::ResampleImageFilter<Int3DImage  , Int3DImage>   IntFilterType;
-typedef itk::VectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
+
+// #if ( ITK_VERSION_MAJOR < 5 )
+// typedef itk::VectorResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
+// #else
+// typedef itk::ResampleImageFilter<Vector3DImage , Vector3DImage>  VectorFilterType;
+// #endif
+
 typedef itk::Transform<double,3,3>           TransformBaseType;
 typedef itk::IdentityTransform<double,3>     IdentityTransformType;
   
@@ -417,7 +431,7 @@ void resample_image(
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
 
-  typename Image::Pointer like=0;
+  typename Image::Pointer like=nullptr;
 
   if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
     minc_transform->Invert();
@@ -598,7 +612,7 @@ void resample_label_image (
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
 
-  typename Image::Pointer like=0;
+  typename Image::Pointer like=nullptr;
 
   if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
     minc_transform->Invert();
@@ -681,7 +695,7 @@ void resample_label_image (
   {
     InputPixelType val = it.Get();
 
-    if(vnl_math_isfinite(val))
+    if(isfinite(val))
       sval.insert(val);
   }
   
@@ -723,10 +737,10 @@ void resample_label_image (
       typename TmpImage::PixelType val = it_filter.Get();
       typename TmpImage::PixelType val_max = it_max.Get();
       
-      if( !vnl_math_isfinite(val) || val<-8.5) {
+      if( !isfinite(val) || val<-8.5) {
         it_max.Set(-8.5);
         it_out.Set(opt.fill);
-      } else if( label_it == sval.begin() || vnl_math_isfinite(val) && val>val_max)
+      } else if( label_it == sval.begin() || isfinite(val) && val>val_max)
       {
         it_max.Set(val);
         it_out.Set(*label_it);
@@ -789,8 +803,12 @@ void resample_vector_image(
    const resample_options &opt
    )
 {
-  //typedef typename itk::VariableVectorResampleImageFilter<Image, ImageOut> ResampleFilterType;
+  #if (ITK_VERSION_MAJOR<5)
   typedef typename itk::VectorResampleImageFilter<Image, ImageOut> ResampleFilterType;
+  #else
+  typedef typename itk::ResampleImageFilter<Image, ImageOut> ResampleFilterType;
+  #endif
+
   typedef typename itk::ImageFileReader<Image >   ImageReaderType;
   typedef typename itk::ImageFileWriter<ImageOut >   ImageWriterType;
   
@@ -830,7 +848,7 @@ void resample_vector_image(
   //this is for processing using batch system
   filter->SetNumberOfThreads(1);
 
-  typename Image::Pointer like=0;
+  typename Image::Pointer like=nullptr;
 
   if( opt.transform_bbox && !xfm_f.empty() && opt.invert)
     minc_transform->Invert();
@@ -1144,7 +1162,9 @@ int main (int argc, char **argv)
       }
      } else if( nd==3 && nc==3 )  { // deal with this case as vector image 
        VectorInterpolatorType::Pointer interpolator = VectorInterpolatorType::New();
-       interpolator->SetSplineOrder(order);
+
+       //interpolator->SetSplineOrder(order); // TODO: fix this for ITKv5
+
        resample_vector_image<Vector3DImage,Vector3DImage,VectorInterpolatorType>(io,output_f,xfm_f,like_f,interpolator,opt);
     } else {
       throw itk::ExceptionObject("This number of dimensions is not supported currently");

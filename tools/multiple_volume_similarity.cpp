@@ -212,8 +212,8 @@ int main(int argc,char **argv)
     ReaderType::Pointer reader=ReaderType::New();
     LabelReaderType::Pointer label_reader=LabelReaderType::New();
     
-    LabelImageType::Pointer mask=0;
-    LabelImageConstIterator* itm=0;
+    LabelImageType::Pointer mask=nullptr;
+    LabelImageConstIterator* itm=nullptr;
     
     if(!mask_f.empty())
     {

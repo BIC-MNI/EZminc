@@ -369,7 +369,7 @@ public:
         bvalues[i] = 0.0;
       } else {
         // UNC comments: Computing the decomposition
-        vnl_svd<double> svd(bMatrix);
+        vnl_svd<double> svd(bMatrix.as_ref());
 
         // UNC comments: Extracting the principal eigenvector i.e. the gradient direction
         

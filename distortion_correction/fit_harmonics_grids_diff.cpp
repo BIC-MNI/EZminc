@@ -14,15 +14,19 @@
 ---------------------------------------------------------------------------- */
 #include <iostream>
 #include <fstream>
+
 #include "gsl_glue.h"
 #include "gsl_gauss.h"
+
 #include <itkBSplineInterpolateImageFunction.h>
 #include <unistd.h>
 #include <getopt.h>
+
 #include "sphericalHarmonicsTransform.h"
 #include <gsl/gsl_rng.h>
 #include <time.h>
 #include <sys/time.h>
+
 #include "minc_wrappers.h"
 
 
