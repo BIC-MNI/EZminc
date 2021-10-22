@@ -2,48 +2,53 @@ LINK_DIRECTORIES(${ITK_LIBRARY_DIRS})
 
 INCLUDE_DIRECTORIES(${ITK_INCLUDE_DIRS} ${MINC4ITK_INCLUDE_DIRS})  
 
+IF( HAVE_MINC4ITK)
+  INCLUDE_DIRECTORIES(${MINC4ITK_INCLUDE_DIRS})  
+ENDIF()
+
 ADD_LIBRARY(spherical_harmonics
   mincMeanSquaresImageToImageMetric.h
   data_proc.h
   sphericalHarmonicsTransform.cpp 
   sphericalHarmonicsTransform.h)
 
-TARGET_LINK_LIBRARIES( 
-    spherical_harmonics
-    ITKIOMINC 
-    minc_image_proc
-    ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY} 
-    )
 
-IF( ITK_VERSION_MAJOR VERSION_GREATER_EQUAL 4 )
+  IF( ITK_VERSION_MAJOR VERSION_GREATER_EQUAL 4 )
   TARGET_LINK_LIBRARIES( 
     spherical_harmonics
     itk4MincHelpers
   )
-ENDIF( ITK_VERSION_MAJOR VERSION_GREATER_EQUAL 4 )
+  ENDIF( ITK_VERSION_MAJOR VERSION_GREATER_EQUAL 4 )
 
+  TARGET_LINK_LIBRARIES( 
+    spherical_harmonics
+    minc_image_proc
+
+    ${ITK_LIBRARIES}
+    ${GSL_LIBRARY} ${GSL_CBLAS_LIBRARY} 
+    )
     
 ADD_EXECUTABLE( fit_harmonics_grids
                 fit_harmonics_grids.cpp )
                 
 TARGET_LINK_LIBRARIES(fit_harmonics_grids 
-  ITKIOMINC ${ITK_LIBRARIES} 
-  spherical_harmonics )
+  spherical_harmonics ${ITK_LIBRARIES}  )
 
 ADD_EXECUTABLE( fit_harmonics_grids_diff
                 fit_harmonics_grids_diff.cpp )
                 
 TARGET_LINK_LIBRARIES(fit_harmonics_grids_diff
-  ITKIOMINC ${ITK_LIBRARIES} 
-  spherical_harmonics )
+  spherical_harmonics 
+  ${ITK_LIBRARIES} )
   
   
 ADD_EXECUTABLE( fit_harmonics_grids_regularize
                 fit_harmonics_grids_regularize.cpp )
                 
 TARGET_LINK_LIBRARIES(fit_harmonics_grids_regularize 
-  ITKIOMINC ${ITK_LIBRARIES}
-  spherical_harmonics )
+  spherical_harmonics
+  ${ITK_LIBRARIES}
+  )
   
   
 ADD_EXECUTABLE( c_fit_harmonics_grids
