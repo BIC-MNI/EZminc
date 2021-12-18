@@ -91,13 +91,14 @@ ENDIF(FFTW3F_FOUND AND GSL_FOUND AND HAVE_MINC1)
 
 
 IF(ITK_FOUND)
-
   IF(HAVE_MINC4ITK)
     LINK_DIRECTORIES(${MINC4ITK_LIBRARY_DIRS})
     INCLUDE_DIRECTORIES( ${MINC4ITK_INCLUDE_DIRS})  
   ELSE(HAVE_MINC4ITK)
     SET(ITK_LIBRARIES itk4MincHelpers ${ITK_LIBRARIES})
   ENDIF(HAVE_MINC4ITK)
+ 
+  message("tools: ITK_LIBRARIES=${ITK_LIBRARIES}")
 
   ADD_EXECUTABLE( multiple_volume_similarity multiple_volume_similarity.cpp)
   TARGET_LINK_LIBRARIES( multiple_volume_similarity ${ITK_LIBRARIES}  )
@@ -107,53 +108,51 @@ IF(ITK_FOUND)
 
   ADD_EXECUTABLE( itk_similarity itk_similarity.cpp )
   TARGET_LINK_LIBRARIES(itk_similarity ${ITK_LIBRARIES})
-  
+
   ADD_EXECUTABLE( itk_resample itk_resample.cpp )
   TARGET_LINK_LIBRARIES(itk_resample  ${ITK_LIBRARIES})
-  
+
   ADD_EXECUTABLE( itk_convert itk_convert.cpp )
   TARGET_LINK_LIBRARIES(itk_convert  ${ITK_LIBRARIES})
-  
+
   ADD_EXECUTABLE( itk_convert_xfm itk_convert_xfm.cpp )
   TARGET_LINK_LIBRARIES(itk_convert_xfm  ${ITK_LIBRARIES})
-  
+
   ADD_EXECUTABLE( itk_morph
                   itk_morph.cpp )
   TARGET_LINK_LIBRARIES( itk_morph   ${ITK_LIBRARIES})
 
- 
   ADD_EXECUTABLE( itk_g_morph
                   itk_g_morph.cpp )
   TARGET_LINK_LIBRARIES( itk_g_morph   ${ITK_LIBRARIES} )
 
-  
   ADD_EXECUTABLE( itk_laplacian_sharpening
                   itk_laplacian_sharpening.cpp )
-                  
+
   TARGET_LINK_LIBRARIES( itk_laplacian_sharpening  ${ITK_LIBRARIES})
 
 
   ADD_EXECUTABLE( itk_laplace
                   itk_laplace.cpp )
-                  
+
   TARGET_LINK_LIBRARIES( itk_laplace  ${ITK_LIBRARIES})
 
   ADD_EXECUTABLE( itk_vesselness
                   itk_vesselness.cpp
                   )
-                  
+
   TARGET_LINK_LIBRARIES( itk_vesselness  ${ITK_LIBRARIES})
 
 
   ADD_EXECUTABLE( itk_fill_hole
                   itk_fill_hole.cpp )
-                  
+
   TARGET_LINK_LIBRARIES( itk_fill_hole  ${ITK_LIBRARIES})
 
 
   ADD_EXECUTABLE( itk_diffusion
                   itk_diffusion.cpp )
-                  
+
   TARGET_LINK_LIBRARIES( itk_diffusion  ${ITK_LIBRARIES})
 
   IF(HAVE_MINC1)
@@ -161,14 +160,14 @@ IF(ITK_FOUND)
                   resample_grid.cpp )
 
     TARGET_LINK_LIBRARIES(resample_grid ${ITK_LIBRARIES} ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES} )
-    
+
     ADD_EXECUTABLE( dircos_to_xfm
                     dircos_to_xfm.cpp )
     TARGET_LINK_LIBRARIES( dircos_to_xfm itk4MincHelpers  ${ITK_LIBRARIES} )
-    
+
     INSTALL(TARGETS dircos_to_xfm resample_grid RUNTIME DESTINATION bin)
   ENDIF(HAVE_MINC1)
-  
+
   INSTALL(TARGETS 
     multiple_volume_similarity 
     itk_distance 
