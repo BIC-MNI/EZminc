@@ -13,15 +13,7 @@
 #include "itkMincGeneralTransform.h"
 #endif //HAVE_MINC4ITK
 
-//! generate minc-style timestamp
-std::string minc_timestamp(int argc,char **argv);
 
-//! change output minc file type, add history
-#ifdef HAVE_MINC4ITK
-void mincify( itk::Object* image, const std::string & history="",nc_type store_datatype=NC_FLOAT,itk::Object* metadata=NULL );
-#else 
-void mincify( itk::Object* image, const std::string & history="",const char * store_datatype=typeid(float).name(),itk::Object* metadata=NULL );
-#endif 
 
 //! check if the filename is XFM file, and generate required additional file names (doesn't read xfm file)
 bool parse_xfm_file_name(const std::string & fname,std::string &def_field,std::string &def_field_base);

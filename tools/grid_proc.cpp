@@ -16,10 +16,10 @@
 #include "config.h"
 #endif //HAVE_CONFIG_H
 
-#include "mincUtils.h"
 #include <itkCommand.h>
-
-#include <itkDisplacementToVelocityFieldLogFilter.h>
+#include <itkImageFileReader.h>
+#include <itkImageFileWriter.h>
+#include <itkDisplacementFieldJacobianDeterminantFilter.h>
 #include <itkInvertDisplacementFieldImageFilter.h>
 #include <itkInverseDisplacementFieldImageFilter.h>
 #include <itkVectorMagnitudeImageFilter.h>
@@ -27,8 +27,13 @@
 #include <itkDisplacementFieldJacobianDeterminantFilter.h>
 #include <itkTransformToDisplacementFieldFilter.h>
 //#include <itkDeformationFieldJacobianDeterminantFilter.h>
-#include <itkDisplacementFieldJacobianDeterminantFilter.h>
+#ifdef HAVE_VELOCITY_FILTER
+#include <itkDisplacementToVelocityFieldLogFilter.h>
 #include "minc/mincVectorHarmonicEnergyFilter.h"
+#endif 
+
+#include "itk4MincHelpers.h"
+
 
 #include <getopt.h>
 #include <unistd.h>
@@ -39,12 +44,13 @@ typedef itk::Image<float, 3 > ScalarImageType;
 
 typedef itk::ExponentialDisplacementFieldImageFilter< VectorImageType, VectorImageType >                      _ExponentFilterType;
 typedef itk::InverseDisplacementFieldImageFilter<VectorImageType, VectorImageType>                            _InvFilterType;
-typedef itk::DisplacementToVelocityFieldLogFilter< VectorImageType, VectorImageType >                         _LogFilterType;
 typedef itk::VectorMagnitudeImageFilter<VectorImageType,ScalarImageType>                                      _MagFilterType;
 typedef itk::DisplacementFieldJacobianDeterminantFilter<VectorImageType,float>                                _DetFilterType;
 
+#ifdef HAVE_VELOCITY_FILTER
+typedef itk::DisplacementToVelocityFieldLogFilter< VectorImageType, VectorImageType >                         _LogFilterType;
 typedef itk::VectorHarmonicEnergyFilter<VectorImageType,ScalarImageType>                                     _HarmonicEnergyFilterType;
-
+#endif 
 
 typedef itk::TransformToDisplacementFieldFilter<VectorImageType,float> _Transform2DefType;
 
@@ -198,22 +204,26 @@ int main (int argc, char **argv)
       _MagFilterType::Pointer filter=_MagFilterType::New();
       filter->SetInput(grid);
       filter->Update();
-      mincify(filter->GetOutput(),minc_history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),grid);
+      minc::mincify(filter->GetOutput(),minc_history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),grid);
       save_file<ScalarImageType>(out_file,filter->GetOutput());
       
     } else if(gdet) {
       _DetFilterType::Pointer filter=_DetFilterType::New();
       filter->SetInput(grid);
       filter->Update();
-      mincify(filter->GetOutput(),minc_history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),grid);
+      minc::mincify(filter->GetOutput(),minc_history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),grid);
       save_file<ScalarImageType>(out_file,filter->GetOutput());
-    } else if(gharm) {
+    } 
+    #ifdef HAVE_VELOCITY_FILTER
+    else if(gharm) {
       _HarmonicEnergyFilterType::Pointer filter=_HarmonicEnergyFilterType::New();
       filter->SetInput(grid);
       filter->Update();
       mincify(filter->GetOutput(),minc_history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),grid);
       save_file<ScalarImageType>(out_file,filter->GetOutput());
-    }  else {
+    }  
+    #endif
+    else {
       VectorImageType::Pointer  out;
       if(gexp)
       {
@@ -229,19 +239,23 @@ int main (int argc, char **argv)
         //filter->SetMaximumNumberOfIterations(iter);
         filter->Update();
         out=filter->GetOutput();
-      } else if(glog) {
+      } 
+      #ifdef HAVE_VELOCITY_FILTER
+        else if(glog) {
         _LogFilterType::Pointer filter=_LogFilterType::New();
         filter->AddObserver( itk::ProgressEvent(), observer );
         filter->SetInput(grid);
         //filter->SetMaximumNumberOfIterations(iter);
         filter->Update();
         out=filter->GetOutput();
-      } else {
+      } 
+      #endif
+      else {
         std::cerr<<"Please specify operation!"<<std::endl;
         return 10;
       }
       
-      mincify(out,minc_history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),grid);
+      minc::mincify(out,minc_history,store_byte?typeid(unsigned char).name():store_short?typeid(short).name():typeid(float).name(),grid);
       save_file<VectorImageType>(out_file,out);
       std::cout << std::endl;
     }

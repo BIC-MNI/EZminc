@@ -155,18 +155,8 @@ IF(ITK_FOUND)
 
   TARGET_LINK_LIBRARIES( itk_diffusion  ${ITK_LIBRARIES})
 
-  IF(HAVE_MINC1)
-    ADD_EXECUTABLE( resample_grid
-                  resample_grid.cpp )
-
-    TARGET_LINK_LIBRARIES(resample_grid ${ITK_LIBRARIES} ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES} )
-
-    ADD_EXECUTABLE( dircos_to_xfm
-                    dircos_to_xfm.cpp )
-    TARGET_LINK_LIBRARIES( dircos_to_xfm itk4MincHelpers  ${ITK_LIBRARIES} )
-
-    INSTALL(TARGETS dircos_to_xfm resample_grid RUNTIME DESTINATION bin)
-  ENDIF(HAVE_MINC1)
+  ADD_EXECUTABLE( grid_proc grid_proc.cpp )
+  TARGET_LINK_LIBRARIES(grid_proc ${ITK_LIBRARIES})
 
   INSTALL(TARGETS 
     multiple_volume_similarity 
@@ -182,7 +172,23 @@ IF(ITK_FOUND)
     itk_diffusion
     itk_vesselness
     itk_fill_hole
-   RUNTIME DESTINATION bin )
+    grid_proc
+  RUNTIME DESTINATION bin )
+
+
+  IF(HAVE_MINC1)
+    ADD_EXECUTABLE( resample_grid
+                  resample_grid.cpp )
+
+    TARGET_LINK_LIBRARIES(resample_grid ${ITK_LIBRARIES} ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES} )
+
+    ADD_EXECUTABLE( dircos_to_xfm
+                    dircos_to_xfm.cpp )
+    TARGET_LINK_LIBRARIES( dircos_to_xfm itk4MincHelpers  ${ITK_LIBRARIES} )
+
+    INSTALL(TARGETS dircos_to_xfm resample_grid RUNTIME DESTINATION bin)
+  ENDIF(HAVE_MINC1)
+
 
 ENDIF(ITK_FOUND)
 
@@ -221,7 +227,8 @@ IF(HAVE_MINC1)
   
   ADD_EXECUTABLE( minc_taylor_reg minc_taylor_reg.c)
   TARGET_LINK_LIBRARIES(minc_taylor_reg ${VOLUME_IO_LIBRARIES} ${LIBMINC_LIBRARIES})
-  
+
+
   INSTALL(TARGETS 
             volume_dwt
             minc_downsample

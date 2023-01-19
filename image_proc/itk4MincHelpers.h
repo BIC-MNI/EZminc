@@ -394,6 +394,13 @@ namespace minc
     allocate_same<T,T>(img,sample);
   }
   
+  //! change output minc file type, add history
+  #ifdef HAVE_MINC4ITK
+  void mincify( itk::Object* image, const std::string & history="",nc_type store_datatype=NC_FLOAT,itk::Object* metadata=NULL );
+  #else 
+  void mincify( itk::Object* image, const std::string & history="",const char * store_datatype=typeid(float).name(),itk::Object* metadata=NULL );
+  #endif 
+  
 };
 
 std::string minc_timestamp(int argc,char **argv);
