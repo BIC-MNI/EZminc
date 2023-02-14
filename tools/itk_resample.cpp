@@ -855,6 +855,7 @@ void resample_vector_image(
       filter->SetOutputSpacing(reader->GetOutput()->GetSpacing());
       filter->SetOutputOrigin(reader->GetOutput()->GetOrigin());
       filter->SetOutputDirection(reader->GetOutput()->GetDirection());
+      filter->SetSize(reader->GetOutput()->GetLargestPossibleRegion().GetSize());
     }
     like=reader->GetOutput();
     like->DisconnectPipeline();
@@ -870,9 +871,11 @@ void resample_vector_image(
       generate_normalized_sampling<ResampleFilterType,Image>(filter,in);
     } else {
       //we are using original sampling
+      //filter->SetOutputParametersFromImage(in);
       filter->SetOutputSpacing(in->GetSpacing());
       filter->SetOutputOrigin(in->GetOrigin());
       filter->SetOutputDirection(in->GetDirection());
+      filter->SetSize(reader->GetOutput()->GetLargestPossibleRegion().GetSize());
     }
   }
 
@@ -884,7 +887,9 @@ void resample_vector_image(
   filter->SetTransform( transform );
   
   filter->SetInput(in);
+
   filter->Update();
+  
   typename ImageOut::Pointer out=filter->GetOutput();
   typename ImageWriterType::Pointer writer = ImageWriterType::New();
   writer->SetFileName(output_f.c_str());

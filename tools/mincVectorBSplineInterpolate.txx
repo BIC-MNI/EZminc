@@ -32,12 +32,15 @@ void mincVectorBSplineInterpolate< TInputImage, TCoordRep >
 ::SetInputImage( const InputImageType * ptr )
 {
   Superclass::SetInputImage(ptr);
-  for(unsigned int i=0;i<Dimension;i++)
+  if(ptr) // could be NULL
   {
-    _adaptor[i]->SetImage((InputImageType*)(ptr));//a hack(?)
-    _adaptor[i]->SelectNthElement(i);
-    _interpolator[i]->SetSplineOrder(m_Order);
-    _interpolator[i]->SetInputImage(_adaptor[i]);
+    for(unsigned int i=0;i<Dimension;i++)
+    {
+      _adaptor[i]->SetImage((InputImageType*)(ptr));//a hack(?)
+      _adaptor[i]->SelectNthElement(i);
+      _interpolator[i]->SetSplineOrder(m_Order);
+      _interpolator[i]->SetInputImage(_adaptor[i]);
+    }
   }
 }
 /**
