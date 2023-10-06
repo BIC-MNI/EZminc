@@ -123,6 +123,8 @@ $Usage = "Usage: $me [options] source.mnc target.mnc output.xfm [output.mnc]\n".
       "use quaternion transformation" ],
    ["-mi","const",'-mi', \$opt{cost_function},
       "Mutual information cost function" ],
+   ["-nmi","const",'-nmi', \$opt{cost_function},
+      "Normalized mutual information cost function" ],
    ["-xcorr","const",'-xcorr', \$opt{cost_function},
       "Cross-correlation cost function" ],
    ["-work_dir", "string", 1, \$opt{work_dir},
