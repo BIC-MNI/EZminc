@@ -66,7 +66,7 @@ int      verbose = FALSE;
 int      clobber = FALSE;
 
 double filtering_param   = 0;
-double beta    = 1;
+double beta_param    = 1;
 int anisotropic  = 0;
 
 double S       = 1;
@@ -100,7 +100,7 @@ static ArgvInfo argTable[] =
     
 	{NULL, ARGV_HELP, NULL, NULL,(char*)"---------------------------------PARAMETERS--------------------------------"},
 	{(char*)"-sigma", ARGV_FLOAT, (char *) 1, (char *) &filtering_param,(char*)"Sigma Value                       [0 = Automatic [default]]"},
-	{(char*)"-beta", ARGV_FLOAT, (char *) 1, (char *) &beta,            (char*)"Beta Value                        [default 1]"},
+	{(char*)"-beta", ARGV_FLOAT, (char *) 1, (char *) &beta_param,            (char*)"Beta Value                        [default 1]"},
 	{(char*)"-v", ARGV_FLOAT, (char *) 1, (char *) &S,                  (char*)"Neighboring size : \n\t\t 1 : 26 neighbors [default] \n\t\t 2 : 124 neighbors ..."},
 	{(char*)"-d", ARGV_FLOAT, (char *) 1, (char *) &M,                  (char*)"Search Volume size                [default 5 : 1331 neighbors]"},
 	{(char*)"-w", ARGV_INT, (char *) 1, (char *) &weight_method,        (char*)"Weighting method : \n\t\t 0 : L2-norm (Gaussian noise) [default]\n\t\t 1 : Pearson Divergence (Speckle)\n\t\t 2 : L2-norm + Bais correction (Rician noise)"},
@@ -237,8 +237,8 @@ void Exec(minc::simple_volume<float> & in, float *ima_out, int* vol_size, VIO_Re
       std::cout << "Automatic: only Rician or Gaussian noise" << std::endl;
     else
       std::cout << filtering_param << std::endl;
-    if (beta!=1.0)
-      std::cout << "Weighting parameter " << beta << std::endl;
+    if (beta_param!=1.0)
+      std::cout << "Weighting parameter " << beta_param << std::endl;
       
     std::cout <<      "Ni              : " << 2*neighborhoodsize[0]+1 << " x " << 2*neighborhoodsize[1]+1 << " x " << 2*neighborhoodsize[2]+1 << std::endl;
     std::cout <<      "Vi              : " << 2*searching[0]+1 << " x " << 2*searching[1]+1 << " x " << 2*searching[2]+1 << std::endl;
@@ -337,12 +337,12 @@ void Exec(minc::simple_volume<float> & in, float *ima_out, int* vol_size, VIO_Re
   }
   
 	if (block==0)   
-		denoise_mt(ima_in,ima_out,mean_map,var_map, filtering_param,beta,
+		denoise_mt(ima_in,ima_out,mean_map,var_map, filtering_param,beta_param,
         neighborhoodsize,searching,
         testmean,testvar,m_min,v_min,weight_method,vol_size,hallucinate_in);
   
 	if (block==1)  
-		denoise_block_mt(ima_in,ima_out,mean_map,var_map,filtering_param,beta,
+		denoise_block_mt(ima_in,ima_out,mean_map,var_map,filtering_param,beta_param,
         neighborhoodsize,searching,
         testmean,testvar,m_min,v_min,weight_method,b_space,vol_size,hallucinate_in);
 
