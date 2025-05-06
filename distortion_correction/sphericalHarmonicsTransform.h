@@ -420,7 +420,7 @@ namespace minc
     itkNewMacro(Self);
   
     /** Run-time type information (and related methods). */
-    itkTypeMacro( SphericalHarmonicsTransform, itk::Transform );
+    itkTypeMacro( CylindricalHarmonicsTransform, itk::Transform );
   
     /** Dimension of the domain space. */
     itkStaticConstMacro(InputSpaceDimension, unsigned int, 3);
