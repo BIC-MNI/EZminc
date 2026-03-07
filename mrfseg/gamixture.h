@@ -101,7 +101,7 @@ public:
     return mixtures[indNumber][classNumber*num + 1];
   }
   // this is only 1-d version
-  float gaSetProb(int indNumber, int classNumber, float val) 
+  void gaSetProb(int indNumber, int classNumber, float val) 
   { 
     int num = 3;  
     if(classNumber > (numberOfLabels - numberOfPveLabels - 1)) {
@@ -114,14 +114,14 @@ public:
   }
 
   // this is only 1-d version
-  float gaSetMu(int indNumber, int classNumber,float val) 
+  void gaSetMu(int indNumber, int classNumber,float val) 
   {
     int num = 3;
     mixtures[indNumber][classNumber*num] = val;
   }
 
   // this is only 1-d version
-  float gaSetSigma2(int indNumber, int classNumber, float val) 
+  void gaSetSigma2(int indNumber, int classNumber, float val) 
   {
     int num = 3;
     mixtures[indNumber][classNumber*num + 1] = val;
