@@ -1,7 +1,12 @@
 #ifndef __mincVectorBSplineInterpolate_h
 #define __mincVectorBSplineInterpolate_h
 
+#include <itkVersion.h>
+#if ITK_VERSION_MAJOR >= 5
+#include <itkInterpolateImageFunction.h>
+#else
 #include <itkVectorInterpolateImageFunction.h>
+#endif
 #include <itkNthElementImageAdaptor.h>
 #include <itkBSplineInterpolateImageFunction.h>
 
@@ -23,12 +28,20 @@ namespace minc
   */
   template <class TInputImage, class TCoordRep = double>
   class mincVectorBSplineInterpolate :
+#if ITK_VERSION_MAJOR >= 5
+      public  itk::InterpolateImageFunction<TInputImage,TCoordRep>
+#else
       public  itk::VectorInterpolateImageFunction<TInputImage,TCoordRep>
+#endif
   {
   public:
     /** Standard class typedefs. */
     typedef mincVectorBSplineInterpolate Self;
+#if ITK_VERSION_MAJOR >= 5
+    typedef itk::InterpolateImageFunction<TInputImage,TCoordRep>           Superclass;
+#else
     typedef itk::VectorInterpolateImageFunction<TInputImage,TCoordRep>     Superclass;
+#endif
     typedef itk::SmartPointer<Self>                                        Pointer;
     typedef itk::SmartPointer<const Self>                                  ConstPointer;
   
@@ -36,20 +49,35 @@ namespace minc
     itkNewMacro(Self);
   
     /** Run-time type information (and related methods). */
+#if ITK_VERSION_MAJOR >= 5
+    itkTypeMacro(mincVectorBSplineInterpolate,
+                 itk::InterpolateImageFunction);
+#else
     itkTypeMacro(mincVectorBSplineInterpolate,
                  itk::VectorInterpolateImageFunction);
+#endif
   
     /** InputImageType typedef support. */
     typedef typename Superclass::InputImageType                           InputImageType;
+#if ITK_VERSION_MAJOR >= 5
+    typedef typename InputImageType::PixelType                            PixelType;
+    typedef typename PixelType::ValueType                                 ValueType;
+    typedef typename itk::NumericTraits<ValueType>::RealType              RealType;
+#else
     typedef typename Superclass::PixelType                                PixelType;
     typedef typename Superclass::ValueType                                ValueType;
     typedef typename Superclass::RealType                                 RealType;
+#endif
   
     typedef typename Superclass::PointType                                PointType;
   
     /** Grab the vector dimension from the superclass. */
+#if ITK_VERSION_MAJOR >= 5
+    static constexpr unsigned int Dimension = TInputImage::PixelType::Dimension;
+#else
     itkStaticConstMacro(Dimension, unsigned int,
                         Superclass::Dimension);
+#endif
   
     /** Dimension underlying input image. */
     itkStaticConstMacro(ImageDimension, unsigned int,Superclass::ImageDimension);
@@ -62,6 +90,18 @@ namespace minc
   
     /** Output type is Vector<double,Dimension> */
     typedef typename Superclass::OutputType                              OutputType;
+    
+#if ITK_VERSION_MAJOR >= 5
+    typedef typename InputImageType::SizeType                             SizeType;
+    
+    /** GetRadius() required by InterpolateImageFunction in ITK5 */
+    SizeType GetRadius() const override
+    {
+      SizeType radius;
+      radius.Fill(m_Order);
+      return radius;
+    }
+#endif
     
     /** Should check if an index is inside the image buffer, however we
     * require that it answers true to use the extrapolation possibility. */
