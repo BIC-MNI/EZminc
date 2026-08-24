@@ -23,7 +23,6 @@ IF(NOT MINC_TOOLKIT_BUILD)
   LINK_DIRECTORIES(${ITK_LIBRARY_DIRS})
   INCLUDE( ${LIBMINC_USE_FILE} )
 
-  OPTION(EZMINC_BUILD_MINCNLM  "Build Non-local means denoising programm,requires GSL (protected by a license IDDN.FR.001.070033.000.S.P.2007.000.21000)" OFF)
   OPTION(EZMINC_BUILD_DISTORTION_CORRECTION "Build distortion correction tools, requires GSL" OFF)
 
   IF(HAVE_MINC1) # Right now it is needed for C++ simple minc interface
@@ -82,9 +81,6 @@ ADD_SUBDIRECTORY( scripts )
 
 IF(GSL_FOUND)
   INCLUDE_DIRECTORIES( ${GSL_INCLUDE_DIR})
-  IF(EZMINC_BUILD_MINCNLM)
-    ADD_SUBDIRECTORY(mincnlm)
-  ENDIF(EZMINC_BUILD_MINCNLM)
 ENDIF(GSL_FOUND)
 
 IF(FFTW3F_FOUND)
